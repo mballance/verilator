@@ -998,6 +998,9 @@ public:
     bool isPredictOptimizable() const override { return false; }
     bool sameNode(const AstNode* /*samep*/) const override { return true; }
 };
+// NOTE: AstCoverBin and AstCoverpoint moved to V3AstNodeFuncCov.h
+// These were placeholder implementations that are now replaced with full
+// functional coverage support (IEEE 1800-2023 Section 19)
 class AstDefParam final : public AstNode {
     // A defparam assignment
     // Parents: MODULE
