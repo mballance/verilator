@@ -183,6 +183,44 @@ public:
             funcp->addStmtsp(varp);
         }
     }
+    // Helper to move bins from parser list to coverpoint
+    void addCoverpointBins(AstCoverpoint* cp, AstNode* binsList) {
+        if (!binsList) return;
+        
+        // CRITICAL FIX: The parser creates a linked list of bins. When we try to move them
+        // to the coverpoint one by one while they're still linked, the addNext() logic
+        // that updates headtailp pointers creates circular references. We must fully
+        // unlink ALL bins before adding ANY to the coverpoint.
+        std::vector<AstCoverBin*> bins;
+        
+        // To unlink the head node (which has no backp), create a temporary parent
+        AstBegin* tempParent = new AstBegin{binsList->fileline(), "[TEMP]", nullptr, true};
+        tempParent->addStmtsp(binsList);  // Now binsList has a backp
+        
+        // Now unlink all bins - they all have backp now
+        for (AstNode* binp = binsList, *nextp; binp; binp = nextp) {
+            nextp = binp->nextp();
+            
+            if (AstCoverBin* cbinp = VN_CAST(binp, CoverBin)) {
+                cbinp->unlinkFrBack();  // Now this works for all bins including head
+                bins.push_back(cbinp);
+            } else if (VN_IS(binp, CgOptionAssign)) {
+                // Coverage options - leave in place or handle separately
+                binp->unlinkFrBack();
+            } else {
+                binp->v3warn(COVERIGN, "Unexpected node in bins list, ignoring");
+                VL_DO_DANGLING(binp->deleteTree(), binp);
+            }
+        }
+        
+        // Delete the temporary parent
+        VL_DO_DANGLING(tempParent->deleteTree(), tempParent);
+        
+        // Now add standalone bins to coverpoint
+        for (AstCoverBin* cbinp : bins) {
+            cp->addBinsp(cbinp);
+        }
+    }
     AstDisplay* createDisplayError(FileLine* fileline) {
         AstDisplay* nodep = new AstDisplay{fileline, VDisplayType::DT_ERROR, "", nullptr, nullptr};
         AstNode::addNext<AstNode, AstNode>(nodep, new AstStop{fileline, false});

@@ -1769,6 +1769,16 @@ public:
         iterateChildrenConst(nodep);
     }
 
+    // Functional coverage nodes - not yet implemented, just skip for now
+    void visit(AstCoverpoint* nodep) override {
+        // TODO: Implement functional coverage code generation
+        // For now, just skip these nodes
+    }
+    void visit(AstCoverBin* nodep) override {
+        // TODO: Implement functional coverage code generation
+        // For now, just skip these nodes
+    }
+
     // Default
     void visit(AstNode* nodep) override {  // LCOV_EXCL_START
         putns(nodep, "\n???? // "s + nodep->prettyTypeName() + "\n");
