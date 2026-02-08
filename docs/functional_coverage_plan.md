@@ -92,7 +92,18 @@ This document outlines a comprehensive plan for implementing SystemVerilog funct
 - Test verified: Default bin catches uncovered values correctly
 - Coverage computation treats default bins as regular bins
 
-**Phase 12: Coverage Database Output - ANALYSIS COMPLETE** 📋
+**Phase 12: Array Bins - COMPLETE** ✅
+- Array bins implementation fully working
+- Parser: ✅ Modified `bins_orBraE` rule to return FileLine* marker for array bins
+- Code generation: ✅ Expands array bins into individual bins at generation time:
+  - `bins values[] = {1, 5, 9}` creates 3 separate bins: values[0], values[1], values[2]
+  - Each array element gets its own counter variable and matching code
+  - Supports value ranges: `bins arr[] = {[0:3]}` creates 4 bins
+- Coverage computation: Each array element tracked separately (4 array elements = 4 bins)
+- Test verified: Array bins properly expand and track coverage independently
+- Works with ignore_bins and illegal_bins array variants
+
+**Phase 13: Coverage Database Output - ANALYSIS COMPLETE** 📋
 - Analyzed integration requirements with Verilator's coverage system
 - **Current Status**: Bins are counted but not registered with coverage database
 - **Requirements identified**:
@@ -112,11 +123,11 @@ This document outlines a comprehensive plan for implementing SystemVerilog funct
 1. Implement coverage database integration (requires infrastructure work)
 2. Implement instance tracking for full get_coverage() aggregation
 3. Implement cross coverage bin filtering (binsof, intersect)
-4. Add array bins support (bins name[] = {...})
-5. Weight-based coverage aggregation
+4. Weight-based coverage aggregation
+5. Transition bins support
 
 **Current Test Status:**
-- ✅ 17 tests passing (11 original + 2 cross + 1 wildcard + 1 bin options + 1 get_coverage + 1 default bins)
+- ✅ 18 tests passing (17 previous + 1 array bins)
 - All core functional coverage features working
 - Coverage computation correct, but not yet integrated with coverage database
 

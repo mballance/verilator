@@ -209,6 +209,12 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 continue;
             }
             
+            // Handle array bins: create separate bin for each value
+            if (cbinp->isArray()) {
+                generateArrayBins(coverpointp, cbinp, exprp, atLeastValue);
+                continue;
+            }
+            
             // Create a member variable to track hits for this bin
             // Sanitize bin name to make it a valid C++ identifier
             string binName = cbinp->name();
@@ -372,6 +378,105 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
         m_sampleFuncp->addStmtsp(ifp);
         UINFO(4, "      Successfully added default bin if statement" << endl);
+    }
+    
+    // Generate multiple bins for array bins
+    // Array bins create one bin per value in the range list
+    void generateArrayBins(AstCoverpoint* coverpointp, AstCoverBin* arrayBinp,
+                          AstNodeExpr* exprp, int atLeastValue) {
+        UINFO(4, "    Generating array bins for: " << arrayBinp->name() << endl);
+        
+        // Extract all values from the range list
+        std::vector<AstNodeExpr*> values;
+        for (AstNode* rangep = arrayBinp->rangesp(); rangep; rangep = rangep->nextp()) {
+            if (AstRange* const rangenodep = VN_CAST(rangep, Range)) {
+                // For ranges [min:max], create bins for each value
+                AstConst* const minConstp = VN_CAST(rangenodep->leftp(), Const);
+                AstConst* const maxConstp = VN_CAST(rangenodep->rightp(), Const);
+                if (minConstp && maxConstp) {
+                    int minVal = minConstp->toSInt();
+                    int maxVal = maxConstp->toSInt();
+                    for (int val = minVal; val <= maxVal; ++val) {
+                        values.push_back(new AstConst{rangenodep->fileline(), 
+                                                     AstConst::Signed32{}, val});
+                    }
+                } else {
+                    arrayBinp->v3error("Array bins with non-constant ranges not supported");
+                    return;
+                }
+            } else {
+                // Single value - should be an expression
+                values.push_back(VN_AS(rangep->cloneTree(false), NodeExpr));
+            }
+        }
+        
+        // Create a separate bin for each value
+        int index = 0;
+        for (AstNodeExpr* valuep : values) {
+            // Create bin name: originalName[index]
+            const string binName = arrayBinp->name() + "[" + std::to_string(index) + "]";
+            const string sanitizedName = arrayBinp->name() + "_" + std::to_string(index);
+            const string varName = "__Vcov_" + coverpointp->name() + "_" + sanitizedName;
+            
+            // Create member variable for this bin
+            AstVar* const varp = new AstVar{
+                arrayBinp->fileline(), VVarType::MEMBER, varName,
+                arrayBinp->findUInt32DType()};
+            varp->isStatic(false);
+            m_covergroupp->addMembersp(varp);
+            UINFO(4, "    Created array bin [" << index << "]: " << varName << endl);
+            
+            // Track for coverage computation
+            m_binInfos.push_back(BinInfo(arrayBinp, varp, atLeastValue));
+            
+            // Generate matching code for this specific value
+            generateArrayBinMatchCode(coverpointp, arrayBinp, exprp, varp, valuep);
+            
+            ++index;
+        }
+        
+        UINFO(4, "    Generated " << index << " array bins" << endl);
+    }
+    
+    // Generate matching code for a single array bin element
+    void generateArrayBinMatchCode(AstCoverpoint* coverpointp, AstCoverBin* binp,
+                                   AstNodeExpr* exprp, AstVar* hitVarp, AstNodeExpr* valuep) {
+        // Create condition: expr == value
+        AstNodeExpr* condp = new AstEq{binp->fileline(),
+                                        exprp->cloneTree(false),
+                                        valuep};
+        
+        // Apply iff condition if present
+        if (AstNodeExpr* iffp = coverpointp->iffp()) {
+            condp = new AstAnd{binp->fileline(), iffp->cloneTree(false), condp};
+        }
+        
+        // Create increment statement
+        AstNode* stmtp = new AstAssign{
+            binp->fileline(),
+            new AstVarRef{binp->fileline(), hitVarp, VAccess::WRITE},
+            new AstAdd{binp->fileline(),
+                new AstVarRef{binp->fileline(), hitVarp, VAccess::READ},
+                new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
+        
+        // For illegal_bins, add error message
+        if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+            const string errMsg = "Illegal bin hit in coverpoint '" + coverpointp->name() + "'";
+            AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR, 
+                                             errMsg, nullptr, nullptr};
+            errorp->fmtp()->timeunit(m_covergroupp->timeunit());
+            stmtp = stmtp->addNext(errorp);
+            stmtp = stmtp->addNext(new AstStop{binp->fileline(), true});
+        }
+        
+        // Create if statement
+        AstIf* const ifp = new AstIf{binp->fileline(), condp, stmtp, nullptr};
+        
+        if (!m_sampleFuncp) {
+            binp->v3error("INTERNAL: m_sampleFuncp is null for array bin");
+            return;
+        }
+        m_sampleFuncp->addStmtsp(ifp);
     }
     
     // Recursive helper to generate Cartesian product of cross bins
@@ -740,7 +845,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 fl,
                 new AstGte{fl,
                     new AstVarRef{fl, bi.varp, VAccess::READ},
-                    new AstConst{fl, AstConst::WidthedValue{}, 32, bi.atLeast}},
+                    new AstConst{fl, AstConst::WidthedValue{}, 32, static_cast<uint32_t>(bi.atLeast)}},
                 new AstAssign{
                     fl,
                     new AstVarRef{fl, coveredCountp, VAccess::WRITE},
