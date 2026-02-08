@@ -44,9 +44,15 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstCoverBin* binp;
         AstVar* varp;
         int atLeast;  // Minimum hits required for coverage (from option.at_least)
-        BinInfo(AstCoverBin* b, AstVar* v, int al = 1) : binp{b}, varp{v}, atLeast{al} {}
+        AstCoverpoint* coverpointp;  // Associated coverpoint (or nullptr for cross bins)
+        AstCoverCross* crossp;  // Associated cross (or nullptr for coverpoint bins)
+        BinInfo(AstCoverBin* b, AstVar* v, int al = 1, AstCoverpoint* cp = nullptr, AstCoverCross* cr = nullptr)
+            : binp{b}, varp{v}, atLeast{al}, coverpointp{cp}, crossp{cr} {}
     };
     std::vector<BinInfo> m_binInfos;  // All bins in current covergroup
+    
+    // Track coverpoints that need previous value tracking (for transition bins)
+    std::map<AstCoverpoint*, AstVar*> m_prevValueVars;  // coverpoint -> prev_value variable
 
     // METHODS
     void processCovergroup() {
@@ -71,6 +77,18 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         // Generate coverage computation code
         generateCoverageComputationCode();
+        
+        // TODO: Generate instance registry infrastructure for static get_coverage()
+        // This requires:
+        // - Static registry members (t_instances, s_mutex)
+        // - registerInstance() / unregisterInstance() methods
+        // - Proper C++ emission in EmitC backend
+        // For now, get_coverage() returns 0.0 (placeholder)
+        
+        // Generate coverage database registration if coverage is enabled
+        if (v3Global.opt.coverage()) {
+            generateCoverageRegistration();
+        }
     }
     
     void expandAutomaticBins(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {
@@ -169,6 +187,48 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         return 1;  // Default: at least 1 hit required
     }
     
+    // Check if coverpoint has any transition bins and create previous value variable if needed
+    bool hasTransitionBins(AstCoverpoint* coverpointp) {
+        for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
+            AstCoverBin* cbinp = VN_CAST(binp, CoverBin);
+            if (cbinp && cbinp->binsType() == VCoverBinsType::TRANSITION) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    // Create previous value variable for transition tracking
+    AstVar* createPrevValueVar(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {
+        // Check if already created
+        auto it = m_prevValueVars.find(coverpointp);
+        if (it != m_prevValueVars.end()) {
+            return it->second;
+        }
+        
+        // Create variable to store previous sampled value
+        const string varName = "__Vprev_" + coverpointp->name();
+        AstVar* prevVarp = new AstVar{
+            coverpointp->fileline(), VVarType::MEMBER, varName,
+            exprp->dtypep()};
+        prevVarp->isStatic(false);
+        m_covergroupp->addMembersp(prevVarp);
+        
+        UINFO(4, "    Created previous value variable: " << varName << endl);
+        
+        // Initialize to zero in constructor
+        AstNodeExpr* initExprp = new AstConst{prevVarp->fileline(), AstConst::WidthedValue{}, 
+                                               prevVarp->width(), 0};
+        AstNodeStmt* initStmtp = new AstAssign{
+            prevVarp->fileline(),
+            new AstVarRef{prevVarp->fileline(), prevVarp, VAccess::WRITE},
+            initExprp};
+        m_constructorp->addStmtsp(initStmtp);
+        
+        m_prevValueVars[coverpointp] = prevVarp;
+        return prevVarp;
+    }
+    
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
         if (!m_sampleFuncp || !m_constructorp) {
             coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without sample() or constructor");
@@ -232,14 +292,19 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                       cbinp->binsType() == VCoverBinsType::ILLEGAL ? " (ILLEGAL)" : " (USER)") << endl);
             
             // Track this bin for coverage computation with at_least value
-            m_binInfos.push_back(BinInfo(cbinp, varp, atLeastValue));
+            m_binInfos.push_back(BinInfo(cbinp, varp, atLeastValue, coverpointp));
             
             // TODO: Generate coverage database registration
             // Coverage declarations need special handling for classes vs modules
             // For now, bin counters exist but aren't registered with verilator_coverage
             
             // Generate bin matching code in sample()
-            generateBinMatchCode(coverpointp, cbinp, exprp, varp);
+            // Handle transition bins specially
+            if (cbinp->binsType() == VCoverBinsType::TRANSITION) {
+                generateTransitionBinMatchCode(coverpointp, cbinp, exprp, varp);
+            } else {
+                generateBinMatchCode(coverpointp, cbinp, exprp, varp);
+            }
         }
         
         // Second pass: Handle default bins
@@ -258,10 +323,22 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             UINFO(4, "    Created default bin variable: " << varName << endl);
             
             // Track for coverage computation
-            m_binInfos.push_back(BinInfo(defBinp, varp, atLeastValue));
+            m_binInfos.push_back(BinInfo(defBinp, varp, atLeastValue, coverpointp));
             
             // Generate matching code: if (NOT (bin1 OR bin2 OR ... OR binN))
             generateDefaultBinMatchCode(coverpointp, defBinp, exprp, varp);
+        }
+        
+        // After all bins processed, if coverpoint has transition bins, update previous value
+        if (hasTransitionBins(coverpointp)) {
+            AstVar* prevVarp = m_prevValueVars[coverpointp];
+            // Generate: __Vprev_cpname = current_value;
+            AstNodeStmt* updateStmtp = new AstAssign{
+                coverpointp->fileline(),
+                new AstVarRef{prevVarp->fileline(), prevVarp, VAccess::WRITE},
+                exprp->cloneTree(false)};
+            m_sampleFuncp->addStmtsp(updateStmtp);
+            UINFO(4, "    Added previous value update at end of sample()" << endl);
         }
     }
     
@@ -380,6 +457,164 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         UINFO(4, "      Successfully added default bin if statement" << endl);
     }
     
+    // Generate matching code for transition bins
+    // Transition bins match sequences like: (val1 => val2 => val3)
+    void generateTransitionBinMatchCode(AstCoverpoint* coverpointp, AstCoverBin* binp,
+                                       AstNodeExpr* exprp, AstVar* hitVarp) {
+        UINFO(4, "    Generating transition bin match for: " << binp->name() << endl);
+        
+        // Get or create previous value variable
+        AstVar* prevVarp = createPrevValueVar(coverpointp, exprp);
+        
+        // For now, only support non-array transition bins (single transition set)
+        // Array bins with transitions would require creating multiple hit variables
+        // and inserting them separately into the coverage database
+        if (binp->isArray()) {
+            binp->v3warn(E_UNSUPPORTED, "Array bins for transition bins not yet supported");
+            return;
+        }
+        
+        // Get the (single) transition set
+        AstCoverTransSet* transSetp = binp->transp();
+        if (!transSetp) {
+            binp->v3error("Transition bin without transition set");
+            return;
+        }
+
+            
+            // Get transition items (the sequence: item1 => item2 => item3)
+            std::vector<AstCoverTransItem*> items;
+            for (AstNode* itemp = transSetp->itemsp(); itemp; itemp = itemp->nextp()) {
+                if (AstCoverTransItem* transp = VN_CAST(itemp, CoverTransItem)) {
+                    items.push_back(transp);
+                }
+            }
+            
+            if (items.empty()) {
+                binp->v3error("Transition set without items");
+                return;
+            }
+            
+            // Check for unsupported repetition operators
+            for (AstCoverTransItem* item : items) {
+                if (item->repType() != VTransRepType::NONE) {
+                    binp->v3warn(E_UNSUPPORTED, "Transition repetition operators ([*], [->], [=]) not yet supported");
+                    return;
+                }
+            }
+            
+            // Build transition sequence check
+            // For (a => b): prev == a && current == b
+            // For (a => b => c): Need state machine (deferred for now - only support 2-value)
+            
+            if (items.size() == 1) {
+                // Single item transition not valid (need at least 2 values for =>)
+                binp->v3error("Transition requires at least two values");
+                return;
+            } else if (items.size() == 2) {
+                // Simple two-value transition: (val1 => val2)
+                AstNodeExpr* cond1p = buildTransitionItemCondition(items[0], 
+                    new AstVarRef{prevVarp->fileline(), prevVarp, VAccess::READ});
+                AstNodeExpr* cond2p = buildTransitionItemCondition(items[1], exprp->cloneTree(false));
+                
+                if (!cond1p || !cond2p) {
+                    binp->v3error("Could not build transition conditions");
+                    return;
+                }
+                
+                // Combine: prev matches val1 AND current matches val2
+                AstNodeExpr* fullCondp = new AstAnd{binp->fileline(), cond1p, cond2p};
+                
+                // Apply iff condition if present
+                if (AstNodeExpr* iffp = coverpointp->iffp()) {
+                    fullCondp = new AstAnd{binp->fileline(), iffp->cloneTree(false), fullCondp};
+                }
+                
+                // Create increment statement
+                AstNode* stmtp = new AstAssign{
+                    binp->fileline(),
+                    new AstVarRef{binp->fileline(), hitVarp, VAccess::WRITE},
+                    new AstAdd{binp->fileline(),
+                        new AstVarRef{binp->fileline(), hitVarp, VAccess::READ},
+                        new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
+                
+                // For illegal_bins, add an error message
+                if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+                    const string errMsg = "Illegal transition bin '" + binp->name() + "' hit in coverpoint '" 
+                                        + coverpointp->name() + "'";
+                    AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR, 
+                                                     errMsg, nullptr, nullptr};
+                    errorp->fmtp()->timeunit(m_covergroupp->timeunit());
+                    stmtp = stmtp->addNext(errorp);
+                    stmtp = stmtp->addNext(new AstStop{binp->fileline(), true});
+                }
+                
+                // Create if statement
+                AstIf* const ifp = new AstIf{binp->fileline(), fullCondp, stmtp, nullptr};
+                m_sampleFuncp->addStmtsp(ifp);
+                
+                UINFO(4, "      Successfully added 2-value transition if statement" << endl);
+            } else {
+                // Multi-value sequence (a => b => c => ...)
+                // TODO: Requires state machine to track position in sequence
+                binp->v3warn(E_UNSUPPORTED, "Multi-value transition sequences (>2 values) not yet supported");
+                return;
+            }
+    }
+    
+    // Build condition for a single transition item
+    // Returns expression that checks if value matches the item's value/range list
+    AstNodeExpr* buildTransitionItemCondition(AstCoverTransItem* itemp, AstNodeExpr* exprp) {
+        AstNodeExpr* condp = nullptr;
+        
+        // Get values from the transition item
+        for (AstNode* valp = itemp->valuesp(); valp; valp = valp->nextp()) {
+            AstNodeExpr* singleCondp = nullptr;
+            
+            if (AstConst* constp = VN_CAST(valp, Const)) {
+                // Simple value: check equality
+                singleCondp = new AstEq{constp->fileline(), exprp->cloneTree(false), 
+                                       constp->cloneTree(false)};
+            } else if (AstRange* rangep = VN_CAST(valp, Range)) {
+                // Range [min:max]: check if value is in range
+                singleCondp = new AstAnd{rangep->fileline(),
+                    new AstGte{rangep->fileline(), exprp->cloneTree(false), 
+                              rangep->leftp()->cloneTree(false)},
+                    new AstLte{rangep->fileline(), exprp->cloneTree(false), 
+                              rangep->rightp()->cloneTree(false)}};
+            } else if (AstInsideRange* inrangep = VN_CAST(valp, InsideRange)) {
+                // InsideRange [min:max]: similar to Range
+                singleCondp = new AstAnd{inrangep->fileline(),
+                    new AstGte{inrangep->fileline(), exprp->cloneTree(false), 
+                              inrangep->lhsp()->cloneTree(false)},
+                    new AstLte{inrangep->fileline(), exprp->cloneTree(false), 
+                              inrangep->rhsp()->cloneTree(false)}};
+            } else {
+                // Unknown node type - try to handle as expression
+                UINFO(4, "      Transition item has unknown value node type: " << valp->typeName() << endl);
+                // For now, just skip unknown types - this prevents crashes
+                continue;
+            }
+            
+            // OR together multiple values
+            if (singleCondp) {
+                if (condp) {
+                    condp = new AstOr{itemp->fileline(), condp, singleCondp};
+                } else {
+                    condp = singleCondp;
+                }
+            }
+        }
+        
+        if (!condp) {
+            // If no values were successfully processed, return nullptr
+            // The caller will handle this error
+            UINFO(4, "      No valid transition conditions could be built" << endl);
+        }
+        
+        return condp;
+    }
+    
     // Generate multiple bins for array bins
     // Array bins create one bin per value in the range list
     void generateArrayBins(AstCoverpoint* coverpointp, AstCoverBin* arrayBinp,
@@ -398,6 +633,22 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                     int maxVal = maxConstp->toSInt();
                     for (int val = minVal; val <= maxVal; ++val) {
                         values.push_back(new AstConst{rangenodep->fileline(), 
+                                                     AstConst::Signed32{}, val});
+                    }
+                } else {
+                    arrayBinp->v3error("Array bins with non-constant ranges not supported");
+                    return;
+                }
+            } else if (AstInsideRange* const insideRangep = VN_CAST(rangep, InsideRange)) {
+                // For InsideRange [min:max], create bins for each value
+                AstConst* const minConstp = VN_CAST(insideRangep->lhsp(), Const);
+                AstConst* const maxConstp = VN_CAST(insideRangep->rhsp(), Const);
+                if (minConstp && maxConstp) {
+                    int minVal = minConstp->toSInt();
+                    int maxVal = maxConstp->toSInt();
+                    UINFO(6, "      Expanding InsideRange [" << minVal << ":" << maxVal << "]" << endl);
+                    for (int val = minVal; val <= maxVal; ++val) {
+                        values.push_back(new AstConst{insideRangep->fileline(), 
                                                      AstConst::Signed32{}, val});
                     }
                 } else {
@@ -427,7 +678,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             UINFO(4, "    Created array bin [" << index << "]: " << varName << endl);
             
             // Track for coverage computation
-            m_binInfos.push_back(BinInfo(arrayBinp, varp, atLeastValue));
+            m_binInfos.push_back(BinInfo(arrayBinp, varp, atLeastValue, coverpointp));
             
             // Generate matching code for this specific value
             generateArrayBinMatchCode(coverpointp, arrayBinp, exprp, varp, valuep);
@@ -532,8 +783,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         // Track this for coverage computation
         AstCoverBin* pseudoBinp = new AstCoverBin{
-            crossp->fileline(), binName, nullptr, false, false};
-        m_binInfos.push_back(BinInfo(pseudoBinp, varp));
+            crossp->fileline(), binName, static_cast<AstNode*>(nullptr), false, false};
+        m_binInfos.push_back(BinInfo(pseudoBinp, varp, 1, nullptr, crossp));
         
         // Generate matching code: if (bin1 && bin2 && ... && binN) varName++;
         generateNWayCrossBinMatchCode(crossp, coverpointRefs, bins, varp);
@@ -760,12 +1011,13 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             return;
         }
         
+        // Even if there are no bins, we still need to generate the coverage methods
+        // Empty covergroups should return 100% coverage
         if (m_binInfos.empty()) {
-            UINFO(4, "    No bins found for coverage computation" << endl);
-            return;
+            UINFO(4, "    No bins found, will generate method to return 100%" << endl);
+        } else {
+            UINFO(6, "    Found " << m_binInfos.size() << " bins for coverage" << endl);
         }
-        
-        UINFO(6, "    Found " << m_binInfos.size() << " bins for coverage" << endl);
         
         // Generate code for get_inst_coverage()
         if (getInstCoveragep) {
@@ -809,13 +1061,22 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         if (totalBins == 0) {
             // No coverage to compute - return 100%
+            UINFO(4, "    Empty covergroup, returning 100.0" << endl);
             AstVar* returnVarp = VN_AS(funcp->fvarp(), Var);
+            UINFO(4, "    Return variable: " << (returnVarp ? returnVarp->name() : "NULL") << endl);
             if (returnVarp) {
-                funcp->addStmtsp(new AstAssign{
+                AstAssign* assignp = new AstAssign{
                     fl,
                     new AstVarRef{fl, returnVarp, VAccess::WRITE},
-                    new AstConst{fl, AstConst::RealDouble{}, 100.0}});
+                    new AstConst{fl, AstConst::RealDouble{}, 100.0}};
+                funcp->addStmtsp(assignp);
+                UINFO(4, "    Added assignment to return 100.0" << endl);
+            } else {
+                UINFO(4, "    ERROR: No return variable found!" << endl);
             }
+            // NOTE: There's a known issue where this assignment doesn't get emitted to C++
+            // The generated code still shows initialization to 0 instead of our assignment
+            // This requires deeper investigation of the C++ emitter (V3EmitC)
             return;
         }
         
@@ -897,6 +1158,91 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             count++;
         }
         return count;
+    }
+
+    void generateCoverageRegistration() {
+        // Generate VL_COVER_INSERT calls for each bin in the covergroup
+        // This registers the bins with the coverage database so they can be reported
+        
+        UINFO(4, "  Generating coverage database registration for " 
+              << m_binInfos.size() << " bins" << endl);
+        
+        if (m_binInfos.empty()) return;
+        
+        // We need to add the registration code to the constructor
+        // The registration should happen after member variables are initialized
+        if (!m_constructorp) {
+            m_covergroupp->v3warn(E_UNSUPPORTED, 
+                                   "Cannot generate coverage registration without constructor");
+            return;
+        }
+        
+        // For each bin, generate a VL_COVER_INSERT call
+        // The calls use CCall nodes to invoke VL_COVER_INSERT macro
+        for (const BinInfo& binInfo : m_binInfos) {
+            AstVar* varp = binInfo.varp;
+            AstCoverBin* binp = binInfo.binp;
+            AstCoverpoint* coverpointp = binInfo.coverpointp;
+            AstCoverCross* crossp = binInfo.crossp;
+            
+            // Skip illegal and ignore bins - they don't count towards coverage
+            if (binp->binsType() == VCoverBinsType::IGNORE ||
+                binp->binsType() == VCoverBinsType::ILLEGAL) {
+                continue;
+            }
+            
+            FileLine* fl = binp->fileline();
+            
+            // Build hierarchical name: covergroup.coverpoint.bin or covergroup.cross.bin
+            std::string hierName = m_covergroupp->name();
+            std::string binName = binp->name();
+            
+            if (coverpointp) {
+                // Coverpoint bin: use coverpoint name or generate from expression
+                std::string cpName = coverpointp->name();
+                if (cpName.empty()) {
+                    // Generate name from expression
+                    if (coverpointp->exprp()) {
+                        cpName = coverpointp->exprp()->name();
+                        if (cpName.empty()) cpName = "cp";
+                    } else {
+                        cpName = "cp";
+                    }
+                }
+                hierName += "." + cpName;
+            } else if (crossp) {
+                // Cross bin: use cross name
+                std::string crossName = crossp->name();
+                if (crossName.empty()) crossName = "cross";
+                hierName += "." + crossName;
+            }
+            hierName += "." + binName;
+            
+            // Generate: VL_COVER_INSERT(contextp, hier, &binVar, "page", "v_funccov/...", ...)
+            
+            UINFO(6, "    Registering bin: " << hierName << " -> " << varp->name() << endl);
+            
+            // Build the coverage insert as a C statement
+            // The variable reference needs to be &this->varname, where varname gets mangled to __PVT__varname
+            // Use "page" field with v_funccov prefix so type is extracted correctly (consistent with code coverage)
+            std::string pageName = "v_funccov/" + m_covergroupp->name();
+            std::string insertCall = "VL_COVER_INSERT(vlSymsp->_vm_contextp__->coveragep(), ";
+            insertCall += "\"" + hierName + "\", ";
+            insertCall += "&(this->__PVT__" + varp->name() + "), ";
+            insertCall += "\"page\", \"" + pageName + "\", ";
+            insertCall += "\"filename\", \"" + fl->filename() + "\", ";
+            insertCall += "\"lineno\", \"" + std::to_string(fl->lineno()) + "\", ";
+            insertCall += "\"column\", \"" + std::to_string(fl->firstColumn()) + "\", ";
+            insertCall += "\"bin\", \"" + binName + "\");";
+            
+            // Create a statement node with the coverage insert call
+            AstCStmt* cstmtp = new AstCStmt{fl, insertCall};
+            
+            // Add to constructor
+            m_constructorp->addStmtsp(cstmtp);
+            
+            UINFO(6, "      Added VL_COVER_INSERT call to constructor" << endl);
+        }
     }
 
     // VISITORS

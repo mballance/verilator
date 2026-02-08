@@ -7108,11 +7108,23 @@ bins_or_options<nodep>:  // ==IEEE: bins_or_options
         //
         //                      // cgexpr part of trans_list
         |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
-                        { $$ = nullptr; BBCOVERIGN($<fl>4, "Ignoring unsupported: cover bin trans list"); DEL($5, $6); }
+                        { 
+                                FileLine* isArray = $<fl>3;
+                                $$ = new AstCoverBin{$<fl>2, *$2, static_cast<AstCoverTransSet*>($5), false, false, isArray != nullptr};
+                                DEL($6); 
+                        }
         |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
-                        { $$ = nullptr; BBCOVERIGN($<fl>4, "Ignoring unsupported: cover bin trans list"); DEL($5, $6); }
+                        { 
+                                FileLine* isArray = $<fl>3;
+                                $$ = new AstCoverBin{$<fl>2, *$2, static_cast<AstCoverTransSet*>($5), true, false, isArray != nullptr};
+                                DEL($6); 
+                        }
         |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
-                        { $$ = nullptr; BBCOVERIGN($<fl>4, "Ignoring unsupported: cover bin trans list"); DEL($5, $6); }
+                        { 
+                                FileLine* isArray = $<fl>3;
+                                $$ = new AstCoverBin{$<fl>2, *$2, static_cast<AstCoverTransSet*>($5), false, true, isArray != nullptr};
+                                DEL($6); 
+                        }
         |       yWILDCARD yBINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: cover bin 'wildcard' trans list"); DEL($6, $7);}
         |       yWILDCARD yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
@@ -7148,15 +7160,25 @@ trans_list<nodep>:  // ==IEEE: trans_list
         |       trans_list ',' '(' trans_set ')'        { $$ = addNextNull($1, $4); }
         ;
 
-trans_set<nodep>:  // ==IEEE: trans_set
-                trans_range_list                        { $$ = $1; }
-        //                      // Note the { => } in the grammar, this is really a list
+trans_set<nodep>:  // ==IEEE: trans_set (returns AstCoverTransSet)
+                trans_range_list                        { 
+                        // Single transition item - wrap in AstCoverTransSet
+                        $$ = new AstCoverTransSet{$<fl>1, static_cast<AstCoverTransItem*>($1)}; 
+                }
         |       trans_set yP_EQGT trans_range_list
-                        { $$ = $1; BBCOVERIGN($<fl>2, "Ignoring unsupported: cover trans set '=>'"); DEL($3); }
+                { 
+                        // Chain transition items with => operator
+                        // Add new item to existing set
+                        $$ = $1;
+                        static_cast<AstCoverTransSet*>($$)->addItemsp(static_cast<AstCoverTransItem*>($3));
+                }
         ;
 
-trans_range_list<nodep>:  // ==IEEE: trans_range_list
-                trans_item                              { $$ = $1; }
+trans_range_list<nodep>:  // ==IEEE: trans_range_list (returns AstCoverTransItem)
+                trans_item                              { 
+                        // Simple transition item without repetition
+                        $$ = new AstCoverTransItem{$<fl>1, $1, VTransRepType::NONE};
+                }
         |       trans_item yP_BRASTAR cgexpr ']'
                         { $$ = nullptr; BBCOVERIGN($<fl>2, "Ignoring unsupported: cover '[*'"); DEL($1, $3); }
         |       trans_item yP_BRASTAR cgexpr ':' cgexpr ']'
@@ -7171,7 +7193,7 @@ trans_range_list<nodep>:  // ==IEEE: trans_range_list
                         { $$ = nullptr; BBCOVERIGN($<fl>2, "Ignoring unsupported: cover '[='"); DEL($1, $3, $5); }
         ;
 
-trans_item<nodep>:  // ==IEEE: range_list
+trans_item<nodep>:  // ==IEEE: range_list (returns range list node)
                 covergroup_range_list                   { $$ = $1; }
         ;
 
