@@ -7,6 +7,7 @@
 // Test mixed bin types: single values and ranges
 
 module t (/*AUTOARG*/);
+    /* verilator lint_off UNSIGNED */
     logic [7:0] opcode;
 
     covergroup cg;

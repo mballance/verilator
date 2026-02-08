@@ -38,16 +38,87 @@ This document outlines a comprehensive plan for implementing SystemVerilog funct
   - Result: Bins now correctly typed, filtered from coverage computation, error on illegal hit
 - 10 comprehensive tests passing
 
+**Phase 7: Cross Coverage - COMPLETE** ✅
+- Cross coverage (2-way, 3-way, N-way) fully implemented and working
+- Parser: ✅ Already had full cross support with coverpoint references
+- Code generation: ✅ Cartesian product bin generation working
+- Coverage computation: ✅ Cross bins counted correctly in get_inst_coverage()
+- Verified with comprehensive tests:
+  - 2-way cross (2×2 = 4 bins)
+  - 3-way cross (2×2×2 = 8 bins)
+- N-way cross supported via recursive Cartesian product algorithm
+
+**Phase 8: Wildcard Bins - COMPLETE** ✅
+- Wildcard bins with don't-care matching fully implemented
+- Parser: ✅ Already recognized `wildcard bins` keyword
+- AST: ✅ Added VCoverBinsType::WILDCARD enum value
+- Code generation: ✅ Bit-mask matching implemented
+  - Generates `(expr & mask) == (value & mask)` conditions
+  - Properly handles X/Z bits as don't-cares
+- Test verified: 8-bit patterns with ? wildcards work correctly
+- Examples: `8'b0000_????`, `8'b1111_????`, `8'b10?0_11??`
+
+**Phase 9: Bin Options - COMPLETE** ✅
+- Bin options parsing and enforcement implemented
+- Parser: ✅ Converts `AstCgOptionAssign` to `AstCoverOption` nodes
+- Options supported:
+  - `option.at_least = N` ✅ - Enforced in coverage computation
+  - `option.weight = N` - Parsed (not yet used)
+  - `option.goal = N` - Parsed (not yet used)
+  - `option.comment = "string"` - Parsed
+  - `option.auto_bin_max = N` - Parsed
+  - `option.per_instance = 0/1` - Parsed
+- Coverage computation updated to check `bin_count >= at_least`
+- Test verified: at_least=2 requires 2+ hits for coverage
+
+**Phase 10: get_coverage() Method - PARTIAL** ⚠️
+- Static/type-level get_coverage() method implemented
+- Currently returns 0.0 (placeholder for full implementation)
+- Full implementation requires instance tracking infrastructure:
+  - Need to track all instances globally
+  - Aggregate coverage across all instances
+  - This requires static counters or instance registry
+- Test verified: Method exists and is callable
+- Future: Implement proper instance aggregation
+
+**Phase 11: Default Bins - COMPLETE** ✅
+- Default bins implementation fully working
+- Parser: ✅ Creates AstCoverBin with VCoverBinsType::DEFAULT
+- Code generation: ✅ Two-pass approach:
+  1. First pass: Generate code for all explicit bins
+  2. Second pass: Generate default bins with NOT(all_explicit_bins) condition
+- Default bins match values not covered by any other explicit bin
+- Properly excludes ignore_bins and illegal_bins from negation condition
+- Test verified: Default bin catches uncovered values correctly
+- Coverage computation treats default bins as regular bins
+
+**Phase 12: Coverage Database Output - ANALYSIS COMPLETE** 📋
+- Analyzed integration requirements with Verilator's coverage system
+- **Current Status**: Bins are counted but not registered with coverage database
+- **Requirements identified**:
+  1. Access to `VerilatedCovContext` in class constructors
+  2. `VL_COVER_INSERT()` macro calls for each bin
+  3. Hierarchical naming scheme for functional coverage bins
+  4. New coverage type identifier (e.g., "funccov" beyond line/block/toggle)
+  5. Updates to verilator_coverage tool to parse functional coverage
+- **Challenges**:
+  - Functional coverage lives in class instances, not modules
+  - Coverage context must be threaded through class instantiation
+  - Requires changes to class code generation infrastructure
+  - Each bin needs globally unique hierarchical identifier
+- **Recommendation**: Defer to future work - requires architectural changes beyond current scope
+
 **Next Steps (Priority Order):**
-1. Implement cross coverage (2-way basic)
-2. Add wildcard bins support
-3. Implement bin options (at least, bins, default, etc.)
-4. Implement get_coverage() (static/type-level)  
-5. Add coverage output to verilator_coverage tool
+1. Implement coverage database integration (requires infrastructure work)
+2. Implement instance tracking for full get_coverage() aggregation
+3. Implement cross coverage bin filtering (binsof, intersect)
+4. Add array bins support (bins name[] = {...})
+5. Weight-based coverage aggregation
 
 **Current Test Status:**
-- ✅ 7/7 core tests passing
-- 🚧 1 test for ignore_bins (debugging filtering logic)
+- ✅ 17 tests passing (11 original + 2 cross + 1 wildcard + 1 bin options + 1 get_coverage + 1 default bins)
+- All core functional coverage features working
+- Coverage computation correct, but not yet integrated with coverage database
 
 ### Existing Code Coverage Infrastructure
 

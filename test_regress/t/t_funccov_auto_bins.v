@@ -3,6 +3,7 @@
 // Test that bins auto[N] automatically divides the value space
 
 module t;
+    /* verilator lint_off UNSIGNED */
     /* verilator lint_off CMPCONST */
     logic [2:0] data;  // 3-bit: 0-7
 

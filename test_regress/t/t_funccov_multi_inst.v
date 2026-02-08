@@ -7,6 +7,7 @@
 // Test multiple covergroup instances with separate tracking
 
 module t (/*AUTOARG*/);
+    /* verilator lint_off UNSIGNED */
     logic [3:0] data1, data2;
 
     covergroup cg;

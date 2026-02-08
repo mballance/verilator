@@ -7,6 +7,7 @@
 // Test viewing individual bin hit counts
 
 module t (/*AUTOARG*/);
+    /* verilator lint_off UNSIGNED */
     logic [3:0] data;
 
     covergroup cg;

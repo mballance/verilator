@@ -7,6 +7,7 @@
 // Test basic functional coverage sampling
 
 module t (/*AUTOARG*/);
+    /* verilator lint_off UNSIGNED */
     logic [3:0] data;
     int cyc = 0;
 

@@ -66,15 +66,21 @@ class AstCoverBin final : public AstNode {
     VCoverBinsType m_type;
     bool m_isArray = false;
 public:
-    AstCoverBin(FileLine* fl, const string& name, AstNode* rangesp, bool ignore, bool illegal)
+    AstCoverBin(FileLine* fl, const string& name, AstNode* rangesp, bool ignore, bool illegal, bool wildcard = false)
         : ASTGEN_SUPER_CoverBin(fl), m_name{name}, 
-          m_type{illegal ? VCoverBinsType::ILLEGAL : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::USER)} {
+          m_type{wildcard ? VCoverBinsType::WILDCARD : 
+                 (illegal ? VCoverBinsType::ILLEGAL : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::USER))} {
         if (rangesp) addRangesp(rangesp);
     }
     // Constructor for automatic bins
     AstCoverBin(FileLine* fl, const string& name, AstNodeExpr* arraySizep)
         : ASTGEN_SUPER_CoverBin(fl), m_name{name}, m_type{VCoverBinsType::AUTO}, m_isArray{true} {
         this->arraySizep(arraySizep);
+    }
+    // Constructor for default bins (catch-all)
+    AstCoverBin(FileLine* fl, const string& name, VCoverBinsType type)
+        : ASTGEN_SUPER_CoverBin(fl), m_name{name}, m_type{type} {
+        // DEFAULT bins have no ranges - they catch everything not in other bins
     }
     ASTGEN_MEMBERS_AstCoverBin;
     void dump(std::ostream& str) const override;

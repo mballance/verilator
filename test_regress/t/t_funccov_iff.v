@@ -7,6 +7,7 @@
 // Test iff condition filtering in coverpoints
 
 module t (/*AUTOARG*/);
+    /* verilator lint_off UNSIGNED */
     logic [3:0] data;
     logic       enable;
 

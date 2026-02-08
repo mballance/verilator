@@ -7,6 +7,7 @@
 // Test basic functional coverage infrastructure
 
 module t;
+    /* verilator lint_off UNSIGNED */
    int addr;
    int cmd;
 

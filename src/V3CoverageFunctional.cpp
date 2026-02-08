@@ -39,11 +39,12 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     std::vector<AstCoverpoint*> m_coverpoints;  // Coverpoints in current covergroup
     std::vector<AstCoverCross*> m_coverCrosses;  // Cross coverage items in current covergroup
     
-    // Structure to track bins with their variables
+    // Structure to track bins with their variables and options
     struct BinInfo {
         AstCoverBin* binp;
         AstVar* varp;
-        BinInfo(AstCoverBin* b, AstVar* v) : binp{b}, varp{v} {}
+        int atLeast;  // Minimum hits required for coverage (from option.at_least)
+        BinInfo(AstCoverBin* b, AstVar* v, int al = 1) : binp{b}, varp{v}, atLeast{al} {}
     };
     std::vector<BinInfo> m_binInfos;  // All bins in current covergroup
 
@@ -152,6 +153,22 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
     }
     
+    // Extract option values from a coverpoint
+    int getCoverpointAtLeast(AstCoverpoint* coverpointp) {
+        // Look for option.at_least in coverpoint options
+        for (AstNode* optionp = coverpointp->optionsp(); optionp; optionp = optionp->nextp()) {
+            if (AstCoverOption* optp = VN_CAST(optionp, CoverOption)) {
+                if (optp->optionType() == VCoverOptionType::AT_LEAST) {
+                    // Extract the value from the option expression
+                    if (AstConst* constp = VN_CAST(optp->valuep(), Const)) {
+                        return constp->toSInt();
+                    }
+                }
+            }
+        }
+        return 1;  // Default: at least 1 hit required
+    }
+    
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
         if (!m_sampleFuncp || !m_constructorp) {
             coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without sample() or constructor");
@@ -170,7 +187,13 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // Expand automatic bins before processing
         expandAutomaticBins(coverpointp, exprp);
         
+        // Extract option values for this coverpoint
+        int atLeastValue = getCoverpointAtLeast(coverpointp);
+        UINFO(6, "    Coverpoint at_least = " << atLeastValue << endl);
+        
         // Generate member variables and matching code for each bin
+        // Process in two passes: first non-default bins, then default bins
+        std::vector<AstCoverBin*> defaultBins;
         int binCount = 0;
         for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
             if (++binCount > 1000) {
@@ -179,6 +202,12 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             }
             AstCoverBin* const cbinp = VN_CAST(binp, CoverBin);
             if (!cbinp) continue;
+            
+            // Defer default bins to second pass
+            if (cbinp->binsType() == VCoverBinsType::DEFAULT) {
+                defaultBins.push_back(cbinp);
+                continue;
+            }
             
             // Create a member variable to track hits for this bin
             // Sanitize bin name to make it a valid C++ identifier
@@ -196,8 +225,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                   << (cbinp->binsType() == VCoverBinsType::IGNORE ? " (IGNORE)" :
                       cbinp->binsType() == VCoverBinsType::ILLEGAL ? " (ILLEGAL)" : " (USER)") << endl);
             
-            // Track this bin for coverage computation
-            m_binInfos.push_back(BinInfo(cbinp, varp));
+            // Track this bin for coverage computation with at_least value
+            m_binInfos.push_back(BinInfo(cbinp, varp, atLeastValue));
             
             // TODO: Generate coverage database registration
             // Coverage declarations need special handling for classes vs modules
@@ -206,113 +235,36 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             // Generate bin matching code in sample()
             generateBinMatchCode(coverpointp, cbinp, exprp, varp);
         }
+        
+        // Second pass: Handle default bins
+        // Default bin matches when value doesn't match any other explicit bin
+        for (AstCoverBin* defBinp : defaultBins) {
+            // Create member variable for default bin
+            string binName = defBinp->name();
+            std::replace(binName.begin(), binName.end(), '[', '_');
+            std::replace(binName.begin(), binName.end(), ']', '_');
+            const string varName = "__Vcov_" + coverpointp->name() + "_" + binName;
+            AstVar* const varp = new AstVar{
+                defBinp->fileline(), VVarType::MEMBER, varName,
+                defBinp->findUInt32DType()};
+            varp->isStatic(false);
+            m_covergroupp->addMembersp(varp);
+            UINFO(4, "    Created default bin variable: " << varName << endl);
+            
+            // Track for coverage computation
+            m_binInfos.push_back(BinInfo(defBinp, varp, atLeastValue));
+            
+            // Generate matching code: if (NOT (bin1 OR bin2 OR ... OR binN))
+            generateDefaultBinMatchCode(coverpointp, defBinp, exprp, varp);
+        }
     }
     
     void generateBinMatchCode(AstCoverpoint* coverpointp, AstCoverBin* binp,
                               AstNodeExpr* exprp, AstVar* hitVarp) {
         UINFO(4, "    Generating bin match for: " << binp->name() << endl);
         
-        // Get the range list from the bin
-        AstNode* rangep = binp->rangesp();
-        if (!rangep) {
-            UINFO(4, "      No range found for bin" << endl);
-            return;
-        }
-        
-        // Build condition by OR-ing all ranges together
-        AstNodeExpr* fullCondp = nullptr;
-        int rangeCount = 0;
-        
-        for (AstNode* currRangep = rangep; currRangep; currRangep = currRangep->nextp()) {
-            if (++rangeCount > 100) {
-                binp->v3error("Too many ranges in bin (max 100)");
-                break;
-            }
-            
-            // Clone the expression for this range
-            AstNodeExpr* exprClonep = exprp->cloneTree(false);
-            
-            // Build condition for this specific range
-            AstNodeExpr* rangeCondp = nullptr;
-            
-            if (AstInsideRange* irp = VN_CAST(currRangep, InsideRange)) {
-                // INSIDERANGE has min and max as children
-                // Convert to: (expr >= min) && (expr <= max)
-                AstNode* minp = irp->lhsp();
-                AstNode* maxp = irp->rhsp();
-                
-                if (minp && maxp) {
-                    AstNodeExpr* minExprp = VN_CAST(minp, NodeExpr);
-                    AstNodeExpr* maxExprp = VN_CAST(maxp, NodeExpr);
-                    if (minExprp && maxExprp) {
-                        AstNodeExpr* exprClone2p = exprp->cloneTree(false);
-                        
-                        // Check if this is a single-value range (min == max)
-                        bool isSingleValue = false;
-                        if (const AstConst* minConstp = VN_CAST(minExprp, Const)) {
-                            if (const AstConst* maxConstp = VN_CAST(maxExprp, Const)) {
-                                if (minConstp->toUInt() == maxConstp->toUInt()) {
-                                    isSingleValue = true;
-                                }
-                            }
-                        }
-                        
-                        if (isSingleValue) {
-                            // Single value: just check equality
-                            rangeCondp = new AstEq{binp->fileline(), exprClonep, 
-                                                   minExprp->cloneTree(false)};
-                            exprClone2p->deleteTree();
-                        } else {
-                            // Check if min is constant 0 - skip the >= check to avoid UNSIGNED warning
-                            bool skipMinCheck = false;
-                            if (const AstConst* constp = VN_CAST(minExprp, Const)) {
-                                if (constp->toUInt() == 0) skipMinCheck = true;
-                            }
-                            
-                            if (skipMinCheck) {
-                                // Just check upper bound
-                                rangeCondp = new AstLte{binp->fileline(), exprClonep, 
-                                                        maxExprp->cloneTree(false)};
-                                exprClone2p->deleteTree();
-                            } else {
-                                // Check both bounds
-                                rangeCondp = new AstAnd{
-                                    binp->fileline(),
-                                    new AstGte{binp->fileline(), exprClonep, 
-                                              minExprp->cloneTree(false)},
-                                    new AstLte{binp->fileline(), exprClone2p, 
-                                              maxExprp->cloneTree(false)}};
-                            }
-                        }
-                    } else {
-                        UINFO(4, "      Min or max is not an expression" << endl);
-                        exprClonep->deleteTree();
-                        continue;
-                    }
-                } else {
-                    UINFO(4, "      Could not extract min/max from INSIDERANGE" << endl);
-                    exprClonep->deleteTree();
-                    continue;
-                }
-            } else {
-                // Fallback: just check equality with the range expression
-                AstNodeExpr* rangeExprp = VN_CAST(currRangep, NodeExpr);
-                if (!rangeExprp) {
-                    UINFO(4, "      Cannot convert range to expression" << endl);
-                    exprClonep->deleteTree();
-                    continue;
-                }
-                rangeCondp = new AstEq{binp->fileline(), exprClonep, 
-                                       rangeExprp->cloneTree(false)};
-            }
-            
-            // Combine with previous conditions using OR
-            if (fullCondp) {
-                fullCondp = new AstOr{binp->fileline(), fullCondp, rangeCondp};
-            } else {
-                fullCondp = rangeCondp;
-            }
-        }
+        // Build the bin matching condition using the shared function
+        AstNodeExpr* fullCondp = buildBinCondition(binp, exprp);
         
         if (!fullCondp) {
             UINFO(4, "      No valid conditions generated" << endl);
@@ -354,6 +306,72 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
         m_sampleFuncp->addStmtsp(ifp);
         UINFO(4, "      Successfully added if statement for bin: " << binp->name() << endl);
+    }
+    
+    // Generate matching code for default bins
+    // Default bins match when value doesn't match any other explicit bin
+    void generateDefaultBinMatchCode(AstCoverpoint* coverpointp, AstCoverBin* defBinp,
+                                     AstNodeExpr* exprp, AstVar* hitVarp) {
+        UINFO(4, "    Generating default bin match for: " << defBinp->name() << endl);
+        
+        // Build OR of all non-default, non-ignore bins
+        AstNodeExpr* anyBinMatchp = nullptr;
+        
+        for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
+            AstCoverBin* const cbinp = VN_CAST(binp, CoverBin);
+            if (!cbinp) continue;
+            
+            // Skip default, ignore, and illegal bins
+            if (cbinp->binsType() == VCoverBinsType::DEFAULT ||
+                cbinp->binsType() == VCoverBinsType::IGNORE ||
+                cbinp->binsType() == VCoverBinsType::ILLEGAL) {
+                continue;
+            }
+            
+            // Build condition for this bin
+            AstNodeExpr* binCondp = buildBinCondition(cbinp, exprp);
+            if (!binCondp) continue;
+            
+            // OR with previous conditions
+            if (anyBinMatchp) {
+                anyBinMatchp = new AstOr{defBinp->fileline(), anyBinMatchp, binCondp};
+            } else {
+                anyBinMatchp = binCondp;
+            }
+        }
+        
+        // Default matches when NO explicit bin matches
+        AstNodeExpr* defaultCondp = nullptr;
+        if (anyBinMatchp) {
+            // NOT (bin1 OR bin2 OR ... OR binN)
+            defaultCondp = new AstNot{defBinp->fileline(), anyBinMatchp};
+        } else {
+            // No other bins - default always matches (shouldn't happen in practice)
+            defaultCondp = new AstConst{defBinp->fileline(), AstConst::BitTrue{}};
+        }
+        
+        // Apply iff condition if present
+        if (AstNodeExpr* iffp = coverpointp->iffp()) {
+            defaultCondp = new AstAnd{defBinp->fileline(), iffp->cloneTree(false), defaultCondp};
+        }
+        
+        // Create increment statement
+        AstNode* stmtp = new AstAssign{
+            defBinp->fileline(),
+            new AstVarRef{defBinp->fileline(), hitVarp, VAccess::WRITE},
+            new AstAdd{defBinp->fileline(),
+                new AstVarRef{defBinp->fileline(), hitVarp, VAccess::READ},
+                new AstConst{defBinp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
+        
+        // Create if statement
+        AstIf* const ifp = new AstIf{defBinp->fileline(), defaultCondp, stmtp, nullptr};
+        
+        if (!m_sampleFuncp) {
+            defBinp->v3error("INTERNAL: m_sampleFuncp is null for default bin");
+            return;
+        }
+        m_sampleFuncp->addStmtsp(ifp);
+        UINFO(4, "      Successfully added default bin if statement" << endl);
     }
     
     // Recursive helper to generate Cartesian product of cross bins
@@ -521,6 +539,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstNode* rangep = binp->rangesp();
         if (!rangep) return nullptr;
         
+        // Check if this is a wildcard bin
+        bool isWildcard = (binp->binsType() == VCoverBinsType::WILDCARD);
+        
         // Build condition by OR-ing all ranges together
         AstNodeExpr* fullCondp = nullptr;
         
@@ -543,8 +564,12 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                         
                         if (minConstp && maxConstp && minConstp->toSInt() == maxConstp->toSInt()) {
                             // Single value
-                            rangeCondp = new AstEq{binp->fileline(), exprClonep, 
-                                                   minExprp->cloneTree(false)};
+                            if (isWildcard) {
+                                rangeCondp = buildWildcardCondition(binp, exprClonep, minConstp);
+                            } else {
+                                rangeCondp = new AstEq{binp->fileline(), exprClonep, 
+                                                       minExprp->cloneTree(false)};
+                            }
                         } else {
                             // Range
                             AstNodeExpr* gep = new AstGte{binp->fileline(), exprClonep, 
@@ -556,7 +581,11 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                     }
                 }
             } else if (AstConst* constp = VN_CAST(currRangep, Const)) {
-                rangeCondp = new AstEq{binp->fileline(), exprClonep, constp->cloneTree(false)};
+                if (isWildcard) {
+                    rangeCondp = buildWildcardCondition(binp, exprClonep, constp);
+                } else {
+                    rangeCondp = new AstEq{binp->fileline(), exprClonep, constp->cloneTree(false)};
+                }
             }
             
             if (rangeCondp) {
@@ -566,6 +595,37 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
         
         return fullCondp;
+    }
+    
+    // Build a wildcard condition: (expr & mask) == (value & mask)
+    // where mask has 1s for defined bits and 0s for wildcard bits
+    AstNodeExpr* buildWildcardCondition(AstCoverBin* binp, AstNodeExpr* exprp, AstConst* constp) {
+        FileLine* fl = binp->fileline();
+        
+        // Extract mask from constant (bits that are not X/Z)
+        V3Number mask{constp, constp->width()};
+        V3Number value{constp, constp->width()};
+        
+        for (int bit = 0; bit < constp->width(); ++bit) {
+            // If bit is X or Z (don't care), set mask bit to 0
+            // Otherwise set to 1 and keep the value
+            if (constp->num().bitIs0(bit) || constp->num().bitIs1(bit)) {
+                mask.setBit(bit, 1);
+                value.setBit(bit, constp->num().bitIs1(bit) ? 1 : 0);
+            } else {
+                mask.setBit(bit, 0);
+                value.setBit(bit, 0);
+            }
+        }
+        
+        // Generate: (expr & mask) == (value & mask)
+        AstConst* maskConstp = new AstConst{fl, mask};
+        AstConst* valueConstp = new AstConst{fl, value};
+        
+        AstNodeExpr* exprMasked = new AstAnd{fl, exprp, maskConstp};
+        AstNodeExpr* valueMasked = new AstAnd{fl, valueConstp, maskConstp->cloneTree(false)};
+        
+        return new AstEq{fl, exprMasked, valueMasked};
     }
     
     void generateCoverageComputationCode() {
@@ -602,9 +662,26 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         UINFO(6, "    Found " << m_binInfos.size() << " bins for coverage" << endl);
         
-        // Generate code for get_inst_coverage() only (get_coverage() needs aggregation)
+        // Generate code for get_inst_coverage()
         if (getInstCoveragep) {
             generateCoverageMethodBody(getInstCoveragep);
+        }
+        
+        // Generate code for get_coverage() (type-level)
+        // NOTE: Full type-level coverage requires instance tracking infrastructure
+        // For now, return 0.0 as a placeholder
+        if (getCoveragep) {
+            AstVar* returnVarp = VN_AS(getCoveragep->fvarp(), Var);
+            if (returnVarp) {
+                // TODO: Implement proper type-level coverage aggregation
+                // This requires tracking all instances and averaging their coverage
+                // For now, return 0.0
+                getCoveragep->addStmtsp(new AstAssign{
+                    getCoveragep->fileline(),
+                    new AstVarRef{getCoveragep->fileline(), returnVarp, VAccess::WRITE},
+                    new AstConst{getCoveragep->fileline(), AstConst::RealDouble{}, 0.0}});
+                UINFO(4, "    Added placeholder get_coverage() (returns 0.0)" << endl);
+            }
         }
     }
     
@@ -658,12 +735,12 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 continue;
             }
             
-            // if (bin_count > 0) covered_count++;
+            // if (bin_count >= at_least) covered_count++;
             AstIf* ifp = new AstIf{
                 fl,
-                new AstGt{fl,
+                new AstGte{fl,
                     new AstVarRef{fl, bi.varp, VAccess::READ},
-                    new AstConst{fl, AstConst::WidthedValue{}, 32, 0}},
+                    new AstConst{fl, AstConst::WidthedValue{}, 32, bi.atLeast}},
                 new AstAssign{
                     fl,
                     new AstVarRef{fl, coveredCountp, VAccess::WRITE},
