@@ -37,6 +37,14 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     AstFunc* m_sampleFuncp = nullptr;   // Current sample() function
     AstFunc* m_constructorp = nullptr;  // Current constructor
     std::vector<AstCoverpoint*> m_coverpoints;  // Coverpoints in current covergroup
+    
+    // Structure to track bins with their variables
+    struct BinInfo {
+        AstCoverBin* binp;
+        AstVar* varp;
+        BinInfo(AstCoverBin* b, AstVar* v) : binp{b}, varp{v} {}
+    };
+    std::vector<BinInfo> m_binInfos;  // All bins in current covergroup
 
     // METHODS
     void processCovergroup() {
@@ -45,6 +53,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         UINFO(4, "Processing covergroup: " << m_covergroupp->name() 
               << " with " << m_coverpoints.size() << " coverpoints" << endl);
         
+        // Clear bin info for this covergroup
+        m_binInfos.clear();
+        
         // For each coverpoint, generate sampling code
         for (AstCoverpoint* cpp : m_coverpoints) {
             generateCoverpointCode(cpp);
@@ -52,6 +63,86 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         // Generate coverage computation code
         generateCoverageComputationCode();
+    }
+    
+    void expandAutomaticBins(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {
+        // Find and expand any automatic bins
+        AstNode* prevBinp = nullptr;
+        for (AstNode* binp = coverpointp->binsp(); binp;) {
+            AstCoverBin* const cbinp = VN_CAST(binp, CoverBin);
+            AstNode* nextBinp = binp->nextp();
+            
+            if (cbinp && cbinp->binsType() == VCoverBinsType::AUTO) {
+                UINFO(4, "  Expanding automatic bin: " << cbinp->name() << endl);
+                
+                // Get array size - must be a constant
+                AstNodeExpr* sizep = cbinp->arraySizep();
+                if (!sizep) {
+                    cbinp->v3error("Automatic bins requires array size [N]");
+                    binp = nextBinp;
+                    continue;
+                }
+                
+                // Evaluate as constant
+                const AstConst* constp = VN_CAST(sizep, Const);
+                if (!constp) {
+                    cbinp->v3error("Automatic bins array size must be a constant");
+                    binp = nextBinp;
+                    continue;
+                }
+                
+                const int numBins = constp->toSInt();
+                if (numBins <= 0 || numBins > 10000) {
+                    cbinp->v3error("Automatic bins array size must be 1-10000, got " 
+                                   + std::to_string(numBins));
+                    binp = nextBinp;
+                    continue;
+                }
+                
+                // Calculate range division
+                const int width = exprp->width();
+                const uint64_t maxVal = (width >= 64) ? UINT64_MAX : ((1ULL << width) - 1);
+                const uint64_t binSize = (maxVal + 1) / numBins;
+                
+                UINFO(4, "    Width=" << width << " maxVal=" << maxVal 
+                      << " numBins=" << numBins << " binSize=" << binSize << endl);
+                
+                // Create expanded bins
+                for (int i = 0; i < numBins; i++) {
+                    const uint64_t lo = i * binSize;
+                    const uint64_t hi = (i == numBins - 1) ? maxVal : ((i + 1) * binSize - 1);
+                    
+                    // Create constants for range
+                    AstConst* loConstp = new AstConst{cbinp->fileline(), V3Number(cbinp->fileline(), width, lo)};
+                    AstConst* hiConstp = new AstConst{cbinp->fileline(), V3Number(cbinp->fileline(), width, hi)};
+                    
+                    // Create InsideRange [lo:hi]
+                    AstInsideRange* rangep = new AstInsideRange{cbinp->fileline(), loConstp, hiConstp};
+                    rangep->dtypeFrom(exprp);  // Set dtype from coverpoint expression
+                    
+                    // Create new bin
+                    const string binName = cbinp->name() + "[" + std::to_string(i) + "]";
+                    AstCoverBin* newBinp = new AstCoverBin{
+                        cbinp->fileline(), binName, rangep, false, false};
+                    
+                    // Insert after previous bin
+                    if (prevBinp) {
+                        prevBinp->addNext(newBinp);
+                    } else {
+                        coverpointp->addBinsp(newBinp);
+                    }
+                    prevBinp = newBinp;
+                }
+                
+                // Remove the AUTO bin from the list
+                binp->unlinkFrBack();
+                VL_DO_DANGLING(binp->deleteTree(), binp);
+            } else {
+                prevBinp = binp;
+            }
+            
+            binp = nextBinp;
+        }
     }
     
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
@@ -69,6 +160,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             return;
         }
         
+        // Expand automatic bins before processing
+        expandAutomaticBins(coverpointp, exprp);
+        
         // Generate member variables and matching code for each bin
         int binCount = 0;
         for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
@@ -80,13 +174,27 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             if (!cbinp) continue;
             
             // Create a member variable to track hits for this bin
-            const string varName = "__Vcov_" + coverpointp->name() + "_" + cbinp->name();
+            // Sanitize bin name to make it a valid C++ identifier
+            string binName = cbinp->name();
+            std::replace(binName.begin(), binName.end(), '[', '_');
+            std::replace(binName.begin(), binName.end(), ']', '_');
+            const string varName = "__Vcov_" + coverpointp->name() + "_" + binName;
             AstVar* const varp = new AstVar{
                 cbinp->fileline(), VVarType::MEMBER, varName,
                 cbinp->findUInt32DType()};
             varp->isStatic(false);
             m_covergroupp->addMembersp(varp);
-            UINFO(6, "    Created member variable: " << varName << endl);
+            UINFO(4, "    Created member variable: " << varName << " type=" 
+                  << static_cast<int>(cbinp->binsType()) 
+                  << (cbinp->binsType() == VCoverBinsType::IGNORE ? " (IGNORE)" :
+                      cbinp->binsType() == VCoverBinsType::ILLEGAL ? " (ILLEGAL)" : " (USER)") << endl);
+            
+            // Track this bin for coverage computation
+            m_binInfos.push_back(BinInfo(cbinp, varp));
+            
+            // TODO: Generate coverage database registration
+            // Coverage declarations need special handling for classes vs modules
+            // For now, bin counters exist but aren't registered with verilator_coverage
             
             // Generate bin matching code in sample()
             generateBinMatchCode(coverpointp, cbinp, exprp, varp);
@@ -97,90 +205,148 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                               AstNodeExpr* exprp, AstVar* hitVarp) {
         UINFO(4, "    Generating bin match for: " << binp->name() << endl);
         
-        // Get the range from the bin
+        // Get the range list from the bin
         AstNode* rangep = binp->rangesp();
         if (!rangep) {
             UINFO(4, "      No range found for bin" << endl);
             return;
         }
         
-        // Clone the expression for evaluation
-        AstNodeExpr* exprClonep = exprp->cloneTree(false);
+        // Build condition by OR-ing all ranges together
+        AstNodeExpr* fullCondp = nullptr;
+        int rangeCount = 0;
         
-        // Build condition based on the range type
-        AstNodeExpr* condp = nullptr;
-        
-        if (AstInsideRange* irp = VN_CAST(rangep, InsideRange)) {
-            // INSIDERANGE has min and max as children
-            // Convert to: (expr >= min) && (expr <= max)
-            // But optimize: if min is 0 and unsigned, skip the >= check
-            AstNode* minp = irp->lhsp();
-            AstNode* maxp = irp->rhsp();
+        for (AstNode* currRangep = rangep; currRangep; currRangep = currRangep->nextp()) {
+            if (++rangeCount > 100) {
+                binp->v3error("Too many ranges in bin (max 100)");
+                break;
+            }
             
-            if (minp && maxp) {
-                // minp and maxp should be expressions, cast them safely
-                AstNodeExpr* minExprp = VN_CAST(minp, NodeExpr);
-                AstNodeExpr* maxExprp = VN_CAST(maxp, NodeExpr);
-                if (minExprp && maxExprp) {
-                    AstNodeExpr* exprClone2p = exprp->cloneTree(false);
-                    
-                    // Check if min is constant 0 - skip the >= check to avoid UNSIGNED warning
-                    bool skipMinCheck = false;
-                    if (const AstConst* constp = VN_CAST(minExprp, Const)) {
-                        if (constp->toUInt() == 0) skipMinCheck = true;
-                    }
-                    
-                    if (skipMinCheck) {
-                        // Just check upper bound
-                        condp = new AstLte{binp->fileline(), exprClonep, maxExprp->cloneTree(false)};
-                        exprClone2p->deleteTree();
+            // Clone the expression for this range
+            AstNodeExpr* exprClonep = exprp->cloneTree(false);
+            
+            // Build condition for this specific range
+            AstNodeExpr* rangeCondp = nullptr;
+            
+            if (AstInsideRange* irp = VN_CAST(currRangep, InsideRange)) {
+                // INSIDERANGE has min and max as children
+                // Convert to: (expr >= min) && (expr <= max)
+                AstNode* minp = irp->lhsp();
+                AstNode* maxp = irp->rhsp();
+                
+                if (minp && maxp) {
+                    AstNodeExpr* minExprp = VN_CAST(minp, NodeExpr);
+                    AstNodeExpr* maxExprp = VN_CAST(maxp, NodeExpr);
+                    if (minExprp && maxExprp) {
+                        AstNodeExpr* exprClone2p = exprp->cloneTree(false);
+                        
+                        // Check if this is a single-value range (min == max)
+                        bool isSingleValue = false;
+                        if (const AstConst* minConstp = VN_CAST(minExprp, Const)) {
+                            if (const AstConst* maxConstp = VN_CAST(maxExprp, Const)) {
+                                if (minConstp->toUInt() == maxConstp->toUInt()) {
+                                    isSingleValue = true;
+                                }
+                            }
+                        }
+                        
+                        if (isSingleValue) {
+                            // Single value: just check equality
+                            rangeCondp = new AstEq{binp->fileline(), exprClonep, 
+                                                   minExprp->cloneTree(false)};
+                            exprClone2p->deleteTree();
+                        } else {
+                            // Check if min is constant 0 - skip the >= check to avoid UNSIGNED warning
+                            bool skipMinCheck = false;
+                            if (const AstConst* constp = VN_CAST(minExprp, Const)) {
+                                if (constp->toUInt() == 0) skipMinCheck = true;
+                            }
+                            
+                            if (skipMinCheck) {
+                                // Just check upper bound
+                                rangeCondp = new AstLte{binp->fileline(), exprClonep, 
+                                                        maxExprp->cloneTree(false)};
+                                exprClone2p->deleteTree();
+                            } else {
+                                // Check both bounds
+                                rangeCondp = new AstAnd{
+                                    binp->fileline(),
+                                    new AstGte{binp->fileline(), exprClonep, 
+                                              minExprp->cloneTree(false)},
+                                    new AstLte{binp->fileline(), exprClone2p, 
+                                              maxExprp->cloneTree(false)}};
+                            }
+                        }
                     } else {
-                        // Check both bounds
-                        condp = new AstAnd{
-                            binp->fileline(),
-                            new AstGte{binp->fileline(), exprClonep, minExprp->cloneTree(false)},
-                            new AstLte{binp->fileline(), exprClone2p, maxExprp->cloneTree(false)}};
+                        UINFO(4, "      Min or max is not an expression" << endl);
+                        exprClonep->deleteTree();
+                        continue;
                     }
                 } else {
-                    UINFO(4, "      Min or max is not an expression" << endl);
+                    UINFO(4, "      Could not extract min/max from INSIDERANGE" << endl);
                     exprClonep->deleteTree();
-                    return;
+                    continue;
                 }
             } else {
-                UINFO(4, "      Could not extract min/max from INSIDERANGE" << endl);
-                exprClonep->deleteTree();
-                return;
+                // Fallback: just check equality with the range expression
+                AstNodeExpr* rangeExprp = VN_CAST(currRangep, NodeExpr);
+                if (!rangeExprp) {
+                    UINFO(4, "      Cannot convert range to expression" << endl);
+                    exprClonep->deleteTree();
+                    continue;
+                }
+                rangeCondp = new AstEq{binp->fileline(), exprClonep, 
+                                       rangeExprp->cloneTree(false)};
             }
-        } else {
-            // Fallback: just check equality
-            AstNodeExpr* rangeExprp = VN_CAST(rangep, NodeExpr);
-            if (!rangeExprp) {
-                UINFO(4, "      Cannot convert range to expression" << endl);
-                exprClonep->deleteTree();
-                return;
+            
+            // Combine with previous conditions using OR
+            if (fullCondp) {
+                fullCondp = new AstOr{binp->fileline(), fullCondp, rangeCondp};
+            } else {
+                fullCondp = rangeCondp;
             }
-            condp = new AstEq{binp->fileline(), exprClonep, rangeExprp->cloneTree(false)};
+        }
+        
+        if (!fullCondp) {
+            UINFO(4, "      No valid conditions generated" << endl);
+            return;
         }
         
         // Apply iff condition if present - wraps the bin match condition
         if (AstNodeExpr* iffp = coverpointp->iffp()) {
             UINFO(6, "      Adding iff condition" << endl);
-            condp = new AstAnd{binp->fileline(), iffp->cloneTree(false), condp};
+            fullCondp = new AstAnd{binp->fileline(), iffp->cloneTree(false), fullCondp};
         }
         
-        // Create: if (condition) hitVar++;
-        AstIf* const ifp = new AstIf{
-            binp->fileline(), condp,
-            new AstAssign{
-                binp->fileline(),
-                new AstVarRef{binp->fileline(), hitVarp, VAccess::WRITE},
-                new AstAdd{binp->fileline(),
-                    new AstVarRef{binp->fileline(), hitVarp, VAccess::READ},
-                    new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}},
-            nullptr};
+        // Create the increment statement
+        AstNode* stmtp = new AstAssign{
+            binp->fileline(),
+            new AstVarRef{binp->fileline(), hitVarp, VAccess::WRITE},
+            new AstAdd{binp->fileline(),
+                new AstVarRef{binp->fileline(), hitVarp, VAccess::READ},
+                new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
         
+        // For illegal_bins, add an error message
+        if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+            const string errMsg = "Illegal bin '" + binp->name() + "' hit in coverpoint '" 
+                                + coverpointp->name() + "'";
+            AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR, 
+                                             errMsg, nullptr, nullptr};
+            errorp->fmtp()->timeunit(m_covergroupp->timeunit());
+            stmtp = stmtp->addNext(errorp);
+            stmtp = stmtp->addNext(new AstStop{binp->fileline(), true});
+        }
+        
+        // Create: if (condition) { hitVar++; [error if illegal] }
+        AstIf* const ifp = new AstIf{binp->fileline(), fullCondp, stmtp, nullptr};
+        
+        UINFO(4, "      Adding bin match if statement to sample function" << endl);
+        if (!m_sampleFuncp) {
+            binp->v3error("INTERNAL: m_sampleFuncp is null when trying to add bin match code");
+            return;
+        }
         m_sampleFuncp->addStmtsp(ifp);
-        UINFO(6, "      Added if statement for bin matching" << endl);
+        UINFO(4, "      Successfully added if statement for bin: " << binp->name() << endl);
     }
     
     void generateCoverageComputationCode() {
@@ -210,36 +376,47 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             return;
         }
         
-        // Collect all bin counter variables
-        std::vector<AstVar*> binVars;
-        memberCount = 0;
-        for (AstNode* itemp = m_covergroupp->membersp(); itemp; itemp = itemp->nextp()) {
-            if (++memberCount > 10000) {
-                m_covergroupp->v3error("Too many members or infinite loop in membersp iteration (2)");
-                break;
-            }
-            if (AstVar* varp = VN_CAST(itemp, Var)) {
-                if (varp->name().find("__Vcov_") == 0) {
-                    binVars.push_back(varp);
-                }
-            }
-        }
-        
-        if (binVars.empty()) {
+        if (m_binInfos.empty()) {
             UINFO(4, "    No bins found for coverage computation" << endl);
             return;
         }
         
-        UINFO(6, "    Found " << binVars.size() << " bins for coverage" << endl);
+        UINFO(6, "    Found " << m_binInfos.size() << " bins for coverage" << endl);
         
         // Generate code for get_inst_coverage() only (get_coverage() needs aggregation)
         if (getInstCoveragep) {
-            generateCoverageMethodBody(getInstCoveragep, binVars);
+            generateCoverageMethodBody(getInstCoveragep);
         }
     }
     
-    void generateCoverageMethodBody(AstFunc* funcp, const std::vector<AstVar*>& binVars) {
+    void generateCoverageMethodBody(AstFunc* funcp) {
         FileLine* fl = funcp->fileline();
+        
+        // Count total bins (excluding ignore_bins and illegal_bins)
+        int totalBins = 0;
+        for (const BinInfo& bi : m_binInfos) {
+            UINFO(6, "      Bin: " << bi.binp->name() << " type=" 
+                  << (int)bi.binp->binsType() << " IGNORE=" << (int)VCoverBinsType::IGNORE 
+                  << " ILLEGAL=" << (int)VCoverBinsType::ILLEGAL << endl);
+            if (bi.binp->binsType() != VCoverBinsType::IGNORE 
+                && bi.binp->binsType() != VCoverBinsType::ILLEGAL) {
+                totalBins++;
+            }
+        }
+        
+        UINFO(4, "    Total regular bins: " << totalBins << " of " << m_binInfos.size() << endl);
+        
+        if (totalBins == 0) {
+            // No coverage to compute - return 100%
+            AstVar* returnVarp = VN_AS(funcp->fvarp(), Var);
+            if (returnVarp) {
+                funcp->addStmtsp(new AstAssign{
+                    fl,
+                    new AstVarRef{fl, returnVarp, VAccess::WRITE},
+                    new AstConst{fl, AstConst::RealDouble{}, 100.0}});
+            }
+            return;
+        }
         
         // Create local variable to count covered bins
         AstVar* coveredCountp = new AstVar{
@@ -254,13 +431,19 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             new AstVarRef{fl, coveredCountp, VAccess::WRITE},
             new AstConst{fl, AstConst::WidthedValue{}, 32, 0}});
         
-        // For each bin, if count > 0, increment covered_count
-        for (AstVar* binVarp : binVars) {
+        // For each regular bin, if count > 0, increment covered_count
+        for (const BinInfo& bi : m_binInfos) {
+            // Skip ignore_bins and illegal_bins in coverage calculation
+            if (bi.binp->binsType() == VCoverBinsType::IGNORE 
+                || bi.binp->binsType() == VCoverBinsType::ILLEGAL) {
+                continue;
+            }
+            
             // if (bin_count > 0) covered_count++;
             AstIf* ifp = new AstIf{
                 fl,
                 new AstGt{fl,
-                    new AstVarRef{fl, binVarp, VAccess::READ},
+                    new AstVarRef{fl, bi.varp, VAccess::READ},
                     new AstConst{fl, AstConst::WidthedValue{}, 32, 0}},
                 new AstAssign{
                     fl,
@@ -288,7 +471,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         // Create total bins as a double constant
         AstNodeExpr* totalReal = new AstConst{fl, AstConst::RealDouble{}, 
-                                              static_cast<double>(binVars.size())};
+                                              static_cast<double>(totalBins)};
         
         // Divide using AstDivD (double division that emits native /)
         AstNodeExpr* divExpr = new AstDivD{fl, coveredReal, totalReal};
@@ -303,7 +486,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             new AstVarRef{fl, returnVarp, VAccess::WRITE},
             coverageExpr});
         
-        UINFO(6, "    Added coverage computation to " << funcp->name() << endl);
+        UINFO(6, "    Added coverage computation to " << funcp->name() << " with " 
+              << totalBins << " bins (excluding ignore/illegal)" << endl);
     }
     
     int countBins(AstCoverpoint* nodep) {
