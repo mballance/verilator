@@ -3,6 +3,7 @@
 // Test that illegal_bins are excluded from coverage calculations
 
 module t;
+    /* verilator lint_off UNSIGNED */
     logic [1:0] data;
 
     covergroup cg;

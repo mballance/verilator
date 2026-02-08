@@ -7,6 +7,7 @@
 // Test querying coverage values via get_inst_coverage
 
 module t (/*AUTOARG*/);
+    /* verilator lint_off UNSIGNED */
     logic [3:0] data;
 
     covergroup cg;

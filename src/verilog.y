@@ -7088,14 +7088,14 @@ bins_or_options<nodep>:  // ==IEEE: bins_or_options
         |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' id/*cover_point_id*/ yWITH__PAREN '(' cgexpr ')' iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'with' specification"); DEL($3, $8, $10); }
         |       yWILDCARD yBINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
-                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, false, false};
-                          DEL($4, $9); /* TODO: Support wildcard */ }
+                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, false, false, true};
+                          DEL($4, $9); }
         |       yWILDCARD yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
-                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, true, false};
-                          DEL($4, $9); /* TODO: Support wildcard */ }
+                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, true, false, true};
+                          DEL($4, $9); }
         |       yWILDCARD yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
-                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, false, true};
-                          DEL($4, $9); /* TODO: Support wildcard */ }
+                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, false, true, true};
+                          DEL($4, $9); }
         |       yWILDCARD yBINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>9, "Ignoring unsupported: cover bin 'wildcard' 'with' specification"); DEL($4, $7, $11, $13); }
         |       yWILDCARD yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
@@ -7118,11 +7118,14 @@ bins_or_options<nodep>:  // ==IEEE: bins_or_options
                         { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: cover bin 'wildcard' trans list"); DEL($4, $6, $7);}
         //
         |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
-                        { $$ = nullptr; BBCOVERIGN($<fl>5, "Ignoring unsupported: cover bin 'default'"); DEL($3, $6); }
+                        { $$ = new AstCoverBin{$<fl>2, *$2, VCoverBinsType::DEFAULT};
+                          DEL($3, $6); }
         |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
-                        { $$ = nullptr; BBCOVERIGN($<fl>5, "Ignoring unsupported: cover bin 'default'"); DEL($3, $6); }
+                        { $$ = new AstCoverBin{$<fl>2, *$2, VCoverBinsType::IGNORE};
+                          DEL($3, $6); }
         |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
-                        { $$ = nullptr; BBCOVERIGN($<fl>5, "Ignoring unsupported: cover bin 'default'"); DEL($3, $6); }
+                        { $$ = new AstCoverBin{$<fl>2, *$2, VCoverBinsType::ILLEGAL};
+                          DEL($3, $6); }
         |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT ySEQUENCE iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'default' 'sequence'"); DEL($3, $7); }
         |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT ySEQUENCE iffE

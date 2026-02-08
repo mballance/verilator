@@ -7,6 +7,7 @@
 // Realistic example: Bus transaction coverage
 
 module t (/*AUTOARG*/);
+    /* verilator lint_off UNSIGNED */
     logic [31:0] addr;
     logic [1:0]  burst_type;
     logic        valid;

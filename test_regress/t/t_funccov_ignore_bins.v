@@ -7,6 +7,7 @@
 // Test ignore_bins - excluded from coverage
 
 module t (/*AUTOARG*/);
+    /* verilator lint_off UNSIGNED */
     logic [3:0] data;
 
     covergroup cg;

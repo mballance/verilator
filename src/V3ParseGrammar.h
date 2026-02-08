@@ -192,6 +192,7 @@ public:
         // that updates headtailp pointers creates circular references. We must fully
         // unlink ALL bins before adding ANY to the coverpoint.
         std::vector<AstCoverBin*> bins;
+        std::vector<AstCoverOption*> options;
         
         // To unlink the head node (which has no backp), create a temporary parent
         AstBegin* tempParent = new AstBegin{binsList->fileline(), "[TEMP]", nullptr, true};
@@ -204,9 +205,29 @@ public:
             if (AstCoverBin* cbinp = VN_CAST(binp, CoverBin)) {
                 cbinp->unlinkFrBack();  // Now this works for all bins including head
                 bins.push_back(cbinp);
-            } else if (VN_IS(binp, CgOptionAssign)) {
-                // Coverage options - leave in place or handle separately
-                binp->unlinkFrBack();
+            } else if (AstCgOptionAssign* optp = VN_CAST(binp, CgOptionAssign)) {
+                optp->unlinkFrBack();
+                // Convert AstCgOptionAssign to AstCoverOption
+                VCoverOptionType optType = VCoverOptionType::COMMENT;  // default
+                if (optp->name() == "at_least") {
+                    optType = VCoverOptionType::AT_LEAST;
+                } else if (optp->name() == "weight") {
+                    optType = VCoverOptionType::WEIGHT;
+                } else if (optp->name() == "goal") {
+                    optType = VCoverOptionType::GOAL;
+                } else if (optp->name() == "auto_bin_max") {
+                    optType = VCoverOptionType::AUTO_BIN_MAX;
+                } else if (optp->name() == "per_instance") {
+                    optType = VCoverOptionType::PER_INSTANCE;
+                } else if (optp->name() == "comment") {
+                    optType = VCoverOptionType::COMMENT;
+                } else {
+                    optp->v3warn(COVERIGN, "Ignoring unsupported coverage option: " + optp->name());
+                }
+                AstCoverOption* coverOptp = new AstCoverOption{optp->fileline(), optType, 
+                                                                optp->valuep()->cloneTree(false)};
+                options.push_back(coverOptp);
+                VL_DO_DANGLING(optp->deleteTree(), optp);
             } else {
                 binp->v3warn(COVERIGN, "Unexpected node in bins list, ignoring");
                 VL_DO_DANGLING(binp->deleteTree(), binp);
@@ -216,9 +237,12 @@ public:
         // Delete the temporary parent
         VL_DO_DANGLING(tempParent->deleteTree(), tempParent);
         
-        // Now add standalone bins to coverpoint
+        // Now add standalone bins and options to coverpoint
         for (AstCoverBin* cbinp : bins) {
             cp->addBinsp(cbinp);
+        }
+        for (AstCoverOption* optp : options) {
+            cp->addOptionsp(optp);
         }
     }
     AstDisplay* createDisplayError(FileLine* fileline) {
