@@ -7054,35 +7054,82 @@ bins_or_options<nodep>:  // ==IEEE: bins_or_options
         //                      // Superset of IEEE - we allow []'s in more places
                 coverage_option                         { $$ = $1; }
         //                      // Can't use wildcardE as results in conflicts
-        |       bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
-                        { bool ignore = ($<fl>1->ascii() == "ignore_bins");
-                          bool illegal = ($<fl>1->ascii() == "illegal_bins");
-                          $$ = new AstCoverBin{$<fl>2, *$2, $6, ignore, illegal};
+        |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
+                        { $$ = new AstCoverBin{$<fl>2, *$2, $6, false, false};
                           DEL($3, $8); }
-        |       bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
-                        { bool ignore = ($<fl>1->ascii() == "ignore_bins");
-                          bool illegal = ($<fl>1->ascii() == "illegal_bins");
-                          $$ = new AstCoverBin{$<fl>2, *$2, $6, ignore, illegal};
+        |       yBINS idAny/*bin_identifier*/ '[' cgexpr ']' iffE
+                        { // Check for automatic bins: bins auto[N]
+                          if (*$2 == "auto") {
+                              $$ = new AstCoverBin{$<fl>2, *$2, $4};
+                              DEL($6);
+                          } else {
+                              $$ = nullptr; 
+                              BBCOVERIGN($<fl>2, "Ignoring unsupported: bin array (non-auto)");
+                              DEL($4, $6);
+                          }
+                        }
+        |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
+                        { $$ = new AstCoverBin{$<fl>2, *$2, $6, true, false};
+                          DEL($3, $8); }
+        |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
+                        { $$ = new AstCoverBin{$<fl>2, *$2, $6, false, true};
+                          DEL($3, $8); }
+        |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
+                        { $$ = new AstCoverBin{$<fl>2, *$2, $6, false, false};
                           DEL($3, $10, $12); /* TODO: Support 'with' clause */ }
-        |       bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' id/*cover_point_id*/ yWITH__PAREN '(' cgexpr ')' iffE
+        |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
+                        { $$ = new AstCoverBin{$<fl>2, *$2, $6, true, false};
+                          DEL($3, $10, $12); /* TODO: Support 'with' clause */ }
+        |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
+                        { $$ = new AstCoverBin{$<fl>2, *$2, $6, false, true};
+                          DEL($3, $10, $12); /* TODO: Support 'with' clause */ }
+        |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' id/*cover_point_id*/ yWITH__PAREN '(' cgexpr ')' iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'with' specification"); DEL($3, $8, $10); }
-        |       yWILDCARD bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
-                        { bool ignore = ($<fl>2->ascii() == "ignore_bins");
-                          bool illegal = ($<fl>2->ascii() == "illegal_bins");
-                          $$ = new AstCoverBin{$<fl>3, *$3, $7, ignore, illegal};
+        |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' id/*cover_point_id*/ yWITH__PAREN '(' cgexpr ')' iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'with' specification"); DEL($3, $8, $10); }
+        |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' id/*cover_point_id*/ yWITH__PAREN '(' cgexpr ')' iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'with' specification"); DEL($3, $8, $10); }
+        |       yWILDCARD yBINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
+                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, false, false};
                           DEL($4, $9); /* TODO: Support wildcard */ }
-        |       yWILDCARD bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
+        |       yWILDCARD yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
+                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, true, false};
+                          DEL($4, $9); /* TODO: Support wildcard */ }
+        |       yWILDCARD yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' iffE
+                        { $$ = new AstCoverBin{$<fl>3, *$3, $7, false, true};
+                          DEL($4, $9); /* TODO: Support wildcard */ }
+        |       yWILDCARD yBINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>9, "Ignoring unsupported: cover bin 'wildcard' 'with' specification"); DEL($4, $7, $11, $13); }
+        |       yWILDCARD yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>9, "Ignoring unsupported: cover bin 'wildcard' 'with' specification"); DEL($4, $7, $11, $13); }
+        |       yWILDCARD yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' '{' range_list '}' yWITH__PAREN '(' cgexpr ')' iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>9, "Ignoring unsupported: cover bin 'wildcard' 'with' specification"); DEL($4, $7, $11, $13); }
         //
         //                      // cgexpr part of trans_list
-        |       bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
+        |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>4, "Ignoring unsupported: cover bin trans list"); DEL($3, $5, $6); }
-        |       yWILDCARD bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
+        |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>4, "Ignoring unsupported: cover bin trans list"); DEL($3, $5, $6); }
+        |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>4, "Ignoring unsupported: cover bin trans list"); DEL($3, $5, $6); }
+        |       yWILDCARD yBINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: cover bin 'wildcard' trans list"); DEL($4, $6, $7);}
+        |       yWILDCARD yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: cover bin 'wildcard' trans list"); DEL($4, $6, $7);}
+        |       yWILDCARD yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: cover bin 'wildcard' trans list"); DEL($4, $6, $7);}
         //
-        |       bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
+        |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>5, "Ignoring unsupported: cover bin 'default'"); DEL($3, $6); }
-        |       bins_keyword idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT ySEQUENCE iffE
+        |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>5, "Ignoring unsupported: cover bin 'default'"); DEL($3, $6); }
+        |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>5, "Ignoring unsupported: cover bin 'default'"); DEL($3, $6); }
+        |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT ySEQUENCE iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'default' 'sequence'"); DEL($3, $7); }
+        |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT ySEQUENCE iffE
+                        { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'default' 'sequence'"); DEL($3, $7); }
+        |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT ySEQUENCE iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'default' 'sequence'"); DEL($3, $7); }
         ;
 
@@ -7090,12 +7137,6 @@ bins_orBraE<nodep>:  // IEEE: part of bins_or_options:
                 /* empty */                             { $$ = nullptr; }
         |       '[' ']'                                 { $$ = nullptr; /*UNSUP*/ }
         |       '[' cgexpr ']'                          { $$ = nullptr; /*UNSUP*/ DEL($2); }
-        ;
-
-bins_keyword<fl>:  // ==IEEE: bins_keyword
-                yBINS                                   { $$ = $1; /*UNSUP*/ }
-        |       yILLEGAL_BINS                           { $$ = $1; /*UNSUP*/ }
-        |       yIGNORE_BINS                            { $$ = $1; /*UNSUP*/ }
         ;
 
 trans_list<nodep>:  // ==IEEE: trans_list
@@ -7179,7 +7220,11 @@ cross_body_item<nodep>:  // ==IEEE: cross_body_item
         //                      // IEEE: bins_selection_or_option
         |       coverage_option ';'                     { $$ = $1; }
         //                      // IEEE: bins_selection
-        |       bins_keyword idAny/*new-bin_identifier*/ '=' select_expression iffE ';'
+        |       yBINS idAny/*new-bin_identifier*/ '=' select_expression iffE ';'
+                        { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: coverage cross bin"); DEL($4, $5); }
+        |       yIGNORE_BINS idAny/*new-bin_identifier*/ '=' select_expression iffE ';'
+                        { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: coverage cross bin"); DEL($4, $5); }
+        |       yILLEGAL_BINS idAny/*new-bin_identifier*/ '=' select_expression iffE ';'
                         { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: coverage cross bin"); DEL($4, $5); }
         |       error ';'                               { $$ = nullptr; }  // LCOV_EXCL_LINE
         ;

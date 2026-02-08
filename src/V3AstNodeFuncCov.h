@@ -61,6 +61,7 @@ public:
 class AstCoverBin final : public AstNode {
     // @astgen op1 := rangesp : List[AstNode]
     // @astgen op2 := iffp : Optional[AstNodeExpr]
+    // @astgen op3 := arraySizep : Optional[AstNodeExpr]
     string m_name;
     VCoverBinsType m_type;
     bool m_isArray = false;
@@ -69,6 +70,11 @@ public:
         : ASTGEN_SUPER_CoverBin(fl), m_name{name}, 
           m_type{illegal ? VCoverBinsType::ILLEGAL : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::USER)} {
         if (rangesp) addRangesp(rangesp);
+    }
+    // Constructor for automatic bins
+    AstCoverBin(FileLine* fl, const string& name, AstNodeExpr* arraySizep)
+        : ASTGEN_SUPER_CoverBin(fl), m_name{name}, m_type{VCoverBinsType::AUTO}, m_isArray{true} {
+        this->arraySizep(arraySizep);
     }
     ASTGEN_MEMBERS_AstCoverBin;
     void dump(std::ostream& str) const override;
