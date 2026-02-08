@@ -52,6 +52,7 @@ void AstCoverBin::dump(std::ostream& str) const {
     case VCoverBinsType::ILLEGAL: str << "illegal"; break;
     case VCoverBinsType::DEFAULT: str << "default"; break;
     case VCoverBinsType::WILDCARD: str << "wildcard"; break;
+    case VCoverBinsType::TRANSITION: str << "transition"; break;
     }
     if (m_isArray) str << "[]";
 }
@@ -68,8 +69,41 @@ void AstCoverBin::dumpJson(std::ostream& str) const {
     case VCoverBinsType::ILLEGAL: str << "\"illegal\""; break;
     case VCoverBinsType::DEFAULT: str << "\"default\""; break;
     case VCoverBinsType::WILDCARD: str << "\"wildcard\""; break;
+    case VCoverBinsType::TRANSITION: str << "\"transition\""; break;
     }
     if (m_isArray) str << ", \"isArray\": true";
+}
+
+void AstCoverTransItem::dump(std::ostream& str) const {
+    this->AstNode::dump(str);
+    switch (m_repType) {
+    case VTransRepType::NONE: break;
+    case VTransRepType::CONSEC: str << " [*]"; break;
+    case VTransRepType::GOTO: str << " [->]"; break;
+    case VTransRepType::NONCONS: str << " [=]"; break;
+    }
+}
+
+void AstCoverTransItem::dumpJson(std::ostream& str) const {
+    this->AstNode::dumpJson(str);
+    if (m_repType != VTransRepType::NONE) {
+        str << ", \"repType\": ";
+        switch (m_repType) {
+        case VTransRepType::NONE: break;
+        case VTransRepType::CONSEC: str << "\"consec\""; break;
+        case VTransRepType::GOTO: str << "\"goto\""; break;
+        case VTransRepType::NONCONS: str << "\"noncons\""; break;
+        }
+    }
+}
+
+void AstCoverTransSet::dump(std::ostream& str) const {
+    this->AstNode::dump(str);
+    str << " trans_set";
+}
+
+void AstCoverTransSet::dumpJson(std::ostream& str) const {
+    this->AstNode::dumpJson(str);
 }
 
 void AstCoverCross::dump(std::ostream& str) const {

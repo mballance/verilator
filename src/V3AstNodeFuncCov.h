@@ -31,11 +31,18 @@
 // Enumerations
 
 enum class VCoverBinsType : uint8_t {
-    USER, ARRAY, AUTO, IGNORE, ILLEGAL, DEFAULT, WILDCARD
+    USER, ARRAY, AUTO, IGNORE, ILLEGAL, DEFAULT, WILDCARD, TRANSITION
 };
 
 enum class VCoverOptionType : uint8_t {
     WEIGHT, GOAL, AT_LEAST, AUTO_BIN_MAX, PER_INSTANCE, COMMENT
+};
+
+enum class VTransRepType : uint8_t {
+    NONE,        // No repetition
+    CONSEC,      // Consecutive repetition [*]
+    GOTO,        // Goto repetition [->]
+    NONCONS      // Nonconsecutive repetition [=]
 };
 
 //######################################################################
@@ -56,12 +63,13 @@ public:
 //######################################################################
 // Concrete nodes - ORDER MATTERS FOR ASTGEN!
 // Must be in order: CoverBin, CoverCrossBins, CoverOption, CoverSelectExpr, 
-//                   Covergroup, CoverpointRef, CoverCross, Coverpoint
+//                   CoverTransItem, CoverTransSet, Covergroup, CoverpointRef, CoverCross, Coverpoint
 
 class AstCoverBin final : public AstNode {
     // @astgen op1 := rangesp : List[AstNode]
     // @astgen op2 := iffp : Optional[AstNodeExpr]
     // @astgen op3 := arraySizep : Optional[AstNodeExpr]
+    // @astgen op4 := transp : List[AstCoverTransSet]
     string m_name;
     VCoverBinsType m_type;
     bool m_isArray = false;
@@ -81,6 +89,13 @@ public:
     AstCoverBin(FileLine* fl, const string& name, VCoverBinsType type)
         : ASTGEN_SUPER_CoverBin(fl), m_name{name}, m_type{type} {
         // DEFAULT bins have no ranges - they catch everything not in other bins
+    }
+    // Constructor for transition bins
+    AstCoverBin(FileLine* fl, const string& name, AstCoverTransSet* transp, bool ignore, bool illegal, bool isArray = false)
+        : ASTGEN_SUPER_CoverBin(fl), m_name{name}, 
+          m_type{illegal ? VCoverBinsType::ILLEGAL : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::TRANSITION)},
+          m_isArray{isArray} {
+        if (transp) addTransp(transp);
     }
     ASTGEN_MEMBERS_AstCoverBin;
     void dump(std::ostream& str) const override;
@@ -127,6 +142,36 @@ public:
         this->exprp(exprp);
     }
     ASTGEN_MEMBERS_AstCoverSelectExpr;
+    void dump(std::ostream& str) const override;
+    void dumpJson(std::ostream& str) const override;
+};
+
+// Represents a single transition item: value or value[*N] or value[->N] or value[=N]
+class AstCoverTransItem final : public AstNode {
+    // @astgen op1 := valuesp : List[AstNode]  // Range list (values or ranges)
+    // @astgen op2 := repMinp : Optional[AstNodeExpr]  // Repetition min count (for [*], [->], [=])
+    // @astgen op3 := repMaxp : Optional[AstNodeExpr]  // Repetition max count (for ranges)
+    VTransRepType m_repType;
+public:
+    AstCoverTransItem(FileLine* fl, AstNode* valuesp, VTransRepType repType = VTransRepType::NONE)
+        : ASTGEN_SUPER_CoverTransItem(fl), m_repType{repType} {
+        if (valuesp) addValuesp(valuesp);
+    }
+    ASTGEN_MEMBERS_AstCoverTransItem;
+    void dump(std::ostream& str) const override;
+    void dumpJson(std::ostream& str) const override;
+    VTransRepType repType() const { return m_repType; }
+};
+
+// Represents a transition set: value1 => value2 => value3
+class AstCoverTransSet final : public AstNode {
+    // @astgen op1 := itemsp : List[AstCoverTransItem]
+public:
+    AstCoverTransSet(FileLine* fl, AstCoverTransItem* itemsp)
+        : ASTGEN_SUPER_CoverTransSet(fl) {
+        if (itemsp) addItemsp(itemsp);
+    }
+    ASTGEN_MEMBERS_AstCoverTransSet;
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
 };
