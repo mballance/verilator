@@ -1771,12 +1771,16 @@ public:
 
     // Functional coverage nodes - not yet implemented, just skip for now
     void visit(AstCoverpoint* nodep) override {
-        // TODO: Implement functional coverage code generation
-        // For now, just skip these nodes
+        // Functional coverage nodes are handled during the coverage transformation pass
+        // They should not reach the C++ emitter
     }
     void visit(AstCoverBin* nodep) override {
-        // TODO: Implement functional coverage code generation
-        // For now, just skip these nodes
+        // Functional coverage nodes are handled during the coverage transformation pass
+        // They should not reach the C++ emitter
+    }
+    void visit(AstCoverCross* nodep) override {
+        // Functional coverage nodes are handled during the coverage transformation pass
+        // They should not reach the C++ emitter
     }
 
     // Default

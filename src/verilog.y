@@ -7179,9 +7179,52 @@ covergroup_range_list<nodep>:  // ==IEEE: covergroup_range_list
 
 cover_cross<nodep>:  // ==IEEE: cover_cross
                 id/*cover_point_identifier*/ ':' yCROSS list_of_cross_items iffE cross_body
-                        { $$ = nullptr; BBCOVERIGN($<fl>3, "Ignoring unsupported: cover cross"); DEL($4, $5, $6); }
+                        { 
+                          AstCoverCross* const nodep = new AstCoverCross{$<fl>3, *$1, 
+                                                          VN_AS($4, CoverpointRef)};
+                          if ($6) {  // cross_body items (options, bins)
+                              for (AstNode* itemp = $6; itemp; ) {
+                                  AstNode* nextp = itemp->nextp();
+                                  itemp->unlinkFrBack();
+                                  if (AstCoverOption* optp = VN_CAST(itemp, CoverOption)) {
+                                      nodep->addOptionsp(optp);
+                                  } else if (AstCoverCrossBins* binp = VN_CAST(itemp, CoverCrossBins)) {
+                                      nodep->addBinsp(binp);
+                                  } else {
+                                      itemp->v3warn(COVERIGN, "Ignoring unsupported cross body item");
+                                      VL_DO_DANGLING(itemp->deleteTree(), itemp);
+                                  }
+                                  itemp = nextp;
+                              }
+                          }
+                          // TODO: Handle iffE ($5)
+                          if ($5) $5->v3warn(COVERIGN, "Ignoring unsupported: cross iff condition");
+                          $$ = nodep;
+                        }
         |       yCROSS list_of_cross_items iffE cross_body
-                        { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: cover cross"); DEL($2, $3, $4); }
+                        { 
+                          AstCoverCross* const nodep = new AstCoverCross{$<fl>1, 
+                                                          "__cross" + cvtToStr(GRAMMARP->s_typeImpNum++),
+                                                          VN_AS($2, CoverpointRef)};
+                          if ($4) {  // cross_body items (options, bins)
+                              for (AstNode* itemp = $4; itemp; ) {
+                                  AstNode* nextp = itemp->nextp();
+                                  itemp->unlinkFrBack();
+                                  if (AstCoverOption* optp = VN_CAST(itemp, CoverOption)) {
+                                      nodep->addOptionsp(optp);
+                                  } else if (AstCoverCrossBins* binp = VN_CAST(itemp, CoverCrossBins)) {
+                                      nodep->addBinsp(binp);
+                                  } else {
+                                      itemp->v3warn(COVERIGN, "Ignoring unsupported cross body item");
+                                      VL_DO_DANGLING(itemp->deleteTree(), itemp);
+                                  }
+                                  itemp = nextp;
+                              }
+                          }
+                          // TODO: Handle iffE ($3)
+                          if ($3) $3->v3warn(COVERIGN, "Ignoring unsupported: cross iff condition");
+                          $$ = nodep;
+                        }
         ;
 
 list_of_cross_items<nodep>:  // ==IEEE: list_of_cross_items
@@ -7196,7 +7239,8 @@ cross_itemList<nodep>:  // IEEE: part of list_of_cross_items
         ;
 
 cross_item<nodep>:  // ==IEEE: cross_item
-                idDotted/*cover_point_identifier or variable_identifier*/  { $1->deleteTree(); $$ = nullptr; /*UNSUP*/ }
+                id/*cover_point_identifier*/  
+                        { $$ = new AstCoverpointRef{$<fl>1, *$1}; }
         ;
 
 cross_body<nodep>:  // ==IEEE: cross_body
@@ -7219,13 +7263,13 @@ cross_body_item<nodep>:  // ==IEEE: cross_body_item
                         { $$ = $1; BBCOVERIGN($1->fileline(), "Ignoring unsupported: coverage cross 'function' declaration"); }
         //                      // IEEE: bins_selection_or_option
         |       coverage_option ';'                     { $$ = $1; }
-        //                      // IEEE: bins_selection
+        //                      // IEEE: bins_selection - for now, we ignore explicit cross bins
         |       yBINS idAny/*new-bin_identifier*/ '=' select_expression iffE ';'
-                        { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: coverage cross bin"); DEL($4, $5); }
+                        { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: explicit coverage cross bins"); DEL($4, $5); }
         |       yIGNORE_BINS idAny/*new-bin_identifier*/ '=' select_expression iffE ';'
-                        { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: coverage cross bin"); DEL($4, $5); }
+                        { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: explicit coverage cross bins"); DEL($4, $5); }
         |       yILLEGAL_BINS idAny/*new-bin_identifier*/ '=' select_expression iffE ';'
-                        { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: coverage cross bin"); DEL($4, $5); }
+                        { $$ = nullptr; BBCOVERIGN($1, "Ignoring unsupported: explicit coverage cross bins"); DEL($4, $5); }
         |       error ';'                               { $$ = nullptr; }  // LCOV_EXCL_LINE
         ;
 
