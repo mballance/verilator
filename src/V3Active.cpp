@@ -805,12 +805,9 @@ class CovergroupSamplingVisitor final : public VNVisitor {
 public:
     // CONSTRUCTORS
     explicit CovergroupSamplingVisitor(AstNetlist* nodep) {
-        // Skip automatic sampling if --timing is enabled
-        // There's a compatibility issue with V3Timing that needs to be resolved
-        if (v3Global.opt.timing().isSetTrue()) {
-            UINFO(3, "Skipping automatic covergroup sampling due to --timing flag\n");
-            return;
-        }
+        // NOTE: Automatic sampling now works with --timing
+        // Previously disabled due to compatibility issues with V3Timing transformations
+        // The current implementation injects sampling before V3Active, allowing both modes to work
         
         // First pass: collect sample CFuncs from covergroup class scopes
         m_inFirstPass = true;
