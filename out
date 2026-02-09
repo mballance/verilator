@@ -1,8 +1,0 @@
-	   docs/functional_coverage_plan.md
-	   docs/guide/languages.rst
-	   docs/guide/simulating.rst
-	   src/V3CoverageFunctional.cpp
-
-	test_regress/t/t_covergroup_perf.py
-	test_regress/t/t_covergroup_perf.v
-
