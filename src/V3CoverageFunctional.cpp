@@ -53,6 +53,10 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     
     // Track coverpoints that need previous value tracking (for transition bins)
     std::map<AstCoverpoint*, AstVar*> m_prevValueVars;  // coverpoint -> prev_value variable
+    
+    // Track sequence state variables for multi-value transition bins
+    // Key is bin pointer, value is state position variable
+    std::map<AstCoverBin*, AstVar*> m_seqStateVars;  // transition bin -> sequence state variable
 
     // METHODS
     void processCovergroup() {
@@ -227,6 +231,37 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         m_prevValueVars[coverpointp] = prevVarp;
         return prevVarp;
+    }
+    
+    // Create state position variable for multi-value transition bins
+    // Tracks position in sequence: 0=not started, 1=seen first item, etc.
+    AstVar* createSequenceStateVar(AstCoverpoint* coverpointp, AstCoverBin* binp) {
+        // Check if already created
+        auto it = m_seqStateVars.find(binp);
+        if (it != m_seqStateVars.end()) {
+            return it->second;
+        }
+        
+        // Create variable to track sequence position
+        const string varName = "__Vseqpos_" + coverpointp->name() + "_" + binp->name();
+        // Use 8-bit integer for state position (sequences rarely > 255 items)
+        AstVar* stateVarp = new AstVar{
+            binp->fileline(), VVarType::MEMBER, varName,
+            VFlagLogicPacked{}, 8};
+        stateVarp->isStatic(false);
+        m_covergroupp->addMembersp(stateVarp);
+        
+        UINFO(4, "    Created sequence state variable: " << varName << endl);
+        
+        // Initialize to 0 (not started) in constructor
+        AstNodeStmt* initStmtp = new AstAssign{
+            stateVarp->fileline(),
+            new AstVarRef{stateVarp->fileline(), stateVarp, VAccess::WRITE},
+            new AstConst{stateVarp->fileline(), AstConst::WidthedValue{}, 8, 0}};
+        m_constructorp->addStmtsp(initStmtp);
+        
+        m_seqStateVars[binp] = stateVarp;
+        return stateVarp;
     }
     
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
@@ -504,8 +539,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             }
             
             // Build transition sequence check
-            // For (a => b): prev == a && current == b
-            // For (a => b => c): Need state machine (deferred for now - only support 2-value)
+            // For (a => b): prev == a && current == b  (use fast 2-value path)
+            // For (a => b => c => ...): Use state machine
             
             if (items.size() == 1) {
                 // Single item transition not valid (need at least 2 values for =>)
@@ -513,6 +548,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 return;
             } else if (items.size() == 2) {
                 // Simple two-value transition: (val1 => val2)
+                // Use optimized direct comparison (no state machine needed)
                 AstNodeExpr* cond1p = buildTransitionItemCondition(items[0], 
                     new AstVarRef{prevVarp->fileline(), prevVarp, VAccess::READ});
                 AstNodeExpr* cond2p = buildTransitionItemCondition(items[1], exprp->cloneTree(false));
@@ -556,10 +592,148 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 UINFO(4, "      Successfully added 2-value transition if statement" << endl);
             } else {
                 // Multi-value sequence (a => b => c => ...)
-                // TODO: Requires state machine to track position in sequence
-                binp->v3warn(E_UNSUPPORTED, "Multi-value transition sequences (>2 values) not yet supported");
-                return;
+                // Use state machine to track position in sequence
+                generateMultiValueTransitionCode(coverpointp, binp, exprp, hitVarp, items);
             }
+    }
+    
+    // Generate state machine code for multi-value transition sequences
+    // Handles transitions like (1 => 2 => 3 => 4)
+    void generateMultiValueTransitionCode(AstCoverpoint* coverpointp, AstCoverBin* binp,
+                                         AstNodeExpr* exprp, AstVar* hitVarp,
+                                         const std::vector<AstCoverTransItem*>& items) {
+        UINFO(4, "    Generating multi-value transition state machine for: " << binp->name() << endl);
+        UINFO(4, "      Sequence length: " << items.size() << " items" << endl);
+        
+        // Create state position variable
+        AstVar* stateVarp = createSequenceStateVar(coverpointp, binp);
+        
+        // Build case statement with N cases (one for each state 0 to N-1)
+        // State 0: Not started, looking for first item
+        // State 1 to N-1: In progress, looking for next item
+        
+        AstCase* casep = new AstCase{binp->fileline(), VCaseType::CT_CASE,
+                                     new AstVarRef{stateVarp->fileline(), stateVarp, VAccess::READ},
+                                     nullptr};
+        
+        // Generate each case item in the switch statement
+        for (size_t state = 0; state < items.size(); ++state) {
+            AstCaseItem* caseItemp = generateTransitionStateCase(
+                coverpointp, binp, exprp, hitVarp, stateVarp, items, state);
+            
+            if (caseItemp) {
+                casep->addItemsp(caseItemp);
+            }
+        }
+        
+        m_sampleFuncp->addStmtsp(casep);
+        UINFO(4, "      Successfully added multi-value transition state machine" << endl);
+    }
+    
+    // Generate code for a single state in the transition state machine
+    // Returns the case item for this state
+    AstCaseItem* generateTransitionStateCase(AstCoverpoint* coverpointp, AstCoverBin* binp,
+                                            AstNodeExpr* exprp, AstVar* hitVarp, 
+                                            AstVar* stateVarp,
+                                            const std::vector<AstCoverTransItem*>& items,
+                                            size_t state) {
+        FileLine* const fl = binp->fileline();
+        
+        // Build condition for current value matching expected item at this state
+        AstNodeExpr* matchCondp = buildTransitionItemCondition(items[state], exprp->cloneTree(false));
+        if (!matchCondp) {
+            binp->v3error("Could not build transition condition for state " + std::to_string(state));
+            return nullptr;
+        }
+        
+        // Apply iff condition if present
+        if (AstNodeExpr* iffp = coverpointp->iffp()) {
+            matchCondp = new AstAnd{fl, iffp->cloneTree(false), matchCondp};
+        }
+        
+        AstNodeStmt* matchActionp = nullptr;
+        
+        if (state == items.size() - 1) {
+            // Last state: sequence complete!
+            // Increment bin counter
+            matchActionp = new AstAssign{
+                fl,
+                new AstVarRef{fl, hitVarp, VAccess::WRITE},
+                new AstAdd{fl,
+                    new AstVarRef{fl, hitVarp, VAccess::READ},
+                    new AstConst{fl, AstConst::WidthedValue{}, 32, 1}}};
+            
+            // For illegal_bins, add error message
+            if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+                const string errMsg = "Illegal transition bin '" + binp->name() + 
+                                    "' hit in coverpoint '" + coverpointp->name() + "'";
+                AstDisplay* errorp = new AstDisplay{fl, VDisplayType::DT_ERROR, 
+                                                 errMsg, nullptr, nullptr};
+                errorp->fmtp()->timeunit(m_covergroupp->timeunit());
+                matchActionp = matchActionp->addNext(errorp);
+                matchActionp = matchActionp->addNext(new AstStop{fl, true});
+            }
+            
+            // Reset state to 0
+            matchActionp = matchActionp->addNext(new AstAssign{
+                fl,
+                new AstVarRef{fl, stateVarp, VAccess::WRITE},
+                new AstConst{fl, AstConst::WidthedValue{}, 8, 0}});
+        } else {
+            // Intermediate state: advance to next state
+            matchActionp = new AstAssign{
+                fl,
+                new AstVarRef{fl, stateVarp, VAccess::WRITE},
+                new AstConst{fl, AstConst::WidthedValue{}, 8, static_cast<uint32_t>(state + 1)}};
+        }
+        
+        // Build restart logic: check if current value matches first item
+        // If so, restart sequence from state 1 (even if we're in middle of sequence)
+        AstNodeStmt* noMatchActionp = nullptr;
+        if (state > 0) {
+            // Check if current value matches first item (restart condition)
+            AstNodeExpr* restartCondp = buildTransitionItemCondition(
+                items[0], exprp->cloneTree(false));
+            
+            if (restartCondp) {
+                // Apply iff condition
+                if (AstNodeExpr* iffp = coverpointp->iffp()) {
+                    restartCondp = new AstAnd{fl, iffp->cloneTree(false), restartCondp};
+                }
+                
+                // Restart to state 1
+                AstNodeStmt* restartActionp = new AstAssign{
+                    fl,
+                    new AstVarRef{fl, stateVarp, VAccess::WRITE},
+                    new AstConst{fl, AstConst::WidthedValue{}, 8, 1}};
+                
+                // Reset to state 0 (else branch)
+                AstNodeStmt* resetActionp = new AstAssign{
+                    fl,
+                    new AstVarRef{fl, stateVarp, VAccess::WRITE},
+                    new AstConst{fl, AstConst::WidthedValue{}, 8, 0}};
+                
+                noMatchActionp = new AstIf{fl, restartCondp, restartActionp, resetActionp};
+            } else {
+                // Can't build restart condition, just reset
+                noMatchActionp = new AstAssign{
+                    fl,
+                    new AstVarRef{fl, stateVarp, VAccess::WRITE},
+                    new AstConst{fl, AstConst::WidthedValue{}, 8, 0}};
+            }
+        }
+        // For state 0, no action needed if no match (stay in state 0)
+        
+        // Combine into if-else
+        AstNodeStmt* stmtp = new AstIf{fl, matchCondp, matchActionp, noMatchActionp};
+        
+        // Create case item for this state value
+        AstCaseItem* caseItemp = new AstCaseItem{
+            fl,
+            new AstConst{fl, AstConst::WidthedValue{}, 8, static_cast<uint32_t>(state)},
+            stmtp};
+        
+        return caseItemp;
     }
     
     // Build condition for a single transition item
