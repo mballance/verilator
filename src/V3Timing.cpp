@@ -345,26 +345,25 @@ class TimingSuspendableVisitor final : public VNVisitor {
             iterateChildren(nodep);
             return;
         }
-        
+
         AstCFunc* funcp = nodep->funcp();
         if (!funcp) {
             iterateChildren(nodep);
             return;
         }
-        
+
         // Skip if we're not inside a function/procedure (m_procp would be null)
         // This can happen for calls in Active nodes at module scope
         if (!m_procp) {
             iterateChildren(nodep);
             return;
         }
-        
-        UINFO(9, "V3Timing: Processing CCall to " << funcp->name() << " in dependency graph\n");
-        new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(funcp), getSuspendDepVtx(m_procp),
-                        P_CALL};
 
-        new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(funcp),
-                        getNeedsProcDepVtx(m_procp), P_CALL};
+        UINFO(9, "V3Timing: Processing CCall to " << funcp->name() << " in dependency graph\n");
+        new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(funcp), getSuspendDepVtx(m_procp), P_CALL};
+
+        new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(funcp), getNeedsProcDepVtx(m_procp),
+                        P_CALL};
 
         iterateChildren(nodep);
     }
@@ -930,14 +929,14 @@ class TimingControlVisitor final : public VNVisitor {
             iterateChildren(nodep);
             return;
         }
-        
+
         // Check if this is a valid CCall with a valid function pointer
         AstCFunc* funcp = nodep->funcp();
         if (!funcp) {
             iterateChildren(nodep);
             return;
         }
-        
+
         if (funcp->needProcess()) m_hasProcess = true;
         if (hasFlags(funcp, T_SUSPENDEE) && !nodep->user1SetOnce()) {  // If suspendable
             VNRelinker relinker;

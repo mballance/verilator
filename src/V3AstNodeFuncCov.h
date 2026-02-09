@@ -31,18 +31,30 @@
 // Enumerations
 
 enum class VCoverBinsType : uint8_t {
-    USER, ARRAY, AUTO, IGNORE, ILLEGAL, DEFAULT, WILDCARD, TRANSITION
+    USER,
+    ARRAY,
+    AUTO,
+    IGNORE,
+    ILLEGAL,
+    DEFAULT,
+    WILDCARD,
+    TRANSITION
 };
 
 enum class VCoverOptionType : uint8_t {
-    WEIGHT, GOAL, AT_LEAST, AUTO_BIN_MAX, PER_INSTANCE, COMMENT
+    WEIGHT,
+    GOAL,
+    AT_LEAST,
+    AUTO_BIN_MAX,
+    PER_INSTANCE,
+    COMMENT
 };
 
 enum class VTransRepType : uint8_t {
-    NONE,        // No repetition
-    CONSEC,      // Consecutive repetition [*]
-    GOTO,        // Goto repetition [->]
-    NONCONS      // Nonconsecutive repetition [=]
+    NONE,  // No repetition
+    CONSEC,  // Consecutive repetition [*]
+    GOTO,  // Goto repetition [->]
+    NONCONS  // Nonconsecutive repetition [=]
 };
 
 //######################################################################
@@ -51,9 +63,11 @@ enum class VTransRepType : uint8_t {
 class AstNodeFuncCovItem VL_NOT_FINAL : public AstNode {
 protected:
     string m_name;
+
 public:
     AstNodeFuncCovItem(VNType t, FileLine* fl, const string& name)
-        : AstNode{t, fl}, m_name{name} {}
+        : AstNode{t, fl}
+        , m_name{name} {}
     ASTGEN_MEMBERS_AstNodeFuncCovItem;
     string name() const override VL_MT_STABLE { return m_name; }
     void name(const string& flag) { m_name = flag; }
@@ -62,8 +76,9 @@ public:
 
 //######################################################################
 // Concrete nodes - ORDER MATTERS FOR ASTGEN!
-// Must be in order: CoverBin, CoverCrossBins, CoverOption, CoverSelectExpr, 
-//                   CoverTransItem, CoverTransSet, Covergroup, CoverpointRef, CoverCross, Coverpoint
+// Must be in order: CoverBin, CoverCrossBins, CoverOption, CoverSelectExpr,
+//                   CoverTransItem, CoverTransSet, Covergroup, CoverpointRef, CoverCross,
+//                   Coverpoint
 
 class AstCoverBin final : public AstNode {
     // @astgen op1 := rangesp : List[AstNode]
@@ -73,28 +88,40 @@ class AstCoverBin final : public AstNode {
     string m_name;
     VCoverBinsType m_type;
     bool m_isArray = false;
+
 public:
-    AstCoverBin(FileLine* fl, const string& name, AstNode* rangesp, bool ignore, bool illegal, bool wildcard = false)
-        : ASTGEN_SUPER_CoverBin(fl), m_name{name}, 
-          m_type{wildcard ? VCoverBinsType::WILDCARD : 
-                 (illegal ? VCoverBinsType::ILLEGAL : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::USER))} {
+    AstCoverBin(FileLine* fl, const string& name, AstNode* rangesp, bool ignore, bool illegal,
+                bool wildcard = false)
+        : ASTGEN_SUPER_CoverBin(fl)
+        , m_name{name}
+        , m_type{wildcard ? VCoverBinsType::WILDCARD
+                          : (illegal ? VCoverBinsType::ILLEGAL
+                                     : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::USER))} {
         if (rangesp) addRangesp(rangesp);
     }
     // Constructor for automatic bins
     AstCoverBin(FileLine* fl, const string& name, AstNodeExpr* arraySizep)
-        : ASTGEN_SUPER_CoverBin(fl), m_name{name}, m_type{VCoverBinsType::AUTO}, m_isArray{true} {
+        : ASTGEN_SUPER_CoverBin(fl)
+        , m_name{name}
+        , m_type{VCoverBinsType::AUTO}
+        , m_isArray{true} {
         this->arraySizep(arraySizep);
     }
     // Constructor for default bins (catch-all)
     AstCoverBin(FileLine* fl, const string& name, VCoverBinsType type)
-        : ASTGEN_SUPER_CoverBin(fl), m_name{name}, m_type{type} {
+        : ASTGEN_SUPER_CoverBin(fl)
+        , m_name{name}
+        , m_type{type} {
         // DEFAULT bins have no ranges - they catch everything not in other bins
     }
     // Constructor for transition bins
-    AstCoverBin(FileLine* fl, const string& name, AstCoverTransSet* transp, bool ignore, bool illegal, bool isArray = false)
-        : ASTGEN_SUPER_CoverBin(fl), m_name{name}, 
-          m_type{illegal ? VCoverBinsType::ILLEGAL : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::TRANSITION)},
-          m_isArray{isArray} {
+    AstCoverBin(FileLine* fl, const string& name, AstCoverTransSet* transp, bool ignore,
+                bool illegal, bool isArray = false)
+        : ASTGEN_SUPER_CoverBin(fl)
+        , m_name{name}
+        , m_type{illegal ? VCoverBinsType::ILLEGAL
+                         : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::TRANSITION)}
+        , m_isArray{isArray} {
         if (transp) addTransp(transp);
     }
     ASTGEN_MEMBERS_AstCoverBin;
@@ -109,9 +136,11 @@ public:
 class AstCoverCrossBins final : public AstNode {
     // @astgen op1 := selectp : Optional[AstCoverSelectExpr]
     string m_name;
+
 public:
     AstCoverCrossBins(FileLine* fl, const string& name, AstCoverSelectExpr* selectp)
-        : ASTGEN_SUPER_CoverCrossBins(fl), m_name{name} {
+        : ASTGEN_SUPER_CoverCrossBins(fl)
+        , m_name{name} {
         this->selectp(selectp);
     }
     ASTGEN_MEMBERS_AstCoverCrossBins;
@@ -123,9 +152,11 @@ public:
 class AstCoverOption final : public AstNode {
     // @astgen op1 := valuep : AstNodeExpr
     VCoverOptionType m_type;
+
 public:
     AstCoverOption(FileLine* fl, VCoverOptionType type, AstNodeExpr* valuep)
-        : ASTGEN_SUPER_CoverOption(fl), m_type{type} {
+        : ASTGEN_SUPER_CoverOption(fl)
+        , m_type{type} {
         this->valuep(valuep);
     }
     ASTGEN_MEMBERS_AstCoverOption;
@@ -152,9 +183,11 @@ class AstCoverTransItem final : public AstNode {
     // @astgen op2 := repMinp : Optional[AstNodeExpr]  // Repetition min count (for [*], [->], [=])
     // @astgen op3 := repMaxp : Optional[AstNodeExpr]  // Repetition max count (for ranges)
     VTransRepType m_repType;
+
 public:
     AstCoverTransItem(FileLine* fl, AstNode* valuesp, VTransRepType repType = VTransRepType::NONE)
-        : ASTGEN_SUPER_CoverTransItem(fl), m_repType{repType} {
+        : ASTGEN_SUPER_CoverTransItem(fl)
+        , m_repType{repType} {
         if (valuesp) addValuesp(valuesp);
     }
     ASTGEN_MEMBERS_AstCoverTransItem;
@@ -182,9 +215,11 @@ class AstCovergroup final : public AstNode {
     // @astgen op3 := eventp : Optional[AstSenTree]
     string m_name;
     bool m_isClass = false;
+
 public:
     AstCovergroup(FileLine* fl, const string& name, AstNode* membersp, AstSenTree* eventp)
-        : ASTGEN_SUPER_Covergroup(fl), m_name{name} {
+        : ASTGEN_SUPER_Covergroup(fl)
+        , m_name{name} {
         if (membersp) addMembersp(membersp);
         this->eventp(eventp);
     }
@@ -201,9 +236,11 @@ public:
 class AstCoverpointRef final : public AstNode {
     // @astgen ptr := m_coverpointp : Optional[AstCoverpoint]
     string m_name;
+
 public:
     AstCoverpointRef(FileLine* fl, const string& name)
-        : ASTGEN_SUPER_CoverpointRef(fl), m_name{name} {}
+        : ASTGEN_SUPER_CoverpointRef(fl)
+        , m_name{name} {}
     ASTGEN_MEMBERS_AstCoverpointRef;
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;

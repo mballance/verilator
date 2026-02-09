@@ -23,6 +23,7 @@
 #define VERILATOR_VERILATED_FUNCCOV_H_
 
 #include "verilatedos.h"
+
 #include "verilated.h"
 #include "verilated_cov.h"
 
@@ -189,9 +190,7 @@ public:
         }
         // Total possible bins is product of coverpoint bin counts
         size_t totalBins = 1;
-        for (const auto* cp : m_coverpoints) {
-            totalBins *= cp->bins().size();
-        }
+        for (const auto* cp : m_coverpoints) { totalBins *= cp->bins().size(); }
         return (100.0 * coveredBins) / totalBins;
     }
 
