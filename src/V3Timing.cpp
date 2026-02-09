@@ -340,10 +340,23 @@ class TimingSuspendableVisitor final : public VNVisitor {
         }
     }
     void visit(AstNodeCCall* nodep) override {
-        new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(nodep->funcp()), getSuspendDepVtx(m_procp),
+        // Skip automatic covergroup sampling calls (marked with user3==1)
+        if (nodep->user3()) {
+            iterateChildren(nodep);
+            return;
+        }
+        
+        AstCFunc* funcp = nodep->funcp();
+        if (!funcp) {
+            iterateChildren(nodep);
+            return;
+        }
+        
+        UINFO(9, "V3Timing: Processing CCall to " << funcp->name() << " in dependency graph\n");
+        new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(funcp), getSuspendDepVtx(m_procp),
                         P_CALL};
 
-        new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(nodep->funcp()),
+        new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(funcp),
                         getNeedsProcDepVtx(m_procp), P_CALL};
 
         iterateChildren(nodep);
@@ -905,8 +918,21 @@ class TimingControlVisitor final : public VNVisitor {
         }
     }
     void visit(AstNodeCCall* nodep) override {
-        if (nodep->funcp()->needProcess()) m_hasProcess = true;
-        if (hasFlags(nodep->funcp(), T_SUSPENDEE) && !nodep->user1SetOnce()) {  // If suspendable
+        // Skip automatic covergroup sampling calls (marked with user3==1)
+        if (nodep->user3()) {
+            iterateChildren(nodep);
+            return;
+        }
+        
+        // Check if this is a valid CCall with a valid function pointer
+        AstCFunc* funcp = nodep->funcp();
+        if (!funcp) {
+            iterateChildren(nodep);
+            return;
+        }
+        
+        if (funcp->needProcess()) m_hasProcess = true;
+        if (hasFlags(funcp, T_SUSPENDEE) && !nodep->user1SetOnce()) {  // If suspendable
             VNRelinker relinker;
             nodep->unlinkFrBack(&relinker);
             AstCAwait* const awaitp = new AstCAwait{nodep->fileline(), nodep};
