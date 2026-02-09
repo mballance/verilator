@@ -294,9 +294,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             // Track this bin for coverage computation with at_least value
             m_binInfos.push_back(BinInfo(cbinp, varp, atLeastValue, coverpointp));
             
-            // TODO: Generate coverage database registration
-            // Coverage declarations need special handling for classes vs modules
-            // For now, bin counters exist but aren't registered with verilator_coverage
+            // Note: Coverage database registration happens later via VL_COVER_INSERT
+            // (see generateCoverageDeclarations() method around line 1164)
+            // Classes use "v_funccov/" hier prefix vs modules
             
             // Generate bin matching code in sample()
             // Handle transition bins specially
@@ -1256,6 +1256,26 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             m_constructorp = nullptr;
             m_coverpoints.clear();
             m_coverCrosses.clear();
+            
+            // Extract and store the clocking event from AstCovergroup node
+            // The parser creates this node to preserve the event information
+            for (AstNode* itemp = nodep->membersp(); itemp;) {
+                AstNode* nextp = itemp->nextp();
+                if (AstCovergroup* const cgp = VN_CAST(itemp, Covergroup)) {
+                    // Store the event in the global map for V3Active to retrieve later
+                    if (cgp->eventp()) {
+                        // Access the global map defined in V3Active.cpp
+                        extern std::unordered_map<const AstClass*, AstSenTree*> s_covergroupEvents;
+                        s_covergroupEvents[nodep] = cgp->eventp();
+                        cgp->eventp()->unlinkFrBack();  // Unlink to prevent deletion
+                        UINFO(4, "Stored clocking event for covergroup " << nodep->name() << endl);
+                    }
+                    // Remove the AstCovergroup node - it's just a holder for the event
+                    cgp->unlinkFrBack();
+                    VL_DO_DANGLING(cgp->deleteTree(), cgp);
+                }
+                itemp = nextp;
+            }
             
             // Find the sample() method and constructor
             int findCount = 0;
