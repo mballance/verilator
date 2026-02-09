@@ -60,54 +60,38 @@ This document outlines a comprehensive plan for implementing SystemVerilog funct
 
 ### Issue #2: Empty Covergroup Coverage Bug
 
-**Status:** 🔴 **OPEN** - Partial fix applied, deeper investigation needed
+**Status:** ✅ **FIXED** (2026-02-09)
 
-**Test Case:** `test_regress/t/t_covergroup_empty.v` (FAILS)
+**Test Case:** `test_regress/t/t_covergroup_empty.v` - Now **PASSES**
 
-**Problem:** Covergroups with no coverpoints should return 100% coverage (nothing to miss), but currently return 0%.
+**Problem:** Covergroups with no coverpoints should return 100% coverage (nothing to miss), but were returning 0%.
 
-**Root Cause Analysis:**
-1. **Primary Issue (FIXED):** Early return when `m_binInfos.empty()` in `generateCoverageMethodImplementation()` (line 1014-1016) prevented method body generation
-2. **Secondary Issue (OPEN):** AST assignment nodes are created but not emitted to final C++ code
-
-**Code Location:**
-- `src/V3CoverageFunctional.cpp` lines 1014-1024 (generateCoverageMethodImplementation)
-- `src/V3CoverageFunctional.cpp` lines 1061-1077 (generateCoverageMethodBody)
-
-**What Was Fixed:**
-- Removed early return for empty bin lists
-- Now calls `generateCoverageMethodBody()` even when `m_binInfos.empty()`
-- Code correctly adds `AstAssign` statement to set return value to 100.0
-
-**Remaining Issue:**
-- Generated C++ still shows `get_inst_coverage__Vfuncrtn = 0;` (default initialization)
-- The AST nodes we create appear to be discarded or replaced by a later compilation pass
-- Likely related to V3EmitC function body emission or optimization passes
-
-**Investigation Notes:**
+**Root Cause:**
+The `processCovergroup()` function had an early return when both coverpoints and crosses were empty:
 ```cpp
-// Our code creates:
-AstAssign* assignp = new AstAssign{
-    fl,
-    new AstVarRef{fl, returnVarp, VAccess::WRITE},
-    new AstConst{fl, AstConst::RealDouble{}, 100.0}};
-funcp->addStmtsp(assignp);
+if (!m_covergroupp || (m_coverpoints.empty() && m_coverCrosses.empty())) return;
+```
+This prevented `generateCoverageComputationCode()` from being called, so the coverage methods were never populated with the correct 100% return value.
 
-// But generated C++ shows:
-void __VnoInFunc_get_inst_coverage(..., double &get_inst_coverage__Vfuncrtn) {
-    get_inst_coverage__Vfuncrtn = 0;  // Default initialization, not our 100.0
-}
+**The Fix:**
+1. **Removed early return condition** - Changed the guard to only check `if (!m_covergroupp)`, allowing empty covergroups to proceed
+2. **Modified return value handling** - Instead of adding a new assignment statement, we now find and replace the existing return value assignment from 0.0 to 100.0
+
+**Code Changes:**
+- `src/V3CoverageFunctional.cpp` line 58: Removed empty check from `processCovergroup()` 
+- `src/V3CoverageFunctional.cpp` lines 1062-1084: Modified `generateCoverageMethodBody()` to replace existing assignment RHS instead of adding new statement
+
+**Why the Original Approach Failed:**
+Functions already had an initialization statement `get_inst_coverage__Vfuncrtn = 0;` created by Verilator's function infrastructure. Adding a second assignment after it didn't override the first one that was emitted to C++. The fix correctly replaces the RHS of the existing assignment.
+
+**Verification:**
+```
+Empty covergroup coverage: 100.000000%
+*-* All Finished *-*
+vlt/t_covergroup_empty: Self PASSED
 ```
 
-**Impact:** Low priority - edge case with clear workaround (always include at least one coverpoint)
-
-**Workaround:** Ensure every covergroup has at least one coverpoint with at least one bin.
-
-**Next Steps:**
-- Investigate V3EmitC function body emission logic
-- Check if later optimization passes remove our statements
-- Verify function parameter/return value handling for output parameters
-- May require changes to C++ emitter or different AST node approach
+**Impact:** Edge case now properly handled. Empty covergroups correctly report 100% coverage per IEEE 1800 specification.
 
 ---
 
@@ -119,7 +103,7 @@ This section documents all known limitations, unsupported features, and issues i
 
 **Feature Limitations:**
 1. Static `get_coverage()` method - requires architecture changes (Issue #1)
-2. Empty covergroups return 0% instead of 100% (Issue #2)
+2. ~~Empty covergroups return 0% instead of 100%~~ ✅ **FIXED** (Issue #2)
 3. Transition bins: Only 2-value sequences supported
 4. Transition bins: Repetition operators not supported ([*], [->], [=])
 5. Transition bins: Array bins not supported
@@ -176,13 +160,13 @@ This section documents all known limitations, unsupported features, and issues i
 
 ### Issue #2: Empty Covergroup Returns 0% Coverage Instead of 100%
 
-**Status:** 🟡 **IDENTIFIED** - Partial fix applied, deeper investigation needed
+**Status:** ✅ **FIXED** (2026-02-09)
 
 **Discovery Date:** 2026-02-08 (Production hardening phase)
 
-**Problem:** Covergroups with no coverpoints should return 100% coverage (nothing to miss), but currently return 0%.
+**Problem:** Covergroups with no coverpoints should return 100% coverage (nothing to miss), but were returning 0%.
 
-**Test Case:** `test_regress/t/t_covergroup_empty.v` - Currently FAILS
+**Test Case:** `test_regress/t/t_covergroup_empty.v` - Now **PASSES**
 
 **Example:**
 ```systemverilog
@@ -191,46 +175,30 @@ covergroup cg_empty;
 endgroup
 
 cg_empty inst = new;
-real cov = inst.get_inst_coverage();  // Returns 0.0, should be 100.0
+real cov = inst.get_inst_coverage();  // Now returns 100.0 ✅
 ```
 
 **Root Cause:**
-1. **Primary issue (FIXED):** Early return in `generateCoverageMethodImplementation` when `m_binInfos.empty()` prevented coverage method body generation
-   - Location: `src/V3CoverageFunctional.cpp` lines 1014-1024
-   - Fix: Removed early return, now calls `generateCoverageMethodBody` even for empty covergroups
+The `processCovergroup()` function had an early return when both coverpoints and crosses were empty:
+```cpp
+if (!m_covergroupp || (m_coverpoints.empty() && m_coverCrosses.empty())) return;
+```
+This prevented `generateCoverageComputationCode()` from being called for empty covergroups.
 
-2. **Secondary issue (OPEN):** AST assignment nodes are created but not emitted to final C++ code
-   - Location: `src/V3CoverageFunctional.cpp` lines 1061-1078
-   - The code correctly creates `AstAssign` statement to set return value to 100.0
-   - However, generated C++ shows `get_inst_coverage__Vfuncrtn = 0;` (default initialization)
-   - AST nodes appear to be discarded or replaced by a later compilation pass
-   - Likely related to V3EmitC function body emission or optimization passes
+**The Fix:**
+1. Removed the empty check condition from `processCovergroup()` (line 58)
+2. Modified `generateCoverageMethodBody()` to find and replace the existing return value assignment instead of adding a new one (lines 1062-1084)
 
-**Investigation Notes:**
-- Function uses output parameter style (`double &get_inst_coverage__Vfuncrtn`)
-- Return variable is initialized to 0 by default
-- Our `AstAssign` statement to set it to 100.0 is not appearing in final C++
-- May require changes to V3EmitC or understanding of function body emission order
+**Why the Original Approach Failed:**
+Functions already had a default initialization statement created by Verilator's function infrastructure. The fix correctly replaces the RHS of the existing assignment from 0.0 to 100.0 instead of trying to add a second assignment.
 
-**Impact:** Low - Edge case with clear workaround
-
-**Workaround:** 
-Always include at least one coverpoint with one bin in every covergroup:
-```systemverilog
-covergroup cg;
-    cp_dummy: coverpoint dummy_var {
-        bins b = {0};
-    }
-endgroup
+**Verification:**
+```
+Empty covergroup coverage: 100.000000%
+vlt/t_covergroup_empty: Self PASSED
 ```
 
-**Priority:** Low (edge case, has simple workaround)
-
-**Next Steps:**
-- Investigate V3EmitC function body emission logic
-- Check if function has existing body that overrides ours
-- Trace AST through compilation passes to see where assignment is lost
-- Consider alternative AST node types or emission strategies
+**Impact:** Edge case now properly handled per IEEE 1800 specification.
 
 ---
 
@@ -2070,10 +2038,10 @@ The proposed architecture extends the existing coverage system rather than repla
 
 ## Test Status and Validation
 
-### Overall Test Results (2026-02-08)
+### Overall Test Results (2026-02-09)
 
 **Test Suite:** 37 functional coverage tests  
-**Pass Rate:** 97% (36 passing, 1 failing)  
+**Pass Rate:** 100% (37 passing, 0 failing) ✅  
 **Status:** Production-ready with documented limitations
 
 ### Test Categories
@@ -2110,14 +2078,13 @@ The proposed architecture extends the existing coverage system rather than repla
 - Various `*_bad.v` and `*_unsup.v` tests for error detection
 - All passing (correctly detect and report errors)
 
-#### ❌ Failing Tests (1)
+#### ✅ All Tests Passing
 
 **Edge Cases:**
-- `t_covergroup_empty.v` - Empty covergroup (**Known Issue #2**)
+- `t_covergroup_empty.v` - Empty covergroup (**Issue #2 - FIXED** 2026-02-09)
   - Expected: 100% coverage (nothing to miss)
-  - Actual: 0% coverage
-  - Status: Bug identified, partial fix applied, deeper investigation needed
-  - Workaround: Always include at least one coverpoint
+  - Actual: 100% coverage ✅
+  - Status: Bug fixed, test now passes
 
 #### ⏳ Not Yet Run (2)
 

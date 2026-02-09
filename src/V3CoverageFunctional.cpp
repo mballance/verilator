@@ -56,7 +56,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
     // METHODS
     void processCovergroup() {
-        if (!m_covergroupp || (m_coverpoints.empty() && m_coverCrosses.empty())) return;
+        if (!m_covergroupp) return;
         
         UINFO(4, "Processing covergroup: " << m_covergroupp->name() 
               << " with " << m_coverpoints.size() << " coverpoints and "
@@ -75,7 +75,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             generateCrossCode(crossp);
         }
         
-        // Generate coverage computation code
+        // Generate coverage computation code (even for empty covergroups)
         generateCoverageComputationCode();
         
         // TODO: Generate instance registry infrastructure for static get_coverage()
@@ -1063,20 +1063,35 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             // No coverage to compute - return 100%
             UINFO(4, "    Empty covergroup, returning 100.0" << endl);
             AstVar* returnVarp = VN_AS(funcp->fvarp(), Var);
-            UINFO(4, "    Return variable: " << (returnVarp ? returnVarp->name() : "NULL") << endl);
-            if (returnVarp) {
+            
+            // Find and replace existing assignment to return variable
+            AstAssign* existingReturnAssign = nullptr;
+            for (AstNode* stmtp = funcp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
+                if (AstAssign* assignp = VN_CAST(stmtp, Assign)) {
+                    if (AstVarRef* lhsVarRef = VN_CAST(assignp->lhsp(), VarRef)) {
+                        if (lhsVarRef->varp() == returnVarp) {
+                            existingReturnAssign = assignp;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (existingReturnAssign) {
+                // Replace the RHS of existing assignment from 0 to 100.0
+                AstNode* oldRhs = existingReturnAssign->rhsp();
+                if (oldRhs) oldRhs->unlinkFrBack();
+                existingReturnAssign->rhsp(new AstConst{fl, AstConst::RealDouble{}, 100.0});
+                UINFO(4, "    Replaced return value assignment to 100.0" << endl);
+            } else if (returnVarp) {
+                // No existing assignment found, add one
                 AstAssign* assignp = new AstAssign{
                     fl,
                     new AstVarRef{fl, returnVarp, VAccess::WRITE},
                     new AstConst{fl, AstConst::RealDouble{}, 100.0}};
                 funcp->addStmtsp(assignp);
                 UINFO(4, "    Added assignment to return 100.0" << endl);
-            } else {
-                UINFO(4, "    ERROR: No return variable found!" << endl);
             }
-            // NOTE: There's a known issue where this assignment doesn't get emitted to C++
-            // The generated code still shows initialization to 0 instead of our assignment
-            // This requires deeper investigation of the C++ emitter (V3EmitC)
             return;
         }
         
