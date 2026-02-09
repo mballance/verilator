@@ -6907,6 +6907,14 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
         /*cont*/ yENDGROUP endLabelE
                         { AstClass *cgClassp = new AstClass{$<fl>2, *$2, PARSEP->libname()};
                           cgClassp->isCovergroup(true);
+                          // Create an AstCovergroup node to hold the clocking event
+                          // This will be accessible later for automatic sampling
+                          if ($4) {
+                              // $4 is an AstSenItem, wrap it in AstSenTree for storage
+                              AstSenTree* senTreep = new AstSenTree{$<fl>1, VN_AS($4, SenItem)};
+                              AstCovergroup* const cgNodep = new AstCovergroup{$<fl>1, *$2, nullptr, senTreep};
+                              cgClassp->addMembersp(cgNodep);
+                          }
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};
                           newp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
                           newp->classMethod(true);
@@ -6915,7 +6923,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                           newp->addStmtsp($3);
                           newp->addStmtsp($6);
                           cgClassp->addMembersp(newp);
-                          GRAMMARP->createCoverGroupMethods(cgClassp, $4);
+                          GRAMMARP->createCoverGroupMethods(cgClassp, nullptr);  // Don't pass event as sample args
 
                           $$ = cgClassp;
                           GRAMMARP->endLabel($<fl>8, $$, $8);
@@ -7363,7 +7371,7 @@ bins_expression<nodep>:  // ==IEEE: bins_expression
 coverage_eventE<nodep>:  // IEEE: [ coverage_event ]
                 /* empty */                             { $$ = nullptr; }
         |       clocking_event
-                        { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: coverage clocking event"); DEL($1); }
+                        { $$ = $1; }  // Keep the clocking event for automatic sampling
         |       yWITH__ETC yFUNCTION idAny/*"sample"*/ '(' tf_port_listE ')'
                         { if (*$3 != "sample") {
                             $<fl>3->v3error("Coverage sampling function must be named 'sample'");
