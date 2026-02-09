@@ -331,7 +331,7 @@ class OrderGraphBuilder final : public VNVisitor {
     void visit(AstCoverToggle* nodep) override {  //
         iterateLogic(nodep);
     }
-    void visit(AstStmtExpr* nodep) override { 
+    void visit(AstStmtExpr* nodep) override {
         // StmtExpr wraps expressions used as statements (e.g., method calls).
         // If it's under an AstActive but not already in a logic context, treat it as logic.
         // Otherwise just iterate normally.

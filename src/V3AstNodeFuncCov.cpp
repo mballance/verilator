@@ -33,13 +33,9 @@ void AstCovergroupTemp::dumpJson(std::ostream& str) const {
     if (m_isClass) str << ", \"isClass\": true";
 }
 
-void AstCoverpoint::dump(std::ostream& str) const {
-    this->AstNodeFuncCovItem::dump(str);
-}
+void AstCoverpoint::dump(std::ostream& str) const { this->AstNodeFuncCovItem::dump(str); }
 
-void AstCoverpoint::dumpJson(std::ostream& str) const {
-    this->AstNodeFuncCovItem::dumpJson(str);
-}
+void AstCoverpoint::dumpJson(std::ostream& str) const { this->AstNodeFuncCovItem::dumpJson(str); }
 
 void AstCoverBin::dump(std::ostream& str) const {
     this->AstNode::dump(str);
@@ -102,17 +98,11 @@ void AstCoverTransSet::dump(std::ostream& str) const {
     str << " trans_set";
 }
 
-void AstCoverTransSet::dumpJson(std::ostream& str) const {
-    this->AstNode::dumpJson(str);
-}
+void AstCoverTransSet::dumpJson(std::ostream& str) const { this->AstNode::dumpJson(str); }
 
-void AstCoverCross::dump(std::ostream& str) const {
-    this->AstNodeFuncCovItem::dump(str);
-}
+void AstCoverCross::dump(std::ostream& str) const { this->AstNodeFuncCovItem::dump(str); }
 
-void AstCoverCross::dumpJson(std::ostream& str) const {
-    this->AstNodeFuncCovItem::dumpJson(str);
-}
+void AstCoverCross::dumpJson(std::ostream& str) const { this->AstNodeFuncCovItem::dumpJson(str); }
 
 void AstCoverCrossBins::dump(std::ostream& str) const {
     this->AstNode::dump(str);
@@ -160,10 +150,6 @@ void AstCoverpointRef::dumpJson(std::ostream& str) const {
     str << ", \"name\": " << VString::quotePercent(m_name);
 }
 
-void AstCoverSelectExpr::dump(std::ostream& str) const {
-    this->AstNode::dump(str);
-}
+void AstCoverSelectExpr::dump(std::ostream& str) const { this->AstNode::dump(str); }
 
-void AstCoverSelectExpr::dumpJson(std::ostream& str) const {
-    this->AstNode::dumpJson(str);
-}
+void AstCoverSelectExpr::dumpJson(std::ostream& str) const { this->AstNode::dumpJson(str); }
