@@ -1,11 +1,8 @@
+	   docs/functional_coverage_plan.md
+	   docs/guide/languages.rst
+	   docs/guide/simulating.rst
 	   src/V3CoverageFunctional.cpp
-	   src/V3EmitCFunc.h
-	   src/verilog.y
 
-	test_regress/t/t_covergroup_cross_3way.py
-	test_regress/t/t_covergroup_cross_3way.v
-	test_regress/t/t_covergroup_cross_4way.py
-	test_regress/t/t_covergroup_cross_4way.v
-	test_regress/t/t_covergroup_cross_simple.py
-	test_regress/t/t_covergroup_cross_simple.v
+	test_regress/t/t_covergroup_perf.py
+	test_regress/t/t_covergroup_perf.v
 

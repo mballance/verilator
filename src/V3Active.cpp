@@ -704,12 +704,48 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         AstSenTree* const eventp = getCovergroupEvent(classp);
         if (!eventp) return;  // No automatic sampling for this covergroup
         
-        // Get the sample CFunc from the cached map
-        auto it = s_covergroupSampleFuncs.find(classp);
-        if (it == s_covergroupSampleFuncs.end()) {
+        // Get the sample CFunc - we need to find it in the class scope
+        // The class scope name is like "TOP.t__03a__03acg" for class "t__03a__03acg"
+        const string classScopeName = string("TOP.") + classp->name();
+        
+        AstCFunc* sampleCFuncp = nullptr;
+        // Search through all scopes to find the class scope and its sample CFunc
+        for (AstNode* scopeNode = m_scopep; scopeNode; scopeNode = scopeNode->backp()) {
+            if (AstNetlist* netlistp = VN_CAST(scopeNode, Netlist)) {
+                // Found netlist, search its modules for scopes
+                for (AstNode* modp = netlistp->modulesp(); modp; modp = modp->nextp()) {
+                    if (AstScope* scopep = VN_CAST(modp, Scope)) {
+                        if (scopep->name() == classScopeName) {
+                            // Found the class scope, now find the sample CFunc
+                            for (AstNode* itemp = scopep->blocksp(); itemp; itemp = itemp->nextp()) {
+                                if (AstCFunc* cfuncp = VN_CAST(itemp, CFunc)) {
+                                    if (cfuncp->name().find("sample") != string::npos) {
+                                        sampleCFuncp = cfuncp;
+                                        break;
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        
+        if (!sampleCFuncp) {
+            // Fallback: try the cached version
+            auto it = s_covergroupSampleFuncs.find(classp);
+            if (it != s_covergroupSampleFuncs.end()) {
+                sampleCFuncp = it->second;
+            }
+        }
+        
+        if (!sampleCFuncp) {
+            UINFO(4, "Could not find sample() CFunc for covergroup " << classp->name() << endl);
             return;  // CFunc not found
         }
-        AstCFunc* const sampleCFuncp = it->second;
+        UASSERT_OBJ(sampleCFuncp, nodep, "Sample CFunc is null for covergroup");
         
         // Create a VarRef to the covergroup instance for the method call
         FileLine* const fl = nodep->fileline();
@@ -718,6 +754,10 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         // Create the CMethodCall to sample()
         // Note: We don't pass arguments in argsp since vlSymsp is passed via argTypes
         AstCMethodCall* const cmethodCallp = new AstCMethodCall{fl, varrefp, sampleCFuncp, nullptr};
+        
+        // Mark this as an automatic covergroup sampling call so other passes can identify it
+        // Use user3() as a marker (1 = automatic sampling call)
+        cmethodCallp->user3(1);
         
         // Set dtype to void since sample() doesn't return a value
         cmethodCallp->dtypeSetVoid();
@@ -765,6 +805,13 @@ class CovergroupSamplingVisitor final : public VNVisitor {
 public:
     // CONSTRUCTORS
     explicit CovergroupSamplingVisitor(AstNetlist* nodep) {
+        // Skip automatic sampling if --timing is enabled
+        // There's a compatibility issue with V3Timing that needs to be resolved
+        if (v3Global.opt.timing().isSetTrue()) {
+            UINFO(3, "Skipping automatic covergroup sampling due to --timing flag\n");
+            return;
+        }
+        
         // First pass: collect sample CFuncs from covergroup class scopes
         m_inFirstPass = true;
         iterate(nodep);

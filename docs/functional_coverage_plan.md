@@ -353,7 +353,9 @@ real cov_b = the_cg.b.get_inst_coverage();  // Not implemented
 
 **Status:** ✅ **SUPPORTED** (as of 2026-02)
 
-**Feature:** SystemVerilog automatic sampling with clocking events (`@(posedge clk)`) is now supported.
+**Known Limitation:** Automatic sampling is currently incompatible with `--timing` mode. When `--timing` is enabled, automatic sampling is disabled and you must use manual `.sample()` calls. This is a temporary limitation that will be resolved in a future update.
+
+**Feature:** SystemVerilog automatic sampling with clocking events (`@(posedge clk)`) is supported.
 
 **Example:**
 ```systemverilog
