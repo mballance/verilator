@@ -111,8 +111,9 @@ class TaskStateVisitor final : public VNVisitor {
     // MEMBERS
     VarToScopeMap m_varToScopeMap;  // Map for Var -> VarScope mappings
     FuncToClassMap m_funcToClassMap;  // Map for ctor func -> class
-    AstNodeFTask* m_ctorp = nullptr;  // Class constructor
+    AstNodeFTask* m_ctorp = nullptr;  // Class/covergroup constructor
     AstClass* m_classp = nullptr;  // Current class
+    AstCovergroup* m_covergroupp = nullptr;  // Current covergroup
     V3Graph m_callGraph;  // Task call graph
     TaskBaseVertex* m_curVxp;  // Current vertex we're adding to
     std::vector<AstInitialAutomatic*> m_initialps;  // Initial blocks to move
@@ -254,8 +255,9 @@ private:
         if (nodep->isConstructor()) {
             m_curVxp->noInline(true);
             m_ctorp = nodep;
-            UASSERT_OBJ(m_classp, nodep, "Ctor not under class");
-            m_funcToClassMap[nodep] = m_classp;
+            UASSERT_OBJ(m_classp || m_covergroupp, nodep, "Ctor not under class/covergroup");
+            if (m_classp) m_funcToClassMap[nodep] = m_classp;
+            // Covergroups don't need funcToClassMap
         }
         iterateChildren(nodep);
     }
@@ -291,6 +293,31 @@ private:
             iterateChildren(nodep);
         }
         UASSERT_OBJ(m_ctorp, nodep, "class constructor missing");  // LinkDot always makes it
+        for (AstInitialAutomatic* initialp : m_initialps) {
+            if (AstNode* const newp = initialp->stmtsp()) {
+                newp->unlinkFrBackWithNext();
+                if (!m_ctorp->stmtsp()) {
+                    m_ctorp->addStmtsp(newp);
+                } else {
+                    m_ctorp->stmtsp()->addHereThisAsNext(newp);
+                }
+            }
+            VL_DO_DANGLING(pushDeletep(initialp->unlinkFrBack()), initialp);
+        }
+        m_initialps.clear();
+    }
+    void visit(AstCovergroup* nodep) override {
+        // Move initial statements into the constructor (similar to AstClass)
+        VL_RESTORER(m_initialps);
+        VL_RESTORER(m_ctorp);
+        VL_RESTORER(m_covergroupp);
+        m_initialps.clear();
+        m_ctorp = nullptr;
+        m_covergroupp = nodep;
+        {  // Find m_initialps, m_ctor
+            iterateChildren(nodep);
+        }
+        UASSERT_OBJ(m_ctorp, nodep, "covergroup constructor missing");  // Parser always makes it
         for (AstInitialAutomatic* initialp : m_initialps) {
             if (AstNode* const newp = initialp->stmtsp()) {
                 newp->unlinkFrBackWithNext();

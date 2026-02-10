@@ -193,6 +193,37 @@ class ScopeVisitor final : public VNVisitor {
 
         iterateChildren(nodep);
     }
+    void visit(AstCovergroup* nodep) override {
+        // Create required blocks and add to module
+        VL_RESTORER(m_scopep);
+        VL_RESTORER(m_aboveCellp);
+        VL_RESTORER(m_aboveScopep);
+        VL_RESTORER(m_modp);
+        m_aboveScopep = m_scopep;
+        m_modp = nodep;
+
+        string scopename;
+        if (!m_aboveScopep) {
+            scopename = "TOP";
+        } else {
+            scopename = m_aboveScopep->name() + "." + nodep->name();
+        }
+
+        UINFO(4, " COVERGROUP AT " << scopename << "  " << nodep);
+        AstNode::user1ClearTree();
+
+        const AstNode* const abovep
+            = (m_aboveCellp ? static_cast<AstNode*>(m_aboveCellp) : static_cast<AstNode*>(nodep));
+        m_scopep
+            = new AstScope{abovep->fileline(), m_modp, scopename, m_aboveScopep, m_aboveCellp};
+        m_classOrPackageScopes.emplace(nodep, m_scopep);
+
+        // Create scope for the current usage of this cell
+        AstNode::user1ClearTree();
+        nodep->addStmtsp(m_scopep);
+
+        iterateChildren(nodep);
+    }
     void visit(AstCellInline* nodep) override {  //
         if (v3Global.opt.vpi()) {
             m_scopep->addInlinesp(new AstCellInlineScope{nodep->fileline(), m_scopep, nodep});

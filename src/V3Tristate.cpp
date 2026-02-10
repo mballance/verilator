@@ -1873,6 +1873,9 @@ class TristateVisitor final : public TristateBaseVisitor {
     void visit(AstClass* nodep) override {
         // don't deal with classes
     }
+    void visit(AstCovergroup* nodep) override {
+        // don't deal with covergroups
+    }
     void visit(AstNodeFTask* nodep) override {
         // don't deal with functions
     }

@@ -3365,6 +3365,11 @@ class WidthVisitor final : public VNVisitor {
             nodep->dtypep(iterateEditMoveDTypep(nodep, nodep->childDTypep()));
         }
     }
+    void visit(AstCovergroupTemp* nodep) override {
+        // AstCovergroupTemp is a temporary parser node that will be removed by V3CoverageFunctional
+        // Skip it during width processing - its contents (SenTree/SenItem) will be handled separately
+        // when V3CoverageFunctional extracts and processes the clocking event
+    }
     void visit(AstMemberDType* nodep) override {
         if (nodep->didWidthAndSet()) return;  // This node is a dtype & not both PRELIMed+FINALed
         // Iterate into subDTypep() to resolve that type and update pointer.
