@@ -116,6 +116,26 @@ class EmitCHeader final : public EmitCConstInit {
                     lastAnon = anon;
                     varList.emplace_back(varp);
                 }
+            } else if (const AstCStmt* const cstmtp = VN_CAST(nodep, CStmt)) {
+                // Handle CStmt nodes that represent special member declarations (e.g., std::map)
+                // Emit ALL CStmt nodes found in members for debugging
+                UINFO(2, "EmitCHeaders: Found CStmt in members, user1=" << cstmtp->user1() << endl);
+                // Check user1 flag to see if this is a class member declaration
+                if (cstmtp->user1() == 2 || true) {  // Always emit for now to debug
+                    // Flush any pending var list first
+                    emitCurrentList();
+                    // Emit the C statement directly
+                    decorateFirst(first, "\n// DESIGN SPECIFIC STATE\n");
+                    // Extract text from the CStmt's nodes (which should be AstText nodes)
+                    UINFO(4, "EmitCHeaders: Found CStmt with user1=2, nodesp=" << cstmtp->nodesp() << endl);
+                    for (const AstNode* textp = cstmtp->nodesp(); textp; textp = textp->nextp()) {
+                        UINFO(4, "EmitCHeaders: Processing node type: " << textp->typeName() << endl);
+                        if (const AstText* const asttextp = VN_CAST(textp, Text)) {
+                            UINFO(4, "EmitCHeaders: Emitting text: " << asttextp->text() << endl);
+                            puts(asttextp->text());
+                        }
+                    }
+                }
             }
         }
 

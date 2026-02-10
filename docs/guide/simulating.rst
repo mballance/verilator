@@ -356,9 +356,50 @@ Transition bins track sequences of values across multiple samples:
       }
    endgroup
 
-Transition bins currently support simple two-value transitions. The syntax
-``(value1 => value2)`` matches when the coverpoint changes from ``value1`` to
-``value2`` across consecutive samples.
+**Supported Syntax:**
+
+Verilator supports multi-value transition sequences:
+
+.. code-block:: sv
+
+   coverpoint state {
+      // Two-value transitions
+      bins trans_2 = (0 => 1);
+      
+      // Multi-value transitions
+      bins trans_3 = (0 => 1 => 2);
+      bins trans_4 = (0 => 1 => 2 => 3);
+      
+      // Transitions with value sets
+      bins trans_set = (0, 1 => 2, 3);  // (0=>2), (0=>3), (1=>2), (1=>3)
+   }
+
+**Unsupported Repetition Operators:**
+
+Verilator does not currently support IEEE 1800-2023 transition bin repetition
+operators. The following syntax will generate a ``COVERIGN`` warning and be
+ignored:
+
+* **Consecutive repetition** ``[*N]`` - Repeat value N times consecutively
+
+  .. code-block:: sv
+  
+     bins trans = (1 => 2 [*3] => 3);  // Unsupported: 1, 2, 2, 2, 3
+
+* **Goto repetition** ``[->N]`` - See value N times with any gaps, next value follows immediately
+
+  .. code-block:: sv
+  
+     bins trans = (1 => 2 [->3] => 3);  // Unsupported: 1, 2, X, 2, Y, 2, 3
+
+* **Nonconsecutive repetition** ``[=N]`` - See value N times with gaps allowed everywhere
+
+  .. code-block:: sv
+  
+     bins trans = (1 => 2 [=3] => 3);  // Unsupported: 1, 2, X, 2, Y, 2, Z, 3
+
+If you need repetition behavior, consider using multiple bins to represent the
+desired sequences explicitly.
 
 Bin Options
 ^^^^^^^^^^^
@@ -403,6 +444,38 @@ tool:
 
 The coverage data integrates with Verilator's existing coverage infrastructure,
 so you can view functional coverage alongside line and toggle coverage.
+
+Functional Coverage Data Format
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Functional coverage data is stored in the coverage data file (typically
+:file:`coverage.dat`) using the standard Verilator coverage format. Each
+functional coverage bin is recorded as a coverage point with:
+
+* **Type**: ``funccov`` - identifies the record as functional coverage
+* **Page**: ``v_funccov/<covergroup_name>`` - groups bins by their covergroup
+* **Hierarchy**: ``<covergroup>.<coverpoint>.<bin>`` for coverpoints, or
+  ``<covergroup>.<cross>.<bin>`` for cross coverage
+* **Count**: Number of times the bin was hit during simulation
+
+Example coverage.dat entries:
+
+.. code-block::
+
+   C 'tfunccovpagev_funccov/cgftest.vl28hcg.cp_a.low' 150
+   C 'tfunccovpagev_funccov/cgftest.vl29hcg.cp_a.high' 75
+   C 'tfunccovpagev_funccov/cgftest.vl35hcg.cross_ab.a0_b1' 25
+
+To filter functional coverage data, use the :option:`--filter-type` option
+with :command:`verilator_coverage`:
+
+.. code-block:: bash
+
+   # Only process functional coverage
+   $ verilator_coverage --filter-type funccov --annotate report coverage.dat
+   
+   # Exclude functional coverage
+   $ verilator_coverage --filter-type '!funccov' --annotate report coverage.dat
 
 Covergroup Options
 ^^^^^^^^^^^^^^^^^^
@@ -483,6 +556,11 @@ but automatic sampling is not performed. Use explicit ``sample()`` calls:
    
    cg cg_inst = new;
    always @(posedge clk) cg_inst.sample();  // Explicit sampling
+
+**Transition Bin Repetition Operators:** The repetition operators ``[*N]``,
+``[->N]``, and ``[=N]`` for transition bins are not supported. Use multiple
+explicit bins to represent repeated sequences. See the
+:ref:`Transition Bins<Transition Bins>` section for details.
 
 For a complete list of supported features and current implementation status,
 see the functional coverage plan in the Verilator source tree at
