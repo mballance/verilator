@@ -93,12 +93,6 @@ public:
         return nodep;
     }
     void createCoverGroupMethods(AstNodeModule* nodep, AstNode* sampleArgs) {
-        // Hidden static to take unspecified reference argument results
-        AstVar* const defaultVarp
-            = new AstVar{nodep->fileline(), VVarType::MEMBER, "__Vint", nodep->findIntDType()};
-        defaultVarp->lifetime(VLifetime::STATIC_EXPLICIT);
-        nodep->addStmtsp(defaultVarp);
-
         // IEEE: option
         {
             v3Global.setUsesStdPackage();
@@ -142,6 +136,8 @@ public:
 
         // IEEE: static function real get_coverage(optional ref int, optional ref int)
         // IEEE: function real get_inst_coverage(optional ref int, optional ref int)
+        // Note: For simplicity, Verilator implements these without the optional ref int parameters
+        // The parameters are rarely used and complicate the implementation
         for (const string& name : {"get_coverage"s, "get_inst_coverage"s}) {
             AstFunc* const funcp = new AstFunc{nodep->fileline(), name, nullptr, nullptr};
             funcp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
@@ -157,15 +153,6 @@ public:
                 varp->direction(VDirection::OUTPUT);
                 varp->funcReturn(true);
                 funcp->fvarp(varp);
-            }
-            for (const string& varname : {"covered_bins"s, "total_bins"s}) {
-                AstVar* const varp = new AstVar{nodep->fileline(), VVarType::MEMBER, varname,
-                                                nodep->findStringDType()};
-                varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
-                varp->funcLocal(true);
-                varp->direction(VDirection::INPUT);
-                varp->valuep(new AstVarRef{nodep->fileline(), defaultVarp, VAccess::READ});
-                funcp->addStmtsp(varp);
             }
         }
         // IEEE: function void set_inst_name(string)
