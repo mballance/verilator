@@ -33,7 +33,7 @@ VL_DEFINE_DEBUG_FUNCTIONS;
 
 class FunctionalCoverageVisitor final : public VNVisitor {
     // STATE
-    AstClass* m_covergroupp = nullptr;  // Current covergroup being processed
+    AstNodeModule* m_covergroupp = nullptr;  // Current covergroup (AstCovergroup or AstClass)
     AstFunc* m_sampleFuncp = nullptr;   // Current sample() function
     AstFunc* m_constructorp = nullptr;  // Current constructor
     std::vector<AstCoverpoint*> m_coverpoints;  // Coverpoints in current covergroup
@@ -259,14 +259,27 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         return 1;  // Default: at least 1 hit required
     }
     
-    // Extract auto_bin_max option from covergroup
-    int getCovergroupAutoBinMax(AstClass* covergroupp) {
-        // Read from covergroup class field (set by V3Width before CgOptionAssign deletion)
-        const int autoBinMax = covergroupp->autoBinMax();
-        if (autoBinMax >= 0) {
-            UINFO(4, "Using option.auto_bin_max=" << autoBinMax 
-                  << " for " << covergroupp->name() << endl);
-            return autoBinMax;
+    // Extract auto_bin_max option from covergroup (supports both AstCovergroup and AstClass)
+    int getCovergroupAutoBinMax(AstNodeModule* covergroupp) {
+        // Try AstCovergroup first (preferred after Phase 4)
+        if (AstCovergroup* cgp = VN_CAST(covergroupp, Covergroup)) {
+            const int autoBinMax = cgp->autoBinMax();
+            if (autoBinMax >= 0) {
+                UINFO(4, "Using option.auto_bin_max=" << autoBinMax 
+                      << " for " << cgp->name() << endl);
+                return autoBinMax;
+            }
+        }
+        // Fallback to AstClass (during Phase 3 transition)
+        else if (AstClass* classp = VN_CAST(covergroupp, Class)) {
+            if (classp->isCovergroup()) {
+                const int autoBinMax = classp->autoBinMax();
+                if (autoBinMax >= 0) {
+                    UINFO(4, "Using option.auto_bin_max=" << autoBinMax 
+                          << " for " << classp->name() << " (via AstClass)" << endl);
+                    return autoBinMax;
+                }
+            }
         }
         
         // Default: use global option
@@ -300,7 +313,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             coverpointp->fileline(), VVarType::MEMBER, varName,
             exprp->dtypep()};
         prevVarp->isStatic(false);
-        m_covergroupp->addMembersp(prevVarp);
+        m_covergroupp->addStmtsp(prevVarp);
         
         UINFO(4, "    Created previous value variable: " << varName << endl);
         
@@ -333,7 +346,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             binp->fileline(), VVarType::MEMBER, varName,
             VFlagLogicPacked{}, 8};
         stateVarp->isStatic(false);
-        m_covergroupp->addMembersp(stateVarp);
+        m_covergroupp->addStmtsp(stateVarp);
         
         UINFO(4, "    Created sequence state variable: " << varName << endl);
         
@@ -416,7 +429,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 cbinp->fileline(), VVarType::MEMBER, varName,
                 cbinp->findUInt32DType()};
             varp->isStatic(false);
-            m_covergroupp->addMembersp(varp);
+            m_covergroupp->addStmtsp(varp);
             UINFO(4, "    Created member variable: " << varName << " type=" 
                   << static_cast<int>(cbinp->binsType()) 
                   << (cbinp->binsType() == VCoverBinsType::IGNORE ? " (IGNORE)" :
@@ -450,7 +463,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 defBinp->fileline(), VVarType::MEMBER, varName,
                 defBinp->findUInt32DType()};
             varp->isStatic(false);
-            m_covergroupp->addMembersp(varp);
+            m_covergroupp->addStmtsp(varp);
             UINFO(4, "    Created default bin variable: " << varName << endl);
             
             // Track for coverage computation
@@ -944,7 +957,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 arrayBinp->fileline(), VVarType::MEMBER, varName,
                 arrayBinp->findUInt32DType()};
             varp->isStatic(false);
-            m_covergroupp->addMembersp(varp);
+            m_covergroupp->addStmtsp(varp);
             UINFO(4, "    Created array bin [" << index << "]: " << varName << endl);
             
             // Track for coverage computation
@@ -1043,7 +1056,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         AstVar* arrayVarp = new AstVar{fl, VVarType::MEMBER, arrayName, arrayDtp};
         arrayVarp->isStatic(false);
-        m_covergroupp->addMembersp(arrayVarp);
+        m_covergroupp->addStmtsp(arrayVarp);
         
         UINFO(4, "      Created bin array: " << arrayName << " with " << totalBins << " elements" << endl);
         
@@ -1244,7 +1257,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             crossp->fileline(), VVarType::MEMBER, varName,
             bins[0]->findUInt32DType()};
         varp->isStatic(false);
-        m_covergroupp->addMembersp(varp);
+        m_covergroupp->addStmtsp(varp);
         
         UINFO(4, "      Created cross bin variable: " << varName << endl);
         
@@ -1471,7 +1484,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstFunc* getInstCoveragep = nullptr;
         
         int memberCount = 0;
-        for (AstNode* itemp = m_covergroupp->membersp(); itemp; itemp = itemp->nextp()) {
+        for (AstNode* itemp = m_covergroupp->stmtsp(); itemp; itemp = itemp->nextp()) {
             if (++memberCount > 10000) {
                 m_covergroupp->v3error("Too many members or infinite loop in membersp iteration (1)");
                 break;
@@ -1790,6 +1803,57 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     }
 
     // VISITORS
+    void visit(AstCovergroup* nodep) override {
+        UINFO(9, "Visiting AstCovergroup: " << nodep->name() << endl);
+        VL_RESTORER(m_covergroupp);
+        m_covergroupp = nodep;
+        m_sampleFuncp = nullptr;
+        m_constructorp = nullptr;
+        m_coverpoints.clear();
+        m_coverCrosses.clear();
+        
+        // Extract and store the clocking event from AstCovergroupTemp node
+        // The parser creates this node to preserve the event information
+        for (AstNode* itemp = nodep->stmtsp(); itemp;) {
+            AstNode* nextp = itemp->nextp();
+            if (AstCovergroupTemp* const cgp = VN_CAST(itemp, CovergroupTemp)) {
+                // Store the event in the global map for V3Active to retrieve later
+                if (cgp->eventp()) {
+                    // Access the global map defined in V3Active.cpp (widened to AstNodeModule*)
+                    extern std::unordered_map<const AstNodeModule*, AstSenTree*> s_covergroupEvents;
+                    s_covergroupEvents[nodep] = cgp->eventp();
+                    cgp->eventp()->unlinkFrBack();  // Unlink to prevent deletion
+                    UINFO(4, "Stored clocking event for covergroup " << nodep->name() << endl);
+                }
+                // Remove the AstCovergroupTemp node - it's just a holder for the event
+                cgp->unlinkFrBack();
+                VL_DO_DANGLING(cgp->deleteTree(), cgp);
+            }
+            itemp = nextp;
+        }
+        
+        // Find the sample() method and constructor
+        int findCount = 0;
+        for (AstNode* itemp = nodep->stmtsp(); itemp; itemp = itemp->nextp()) {
+            if (++findCount > 10000) {
+                nodep->v3error("Too many members or infinite loop in stmtsp iteration");
+                break;
+            }
+            if (AstFunc* const funcp = VN_CAST(itemp, Func)) {
+                if (funcp->name() == "sample") {
+                    m_sampleFuncp = funcp;
+                    UINFO(9, "Found sample() method" << endl);
+                } else if (funcp->name() == "new") {
+                    m_constructorp = funcp;
+                    UINFO(9, "Found constructor" << endl);
+                }
+            }
+        }
+        
+        iterateChildren(nodep);
+        processCovergroup();
+    }
+
     void visit(AstClass* nodep) override {
         UINFO(9, "Visiting class: " << nodep->name() 
               << " isCovergroup=" << nodep->isCovergroup() << endl);
@@ -1808,8 +1872,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 if (AstCovergroupTemp* const cgp = VN_CAST(itemp, CovergroupTemp)) {
                     // Store the event in the global map for V3Active to retrieve later
                     if (cgp->eventp()) {
-                        // Access the global map defined in V3Active.cpp
-                        extern std::unordered_map<const AstClass*, AstSenTree*> s_covergroupEvents;
+                        // Access the global map defined in V3Active.cpp (widened to AstNodeModule*)
+                        extern std::unordered_map<const AstNodeModule*, AstSenTree*> s_covergroupEvents;
                         s_covergroupEvents[nodep] = cgp->eventp();
                         cgp->eventp()->unlinkFrBack();  // Unlink to prevent deletion
                         UINFO(4, "Stored clocking event for covergroup " << nodep->name() << endl);

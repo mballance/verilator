@@ -625,12 +625,12 @@ public:
 // declared with sensitivity events (e.g., covergroup cg @(posedge clk);)
 
 // Global map to store clocking events for covergroups
-// Key: AstClass pointer, Value: SenTree
-std::unordered_map<const AstClass*, AstSenTree*> s_covergroupEvents;
+// Key: AstNodeModule pointer (AstCovergroup or AstClass), Value: SenTree
+std::unordered_map<const AstNodeModule*, AstSenTree*> s_covergroupEvents;
 
 // Global map to store sample CFuncs for covergroups  
-// Key: AstClass pointer, Value: sample CFunc
-std::unordered_map<const AstClass*, AstCFunc*> s_covergroupSampleFuncs;
+// Key: AstNodeModule pointer (AstCovergroup or AstClass), Value: sample CFunc
+std::unordered_map<const AstNodeModule*, AstCFunc*> s_covergroupSampleFuncs;
 
 class CovergroupSamplingVisitor final : public VNVisitor {
     // STATE
@@ -638,9 +638,9 @@ class CovergroupSamplingVisitor final : public VNVisitor {
     AstScope* m_scopep = nullptr;  // Current scope
     bool m_inFirstPass = true;  // First pass collects CFuncs, second pass adds sampling
 
-    // Helper to get the clocking event from a covergroup class
-    AstSenTree* getCovergroupEvent(AstClass* classp) {
-        auto it = s_covergroupEvents.find(classp);
+    // Helper to get the clocking event from a covergroup (AstCovergroup or AstClass)
+    AstSenTree* getCovergroupEvent(AstNodeModule* covergroupp) {
+        auto it = s_covergroupEvents.find(covergroupp);
         if (it != s_covergroupEvents.end()) {
             return it->second;
         }
