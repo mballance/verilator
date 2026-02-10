@@ -4455,10 +4455,16 @@ class WidthVisitor final : public VNVisitor {
         }
     }
     void methodCallClass(AstMethodCall* nodep, AstClassRefDType* adtypep) {
-        // No need to width-resolve the class, as it was done when we did the child
-        AstClass* const first_classp = adtypep->classp();
+        // No need to width-resolve the class/covergroup, as it was done when we did the child
+        AstNodeModule* const first_modulep = adtypep->modulep();
+        UASSERT_OBJ(first_modulep, nodep, "Unlinked");
+        
+        AstClass* const first_classp = VN_CAST(first_modulep, Class);
+        AstCovergroup* const first_covergroupp = VN_CAST(first_modulep, Covergroup);
+        
+        // Handle class-specific methods (randomize, srandom)
         AstWith* withp = nullptr;
-        if (nodep->name() == "randomize") {
+        if (first_classp && nodep->name() == "randomize") {
             VL_RESTORER(m_randomizeFromp);
             m_randomizeFromp = nodep->fromp();
             withp = methodWithArgument(nodep, false, false, adtypep->findVoidDType(),
@@ -4471,13 +4477,43 @@ class WidthVisitor final : public VNVisitor {
             methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
             V3Randomize::newRandomizeFunc(m_memberMap, first_classp);
             handleRandomizeArgs(nodep, first_classp);
-        } else if (nodep->name() == "srandom") {
+        } else if (first_classp && nodep->name() == "srandom") {
             methodOkArguments(nodep, 1, 1);
             iterateCheckSigned32(nodep, "argument", methodArg(nodep, 0), BOTH);
             methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
             V3Randomize::newSRandomFunc(m_memberMap, first_classp);
         }
-        UASSERT_OBJ(first_classp, nodep, "Unlinked");
+        
+        // For covergroups, directly look up the method (no inheritance)
+        if (first_covergroupp) {
+            if (AstNodeFTask* const ftaskp
+                = VN_CAST(m_memberMap.findMember(first_covergroupp, nodep->name()), NodeFTask)) {
+                userIterate(ftaskp, nullptr);
+                // Covergroup methods are never static
+                nodep->taskp(ftaskp);
+                nodep->dtypeFrom(ftaskp);
+                nodep->classOrPackagep(first_covergroupp);
+                if (VN_IS(ftaskp, Task)) {
+                    if (m_vup && m_vup->prelim() && !VN_IS(nodep->backp(), StmtExpr)) {
+                        nodep->v3error(
+                            "Cannot call a task/void-function as a member function: "
+                            << nodep->prettyNameQ());
+                    }
+                    nodep->dtypeSetVoid();
+                }
+                // Process arguments - same as class code at line 4554
+                if (withp) nodep->addPinsp(withp);
+                // Set didWidth before processing args to avoid recursion
+                nodep->didWidth(true);
+                processFTaskRefArgs(nodep);
+                return;
+            }
+            nodep->v3error("No function/task '" << nodep->prettyName() << "' in covergroup "
+                          << first_covergroupp->prettyNameQ());
+            return;
+        }
+        
+        // For classes, check inheritance hierarchy
         for (AstClass* classp = first_classp; classp;) {
             if (nodep->fileline()->timingOn()) {
                 if (classp->name() == "semaphore" || classp->name() == "process"

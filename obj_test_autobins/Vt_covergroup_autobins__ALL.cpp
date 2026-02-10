@@ -10,7 +10,6 @@
 #include "Vt_covergroup_autobins_t__03a__03acg5__Vclpkg__0.cpp"
 #include "Vt_covergroup_autobins_std__03a__03asemaphore__Vclpkg__0.cpp"
 #include "Vt_covergroup_autobins_std__03a__03aprocess__Vclpkg__0.cpp"
-#include "Vt_covergroup_autobins__main.cpp"
 #include "Vt_covergroup_autobins___024root__Slow.cpp"
 #include "Vt_covergroup_autobins___024root__0__Slow.cpp"
 #include "Vt_covergroup_autobins_t__Slow.cpp"
