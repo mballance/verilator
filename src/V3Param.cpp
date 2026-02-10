@@ -2223,12 +2223,16 @@ public:
                 }
             }
             AstClass* classp = nullptr;
+            AstCovergroup* covergroupp = nullptr;
             for (AstNode* backp = ftaskp->backp(); backp; backp = backp->backp()) {
-                if (VN_IS(backp, Class)) {
-                    classp = VN_AS(backp, Class);
+                if ((classp = VN_CAST(backp, Class))) {
+                    break;
+                } else if ((covergroupp = VN_CAST(backp, Covergroup))) {
                     break;
                 }
             }
+            // For covergroups, skip the parametrized class logic (covergroups don't have parameters)
+            if (covergroupp) return;
             UASSERT_OBJ(classp, ftaskrefp, "Class method has no class above it");
             if (classp->user3p()) return;  // will not get removed, no need to relink
             AstClass* const parametrizedClassp = VN_CAST(classp->user4p(), Class);

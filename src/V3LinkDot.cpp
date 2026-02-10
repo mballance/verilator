@@ -1286,6 +1286,12 @@ class LinkDotFindVisitor final : public VNVisitor {
             // The parser already creates the constructor
         }
     }
+    void visit(AstCovergroupTemp* nodep) override {  // FindVisitor::
+        // AstCovergroupTemp is a temporary parser node that will be removed by V3CoverageFunctional
+        // Skip it during symbol table construction - its SenTree/SenItem children don't need linking
+        UINFO(8, "   Skipping AstCovergroupTemp");
+        // Don't call iterateChildren - we don't want to create symbols for its contents
+    }
     void visit(AstClass* nodep) override {  // FindVisitor::
         UASSERT_OBJ(m_curSymp, nodep, "Class not under module/package/$unit");
         UINFO(8, "   " << nodep);
@@ -3595,24 +3601,13 @@ class LinkDotResolveVisitor final : public VNVisitor {
         m_ds.m_dotPos = DP_NONE;
         m_ds.m_dotErr = false;
     }
-    void visit(AstCovergroup* nodep) override {
-        // Covergroups are AstNodeModule but need explicit visitor to ensure proper handling
-        if (nodep->dead()) return;
+    void visit(AstCovergroupTemp* nodep) override {
+        // AstCovergroupTemp is a temporary parser node that holds clocking events
+        // It will be removed by V3CoverageFunctional, so skip it in V3LinkDot
         LINKDOT_VISIT_START();
-        UINFO(8, indent() << "visit " << nodep);
-        checkNoDot(nodep);
-        m_ds.init(m_curSymp);
-        VSymEnt* const symp = m_statep->getNodeSym(nodep);
-        UASSERT_OBJ(symp, nodep, "Covergroup has no symbol table entry");
-        m_ds.m_dotSymp = m_curSymp = m_modSymp = symp;
-        m_cellp = nullptr;
-        m_modp = nodep;
-        m_modportNum = 0;
-        iterateChildren(nodep);
-        m_modp = nullptr;
-        m_ds.m_dotSymp = m_curSymp = m_modSymp = nullptr;
-        m_ds.m_dotPos = DP_NONE;
-        m_ds.m_dotErr = false;
+        UINFO(8, indent() << "visit (skipping) " << nodep);
+        // Don't iterate children - the SenTree/SenItem inside may reference
+        // variables that aren't fully resolved yet
     }
     void visit(AstScope* nodep) override {
         LINKDOT_VISIT_START();
@@ -5500,7 +5495,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
         }
     }
     void visit(AstCovergroup* nodep) override {
-        // Covergroups don't have inheritance, so simpler than AstClass
+        // Covergroups are simpler than classes - no inheritance to process
         if (nodep->user3SetOnce()) return;
         LINKDOT_VISIT_START();
         UINFO(5, indent() << "visit " << nodep);
@@ -5510,7 +5505,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
         VL_RESTORER(m_modp);
         {
             m_ds.init(m_curSymp);
-            // Until overridden by a SCOPE
             m_ds.m_dotSymp = m_curSymp = m_modSymp = m_statep->getNodeSym(nodep);
             m_modp = nodep;
             iterateChildren(nodep);
