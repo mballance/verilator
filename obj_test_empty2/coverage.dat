@@ -1,0 +1,47 @@
+# SystemC::Coverage-3
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl103n14tlinepagev_line/semaphoreoblockS103-104hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl107n19tlinepagev_line/semaphoreoblockS107-108hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl111n10tlinepagev_line/semaphoreoblockS111,116hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl113n7tlinepagev_line/semaphoreoblockS113-114hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl120n18tlinepagev_line/semaphoreoblockS120,125hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl121n7tbranchpagev_branch/semaphoreoifS121-123hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl121n8tbranchpagev_branch/semaphoreoelsehstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl130n3tlinepagev_line/processoblockS130hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl142n29tlinepagev_line/processoblockS142-143,145,147hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl150n29tlinepagev_line/processoblockS150,152hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl156n20tlinepagev_line/processoblockS156,158hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl164n19tlinepagev_line/processoblockS164-165hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl172n19tlinepagev_line/processoblockS172-173hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl176n10tlinepagev_line/processoblockS176,178hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl178n34texprpagev_expr/processo((status() == process::FINISHED)==0 && (status() == process::KILLED)==0) => 0hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl178n34texprpagev_expr/processo((status() == process::FINISHED)==1) => 1hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl178n34texprpagev_expr/processo((status() == process::KILLED)==1) => 1hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl182n17tlinepagev_line/processoblockS182hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl184n7tlinepagev_line/processoblockS184-185hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl229n21tlinepagev_line/processoblockS229,231,233-234hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl237n19tlinepagev_line/processoblockS237-238hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl243n16tlinepagev_line/stdoblockS243-244hstd' 0
+C 'ftest_regress/t/t_covergroup_empty.vl12n10ttogglepagev_toggle/toclk:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl12n10ttogglepagev_toggle/toclk:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[0]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[0]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[1]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[1]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[2]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[2]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[3]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[3]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[4]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[4]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[5]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[5]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[6]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[6]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[7]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl14n16ttogglepagev_toggle/tovalue[7]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl17n15tlinepagev_line/cg_emptyoblockS17ht::cg_empty__Vclpkg' 0
+C 'ftest_regress/t/t_covergroup_empty.vl17n4tlinepagev_line/cg_emptyoblockS17ht::cg_empty__Vclpkg' 1
+C 'ftest_regress/t/t_covergroup_empty.vl21n23tlinepagev_line/toblockS21ht' 1
+C 'ftest_regress/t/t_covergroup_empty.vl23n4tlinepagev_line/toblockS23-24,27,34,36-37ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl27n7tlinepagev_line/toblockS27-30ht' 0
+C 'ftest_regress/t/t_covergroup_empty.vl40n10tlinepagev_line/toifS40-42ht' 0

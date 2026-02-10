@@ -2671,6 +2671,48 @@ public:
     AstClass* classp() const VL_MT_SAFE { return m_classp; }
     void classp(AstClass* classp) { m_classp = classp; }
 };
+class AstCovergroup final : public AstNodeModule {
+    // A covergroup declaration (functional coverage construct)
+    // Unlike AstClass, this is purely for coverage collection, not object orientation
+    // @astgen op4 := extendsp : List[AstClassExtends]  // Reserved for future use
+    // MEMBERS
+    // @astgen ptr := m_classOrPackagep : Optional[AstClassPackage]  // Package to emit with
+    uint32_t m_declTokenNum;  // Declaration token number
+    int m_autoBinMax = -1;  // option.auto_bin_max (-1 = use global default)
+    // Additional covergroup options can be added here as needed:
+    // int m_atLeast = 1;      // option.at_least
+    // int m_weight = 1;       // option.weight
+    // int m_goal = 100;       // option.goal
+    // bool m_perInstance = false;  // option.per_instance
+
+public:
+    AstCovergroup(FileLine* fl, const string& name, const string& libname)
+        : ASTGEN_SUPER_Covergroup(fl, name, libname)
+        , m_declTokenNum{fl->tokenNum()} {}
+    ASTGEN_MEMBERS_AstCovergroup;
+
+    // Overrides from AstNodeModule
+    string verilogKwd() const override { return "covergroup"; }
+    bool maybePointedTo() const override VL_MT_SAFE { return true; }
+    void dump(std::ostream& str) const override;
+    void dumpJson(std::ostream& str) const override;
+    bool timescaleMatters() const override { return false; }
+
+    // Accessors matching AstClass interface (for compatibility during migration)
+    AstClassPackage* classOrPackagep() const VL_MT_STABLE { return m_classOrPackagep; }
+    void classOrPackagep(AstClassPackage* classpackagep) { m_classOrPackagep = classpackagep; }
+    AstNode* membersp() const VL_MT_STABLE { return stmtsp(); }
+    void addMembersp(AstNode* nodep) { addStmtsp(nodep); }
+
+    // Covergroup-specific accessors
+    int autoBinMax() const { return m_autoBinMax; }
+    void autoBinMax(int value) { m_autoBinMax = value; }
+
+    uint32_t declTokenNum() const override { return m_declTokenNum; }
+    void declTokenNumSetMin(uint32_t tokenNum) override {
+        m_declTokenNum = std::min(m_declTokenNum, tokenNum);
+    }
+};
 class AstIface final : public AstNodeModule {
     // An interface declaration
     bool m_hasVirtualRef = false;  // There exists a virtual interface reference for this interface

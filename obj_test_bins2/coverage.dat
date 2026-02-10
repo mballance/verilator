@@ -1,0 +1,58 @@
+# SystemC::Coverage-3
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl103n14tlinepagev_line/semaphoreoblockS103-104hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl107n19tlinepagev_line/semaphoreoblockS107-108hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl111n10tlinepagev_line/semaphoreoblockS111hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl120n18tlinepagev_line/semaphoreoblockS120,125hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl121n7tbranchpagev_branch/semaphoreoifS121-123hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl121n8tbranchpagev_branch/semaphoreoelsehstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl130n3tlinepagev_line/processoblockS130hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl142n29tlinepagev_line/processoblockS142-143,147hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl150n29tlinepagev_line/processoblockS150hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl156n20tlinepagev_line/processoblockS156,160hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl164n19tlinepagev_line/processoblockS164-165hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl172n19tlinepagev_line/processoblockS172-173hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl176n10tlinepagev_line/processoblockS176hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl182n17tlinepagev_line/processoblockS182hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl229n21tlinepagev_line/processoblockS229,231,233-234hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl237n19tlinepagev_line/processoblockS237-238hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl243n16tlinepagev_line/stdoblockS243-244hstd' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl100n7tlinepagev_line/toifS100-101ht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl14n16ttogglepagev_toggle/todata[0]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl14n16ttogglepagev_toggle/todata[0]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl14n16ttogglepagev_toggle/todata[1]:0->1ht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl14n16ttogglepagev_toggle/todata[1]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl14n16ttogglepagev_toggle/todata[2]:0->1ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl14n16ttogglepagev_toggle/todata[2]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl14n16ttogglepagev_toggle/todata[3]:0->1ht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl14n16ttogglepagev_toggle/todata[3]:1->0ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl15n22tlinepagev_line/toblockS15ht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl18n15tlinepagev_line/cg_ignoreoblockS18ht::cg_ignore__Vclpkg' 7
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl18n4tlinepagev_line/cg_ignoreoblockS18-23ht::cg_ignore__Vclpkg' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl28n15tlinepagev_line/cg_arrayoblockS28ht::cg_array__Vclpkg' 5
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl28n4tlinepagev_line/cg_arrayoblockS28-30ht::cg_array__Vclpkg' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl35n15tlinepagev_line/cg_wildcardoblockS35ht::cg_wildcard__Vclpkg' 5
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl35n4tlinepagev_line/cg_wildcardoblockS35-40ht::cg_wildcard__Vclpkg' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl44n4tlinepagev_line/toblockS44,50-52,55-60,62-63,71-74,77-78,86-89,92-93,107ht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl65n22texprpagev_expr/to((cov < 99.0)==0 && (cov > 101.0)==0) => 0ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl65n22texprpagev_expr/to((cov < 99.0)==1) => 1ht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl65n22texprpagev_expr/to((cov > 101.0)==1) => 1ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl65n7tbranchpagev_branch/toifS65-67ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl65n8tbranchpagev_branch/toelseht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl80n22texprpagev_expr/to((cov < 74.0)==0 && (cov > 76.0)==0) => 0ht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl80n22texprpagev_expr/to((cov < 74.0)==1) => 1ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl80n22texprpagev_expr/to((cov > 76.0)==1) => 1ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl80n7tbranchpagev_branch/toifS80-82ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl80n8tbranchpagev_branch/toelseht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl95n22texprpagev_expr/to((cov < 74.0)==0 && (cov > 76.0)==0) => 0ht' 1
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl95n22texprpagev_expr/to((cov < 74.0)==1) => 1ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl95n22texprpagev_expr/to((cov > 76.0)==1) => 1ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl95n7tbranchpagev_branch/toifS95-97ht' 0
+C 'ftest_regress/t/t_covergroup_bins_advanced.vl95n8tbranchpagev_branch/toelseht' 1
+C 'tfunccovpagev_funccov/cg_arrayftest_regress/t/t_covergroup_bins_advanced.vl30n15binvalueshcg_array.data.values' 3
+C 'tfunccovpagev_funccov/cg_ignoreftest_regress/t/t_covergroup_bins_advanced.vl20n15binlowhcg_ignore.data.low' 1
+C 'tfunccovpagev_funccov/cg_ignoreftest_regress/t/t_covergroup_bins_advanced.vl21n15binmidhcg_ignore.data.mid' 1
+C 'tfunccovpagev_funccov/cg_ignoreftest_regress/t/t_covergroup_bins_advanced.vl22n15binhighhcg_ignore.data.high' 1
+C 'tfunccovpagev_funccov/cg_wildcardftest_regress/t/t_covergroup_bins_advanced.vl37n24binpattern0hcg_wildcard.data.pattern0' 1
+C 'tfunccovpagev_funccov/cg_wildcardftest_regress/t/t_covergroup_bins_advanced.vl38n24binpattern1hcg_wildcard.data.pattern1' 1
+C 'tfunccovpagev_funccov/cg_wildcardftest_regress/t/t_covergroup_bins_advanced.vl39n24binpattern2hcg_wildcard.data.pattern2' 1
+C 'tfunccovpagev_funccov/cg_wildcardftest_regress/t/t_covergroup_bins_advanced.vl40n24binpattern3hcg_wildcard.data.pattern3' 0

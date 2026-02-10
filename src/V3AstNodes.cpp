@@ -1860,6 +1860,14 @@ void AstClassExtends::dumpJson(std::ostream& str) const {
     dumpJsonBoolFuncIf(str, isImplements);
     dumpJsonGen(str);
 }
+void AstCovergroup::dump(std::ostream& str) const {
+    this->AstNodeModule::dump(str);
+    if (m_autoBinMax >= 0) str << " [autobinmax:" << m_autoBinMax << "]";
+}
+void AstCovergroup::dumpJson(std::ostream& str) const {
+    AstNodeModule::dumpJson(str);
+    if (m_autoBinMax >= 0) dumpJsonNum(str, "autoBinMax", m_autoBinMax);
+}
 AstClass* AstClassExtends::classOrNullp() const {
     const AstNodeDType* const dtp = dtypep() ? dtypep() : childDTypep();
     const AstClassRefDType* const refp = VN_CAST(dtp, ClassRefDType);

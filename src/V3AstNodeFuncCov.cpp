@@ -21,13 +21,13 @@
 //######################################################################
 // Dump methods
 
-void AstCovergroup::dump(std::ostream& str) const {
+void AstCovergroupTemp::dump(std::ostream& str) const {
     this->AstNode::dump(str);
     str << " " << m_name;
     if (m_isClass) str << " [class]";
 }
 
-void AstCovergroup::dumpJson(std::ostream& str) const {
+void AstCovergroupTemp::dumpJson(std::ostream& str) const {
     this->AstNode::dumpJson(str);
     str << ", \"name\": " << VString::quotePercent(name());
     if (m_isClass) str << ", \"isClass\": true";
