@@ -3467,9 +3467,40 @@ class WidthVisitor final : public VNVisitor {
             return true;
         }
         // Returns true if ok
-        // No need to width-resolve the class, as it was done when we did the child
-        AstClass* const first_classp = adtypep->classp();
-        UASSERT_OBJ(first_classp, nodep, "Unlinked");
+        // No need to width-resolve the class/covergroup, as it was done when we did the child
+        AstNodeModule* const first_modulep = adtypep->modulep();
+        UASSERT_OBJ(first_modulep, nodep, "Unlinked");
+        
+        // Handle covergroups (no inheritance, simpler)
+        if (AstCovergroup* const covergroupp = VN_CAST(first_modulep, Covergroup)) {
+            if (AstNode* const foundp = m_memberMap.findMember(covergroupp, nodep->name())) {
+                if (AstVar* const varp = VN_CAST(foundp, Var)) {
+                    if (!varp->didWidth()) userIterate(varp, nullptr);
+                    nodep->dtypep(foundp->dtypep());
+                    nodep->varp(varp);
+                    nodep->didWidth(true);
+                    return true;
+                }
+                if (AstNodeFTask* ftaskp = VN_CAST(foundp, NodeFTask)) {
+                    AstMethodCall* newp = new AstMethodCall{
+                        nodep->fileline(), nodep->fromp()->unlinkFrBack(), nodep->name(), nullptr};
+                    newp->taskp(ftaskp);
+                    newp->dtypep(ftaskp->dtypep());
+                    newp->classOrPackagep(covergroupp);
+                    nodep->replaceWith(newp);
+                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                    return true;
+                }
+            }
+            // Not found - error will be reported below
+            nodep->v3error("Member '" << nodep->name() << "' not found in covergroup "
+                          << covergroupp->prettyNameQ());
+            return false;
+        }
+        
+        // Handle classes (with inheritance)
+        AstClass* const first_classp = VN_CAST(first_modulep, Class);
+        UASSERT_OBJ(first_classp, nodep, "Expected Class or Covergroup");
         for (AstClass* classp = first_classp; classp;) {
             if (AstNode* const foundp = m_memberMap.findMember(classp, nodep->name())) {
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
@@ -4827,15 +4858,27 @@ class WidthVisitor final : public VNVisitor {
             }
             nodep->dtypep(refp);
 
-            classp = refp->classp();
-            UASSERT_OBJ(classp, nodep, "Unlinked");
-            if (AstNodeFTask* const ftaskp
-                = VN_CAST(m_memberMap.findMember(classp, "new"), Func)) {
-                nodep->taskp(ftaskp);
-                nodep->classOrPackagep(classp);
-            } else {
-                // Either made explicitly or V3LinkDot made implicitly
-                classp->v3fatalSrc("Can't find class's new");
+            AstNodeModule* const modulep = refp->modulep();
+            UASSERT_OBJ(modulep, nodep, "Unlinked");
+            classp = VN_CAST(modulep, Class);
+            if (classp) {
+                if (AstNodeFTask* const ftaskp
+                    = VN_CAST(m_memberMap.findMember(classp, "new"), Func)) {
+                    nodep->taskp(ftaskp);
+                    nodep->classOrPackagep(classp);
+                } else {
+                    // Either made explicitly or V3LinkDot made implicitly
+                    classp->v3fatalSrc("Can't find class's new");
+                }
+            } else if (AstCovergroup* const covergroupp = VN_CAST(modulep, Covergroup)) {
+                // Covergroups also have constructors
+                if (AstNodeFTask* const ftaskp
+                    = VN_CAST(m_memberMap.findMember(covergroupp, "new"), Func)) {
+                    nodep->taskp(ftaskp);
+                    nodep->classOrPackagep(covergroupp);
+                } else {
+                    covergroupp->v3fatalSrc("Can't find covergroup's new");
+                }
             }
         } else {  // super.new case
             // in this case class and taskp() should be properly linked in V3LinkDot.cpp during
