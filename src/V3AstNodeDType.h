@@ -571,10 +571,10 @@ class AstClassRefDType final : public AstNodeDType {
     // Reference to a class
     // @astgen op1 := paramsp: List[AstPin]
     //
-    // @astgen ptr := m_classp : Optional[AstClass]  // data type pointed to, BELOW the AstTypedef
+    // @astgen ptr := m_classp : Optional[AstNodeModule]  // data type pointed to (Class or Covergroup), BELOW the AstTypedef
     // @astgen ptr := m_classOrPackagep : Optional[AstNodeModule]  // Package hierarchy
 public:
-    AstClassRefDType(FileLine* fl, AstClass* classp, AstPin* paramsp)
+    AstClassRefDType(FileLine* fl, AstNodeModule* classp, AstPin* paramsp)
         : ASTGEN_SUPER_ClassRefDType(fl)
         , m_classp{classp} {
         dtypep(this);
@@ -604,8 +604,12 @@ public:
     AstNodeDType* subDTypep() const override VL_MT_STABLE { return nullptr; }
     AstNodeModule* classOrPackagep() const { return m_classOrPackagep; }
     void classOrPackagep(AstNodeModule* nodep) { m_classOrPackagep = nodep; }
-    AstClass* classp() const VL_MT_STABLE { return m_classp; }
-    void classp(AstClass* nodep) { m_classp = nodep; }
+    // Raw module pointer (can be Class or Covergroup)
+    AstNodeModule* modulep() const VL_MT_STABLE { return m_classp; }
+    void modulep(AstNodeModule* nodep) { m_classp = nodep; }
+    // For backward compatibility - returns AstClass* or nullptr if not a class
+    AstClass* classp() const VL_MT_STABLE { return VN_CAST(m_classp, Class); }
+    void classp(AstClass* nodep) { m_classp = reinterpret_cast<AstNodeModule*>(nodep); }
     bool isCompound() const override { return true; }
 };
 class AstConstDType final : public AstNodeDType {
