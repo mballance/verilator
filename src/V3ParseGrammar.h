@@ -92,7 +92,7 @@ public:
         nodep->trace(singletonp()->allTracingOn(fileline));
         return nodep;
     }
-    void createCoverGroupMethods(AstClass* nodep, AstNode* sampleArgs) {
+    void createCoverGroupMethods(AstNodeModule* nodep, AstNode* sampleArgs) {
         // Hidden static to take unspecified reference argument results
         AstVar* const defaultVarp
             = new AstVar{nodep->fileline(), VVarType::MEMBER, "__Vint", nodep->findIntDType()};
@@ -108,7 +108,7 @@ public:
                                              new AstClassOrPackageRef{nodep->fileline(), "std",
                                                                       nullptr, nullptr},
                                              nullptr}};
-            nodep->addMembersp(varp);
+            nodep->addStmtsp(varp);
         }
 
         // IEEE: type_option
@@ -120,7 +120,7 @@ public:
                                              new AstClassOrPackageRef{nodep->fileline(), "std",
                                                                       nullptr, nullptr},
                                              nullptr}};
-            nodep->addMembersp(varp);
+            nodep->addStmtsp(varp);
         }
 
         // IEEE: function void sample()
@@ -129,7 +129,7 @@ public:
             funcp->addStmtsp(sampleArgs);
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
-            nodep->addMembersp(funcp);
+            nodep->addStmtsp(funcp);
         }
 
         // IEEE: function void start(), void stop()
@@ -137,7 +137,7 @@ public:
             AstFunc* const funcp = new AstFunc{nodep->fileline(), name, nullptr, nullptr};
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
-            nodep->addMembersp(funcp);
+            nodep->addStmtsp(funcp);
         }
 
         // IEEE: static function real get_coverage(optional ref int, optional ref int)
@@ -148,7 +148,7 @@ public:
             funcp->isStatic(name == "get_coverage");
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
-            nodep->addMembersp(funcp);
+            nodep->addStmtsp(funcp);
             {
                 AstVar* const varp = new AstVar{nodep->fileline(), VVarType::MEMBER, name,
                                                 nodep->findDoubleDType()};
@@ -174,7 +174,7 @@ public:
                 = new AstFunc{nodep->fileline(), "set_inst_name", nullptr, nullptr};
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
-            nodep->addMembersp(funcp);
+            nodep->addStmtsp(funcp);
             AstVar* const varp = new AstVar{nodep->fileline(), VVarType::MEMBER, "name",
                                             nodep->findStringDType()};
             varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);

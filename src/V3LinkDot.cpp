@@ -1251,6 +1251,34 @@ class LinkDotFindVisitor final : public VNVisitor {
         }
     }
 
+    void visit(AstCovergroup* nodep) override {  // FindVisitor::
+        // TEMPORARY (Phase 2): Convert AstCovergroup to AstClass to keep existing passes working
+        // This will be removed in Phase 4 once all visitors are updated to support AstCovergroup
+        
+        AstClass* classp = new AstClass{nodep->fileline(), nodep->name(), nodep->libname()};
+        classp->isCovergroup(true);
+        
+        // Copy covergroup properties
+        if (nodep->autoBinMax() >= 0) {
+            classp->autoBinMax(nodep->autoBinMax());
+        }
+        if (nodep->classOrPackagep()) {
+            classp->classOrPackagep(nodep->classOrPackagep());
+        }
+        classp->declTokenNumSetMin(nodep->declTokenNum());
+        
+        // Move members (stmts)
+        if (nodep->stmtsp()) {
+            classp->addStmtsp(nodep->stmtsp()->unlinkFrBackWithNext());
+        }
+        
+        // Replace in tree
+        nodep->replaceWith(classp);
+        VL_DO_DANGLING(nodep->deleteTree(), nodep);
+        
+        // Continue visiting the replacement
+        iterate(classp);
+    }
     void visit(AstClass* nodep) override {  // FindVisitor::
         UASSERT_OBJ(m_curSymp, nodep, "Class not under module/package/$unit");
         UINFO(8, "   " << nodep);
