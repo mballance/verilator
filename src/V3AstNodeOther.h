@@ -2642,6 +2642,14 @@ public:
     AstClass* classp() const VL_MT_SAFE { return m_classp; }
     void classp(AstClass* classp) { m_classp = classp; }
 };
+// AstCovergroup - SystemVerilog covergroup construct (added 2026)
+// Separate from AstClass because covergroups have different semantics:
+// - Cannot be extended (except via SystemVerilog's optional "extend" feature)
+// - Have coverage-specific options (auto_bin_max, at_least, weight, goal, etc.)
+// - Generate different code (coverage collection runtime, not object instantiation)
+// - No inheritance, randomization, or class-based features
+// Previously represented as AstClass with m_covergroup flag (pre-2026),
+// but this polluted AstClass with covergroup-specific fields and checks.
 class AstCovergroup final : public AstNodeModule {
     // A covergroup declaration (functional coverage construct)
     // Unlike AstClass, this is purely for coverage collection, not object orientation
