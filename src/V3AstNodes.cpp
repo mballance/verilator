@@ -1839,7 +1839,6 @@ bool AstClass::isClassExtendedFrom(const AstClass* refClassp, const AstClass* ba
 }
 void AstClass::dump(std::ostream& str) const {
     this->AstNodeModule::dump(str);
-    if (isCovergroup()) str << " [CG]";
     if (isExtended()) str << " [EXT]";
     if (isInterfaceClass()) str << " [IFCCLS]";
     if (isVirtual()) str << " [VIRT]";
@@ -1847,7 +1846,6 @@ void AstClass::dump(std::ostream& str) const {
 }
 void AstClass::dumpJson(std::ostream& str) const {
     // dumpJsonNumFunc(str, declTokenNum);  // Not dumped as adding token changes whole file
-    dumpJsonBoolFuncIf(str, isCovergroup);
     dumpJsonBoolFunc(str, isExtended);
     dumpJsonBoolFunc(str, isInterfaceClass);
     dumpJsonBoolFunc(str, isVirtual);

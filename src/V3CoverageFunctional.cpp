@@ -14,7 +14,7 @@
 //
 //*************************************************************************
 // FUNCTIONAL COVERAGE TRANSFORMATIONS:
-//      For each covergroup (AstClass with isCovergroup()):
+//      For each covergroup (AstCovergroup):
 //          For each coverpoint (AstCoverpoint):
 //              Generate member variable for VerilatedCoverpoint
 //              Generate initialization in constructor
@@ -268,17 +268,6 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 UINFO(4, "Using option.auto_bin_max=" << autoBinMax 
                       << " for " << cgp->name() << endl);
                 return autoBinMax;
-            }
-        }
-        // Fallback to AstClass (during Phase 3 transition)
-        else if (AstClass* classp = VN_CAST(covergroupp, Class)) {
-            if (classp->isCovergroup()) {
-                const int autoBinMax = classp->autoBinMax();
-                if (autoBinMax >= 0) {
-                    UINFO(4, "Using option.auto_bin_max=" << autoBinMax 
-                          << " for " << classp->name() << " (via AstClass)" << endl);
-                    return autoBinMax;
-                }
             }
         }
         
@@ -1855,10 +1844,6 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     }
 
     void visit(AstClass* nodep) override {
-        // Phase 4: Covergroups should now use AstCovergroup, not AstClass
-        UASSERT_OBJ(!nodep->isCovergroup(), nodep,
-                    "Covergroups should use AstCovergroup node type, not AstClass");
-        
         UINFO(9, "Visiting class: " << nodep->name() << endl);
         // Regular class handling (if we ever need it)
         iterateChildren(nodep);

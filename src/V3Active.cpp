@@ -701,10 +701,8 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         AstNodeModule* const modulep = classRefp->modulep();
         if (!modulep) return;
         
-        // Check if it's a covergroup
-        const bool isCovergroup = VN_IS(modulep, Covergroup) 
-            || (VN_IS(modulep, Class) && VN_AS(modulep, Class)->isCovergroup());
-        if (!isCovergroup) return;
+        // Check if it's a covergroup (only native AstCovergroup now)
+        if (!VN_IS(modulep, Covergroup)) return;
         
         // Check if this covergroup has an automatic sampling event
         AstSenTree* const eventp = getCovergroupEvent(modulep);
