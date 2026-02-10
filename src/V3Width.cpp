@@ -1675,6 +1675,28 @@ class WidthVisitor final : public VNVisitor {
         if (m_vup->prelim()) iterateCheckSizedSelf(nodep, "LHS", nodep->lhsp(), SELF, BOTH);
     }
     void visit(AstCgOptionAssign* nodep) override {
+        // Extract auto_bin_max and store in parent covergroup class before deleting
+        if (!nodep->typeOption() && nodep->name() == "auto_bin_max") {
+            if (const AstConst* const constp = VN_CAST(nodep->valuep(), Const)) {
+                // Find the parent covergroup class
+                AstNode* parentp = nodep->backp();
+                while (parentp && !VN_IS(parentp, NodeFTask)) {
+                    parentp = parentp->backp();
+                }
+                if (AstNodeFTask* const ftaskp = VN_CAST(parentp, NodeFTask)) {
+                    // Constructor function - find its class
+                    AstNode* classMemberp = ftaskp;
+                    while (classMemberp && !VN_IS(classMemberp->backp(), Class)) {
+                        classMemberp = classMemberp->backp();
+                    }
+                    if (AstClass* const classp = VN_CAST(classMemberp->backp(), Class)) {
+                        if (classp->isCovergroup()) {
+                            classp->autoBinMax(constp->toSInt());
+                        }
+                    }
+                }
+            }
+        }
         // We report COVERIGN on the whole covergroup; if get more fine-grained add this
         // nodep->v3warn(COVERIGN, "Ignoring unsupported: coverage option");
         VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);

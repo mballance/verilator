@@ -312,7 +312,9 @@ private:
     bool m_xInitialEdge = false;    // main switch: --x-initial-edge
 
     int         m_buildJobs = -1;    // main switch: --build-jobs, -j
+    int         m_coverageAutoBinMax = 64;  // main switch: --coverage-auto-bin-max
     int         m_coverageExprMax = 32;    // main switch: --coverage-expr-max
+    int         m_coverageCrossThreshold = 64;  // main switch: --coverage-cross-threshold
     int         m_convergeLimit = 100;  // main switch: --converge-limit
     int         m_coverageMaxWidth = 256; // main switch: --coverage-max-width
     int         m_expandLimit = 256;  // main switch: --expand-limit
@@ -593,7 +595,9 @@ public:
 
     int buildJobs() const VL_MT_SAFE { return m_buildJobs; }
     int convergeLimit() const { return m_convergeLimit; }
+    int coverageAutoBinMax() const { return m_coverageAutoBinMax; }
     int coverageExprMax() const { return m_coverageExprMax; }
+    int coverageCrossThreshold() const { return m_coverageCrossThreshold; }
     int coverageMaxWidth() const { return m_coverageMaxWidth; }
     bool dumpTreeAddrids() const VL_MT_SAFE;
     int expandLimit() const { return m_expandLimit; }

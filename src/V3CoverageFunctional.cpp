@@ -95,6 +95,74 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
     }
     
+    // Check if coverpoint has explicit bins (excluding ignore/illegal)
+    bool hasExplicitBins(AstCoverpoint* coverpointp) {
+        for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
+            AstCoverBin* const cbinp = VN_CAST(binp, CoverBin);
+            if (!cbinp) continue;
+            
+            // Only count non-ignore, non-illegal bins as "explicit"
+            if (cbinp->binsType() != VCoverBinsType::IGNORE &&
+                cbinp->binsType() != VCoverBinsType::ILLEGAL) {
+                return true;  // Found at least one explicit bin
+            }
+        }
+        return false;  // No explicit bins found
+    }
+    
+    // Check if data type is an enum
+    bool isEnumType(AstNodeDType* dtypep) {
+        dtypep = dtypep->skipRefp();
+        return VN_IS(dtypep, EnumDType);
+    }
+    
+    // Get the number of values in an enum type
+    int getEnumCardinality(AstEnumDType* enumDtypep) {
+        int count = 0;
+        for (AstNode* itemp = enumDtypep->itemsp(); itemp; itemp = itemp->nextp()) {
+            count++;
+        }
+        return count;
+    }
+    
+    // Create automatic bins for coverpoint with no explicit bins
+    void createAutomaticBins(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {
+        UINFO(4, "  Creating automatic bins for coverpoint" << endl);
+        
+        // Get auto_bin_max from covergroup options or global default
+        int numBins;
+        const int autoBinMaxValue = getCovergroupAutoBinMax(m_covergroupp);
+        
+        AstNodeDType* dtypep = exprp->dtypep()->skipRefp();
+        
+        if (AstEnumDType* enumDtypep = VN_CAST(dtypep, EnumDType)) {
+            // For enum: N = cardinality
+            numBins = getEnumCardinality(enumDtypep);
+            UINFO(4, "    Enum with " << numBins << " values" << endl);
+        } else {
+            // For integral: N = min(2^M, auto_bin_max)
+            const int width = exprp->width();
+            const uint64_t maxPossibleBins = (width >= 64) ? UINT64_MAX : (1ULL << width);
+            numBins = std::min(maxPossibleBins, (uint64_t)autoBinMaxValue);
+            UINFO(4, "    Integral " << width << "-bit, auto_bin_max=" << autoBinMaxValue 
+                  << ", creating " << numBins << " bins" << endl);
+        }
+        
+        // Create bins using existing AUTO mechanism
+        // Synthesize a "bins auto[N]" node using the automatic bins constructor
+        AstConst* sizeConstp = new AstConst{coverpointp->fileline(), 
+                                            AstConst::WidthedValue{}, 32, (uint32_t)numBins};
+        AstCoverBin* autoBinp = new AstCoverBin{
+            coverpointp->fileline(),
+            "__auto",  // Internal name
+            sizeConstp};  // Array size for AUTO bins constructor
+        
+        // Add to coverpoint
+        coverpointp->addBinsp(autoBinp);
+        
+        // Now expandAutomaticBins() will handle the expansion
+    }
+    
     void expandAutomaticBins(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {
         // Find and expand any automatic bins
         AstNode* prevBinp = nullptr;
@@ -191,6 +259,22 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         return 1;  // Default: at least 1 hit required
     }
     
+    // Extract auto_bin_max option from covergroup
+    int getCovergroupAutoBinMax(AstClass* covergroupp) {
+        // Read from covergroup class field (set by V3Width before CgOptionAssign deletion)
+        const int autoBinMax = covergroupp->autoBinMax();
+        if (autoBinMax >= 0) {
+            UINFO(4, "Using option.auto_bin_max=" << autoBinMax 
+                  << " for " << covergroupp->name() << endl);
+            return autoBinMax;
+        }
+        
+        // Default: use global option
+        UINFO(4, "Using global --coverage-auto-bin-max=" << v3Global.opt.coverageAutoBinMax()
+              << " for " << covergroupp->name() << endl);
+        return v3Global.opt.coverageAutoBinMax();
+    }
+    
     // Check if coverpoint has any transition bins and create previous value variable if needed
     bool hasTransitionBins(AstCoverpoint* coverpointp) {
         for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
@@ -279,7 +363,19 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             return;
         }
         
-        // Expand automatic bins before processing
+        // Check if automatic bins needed
+        if (!hasExplicitBins(coverpointp)) {
+            // Check for real type (no auto-bins for real per IEEE spec)
+            if (exprp->dtypep()->isDouble()) {
+                coverpointp->v3error("Coverpoint of real type requires explicit bins");
+                return;
+            }
+            
+            UINFO(4, "  Coverpoint has no explicit bins, creating automatic bins" << endl);
+            createAutomaticBins(coverpointp, exprp);
+        }
+        
+        // Expand automatic bins before processing (both explicit bins auto[N] and injected ones)
         expandAutomaticBins(coverpointp, exprp);
         
         // Extract option values for this coverpoint
@@ -904,6 +1000,203 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         m_sampleFuncp->addStmtsp(ifp);
     }
     
+    // Calculate total number of cross bins (Cartesian product of all coverpoint bins)
+    size_t computeTotalCrossBins(const std::vector<std::vector<AstCoverBin*>>& allCpBins) {
+        if (allCpBins.empty()) return 0;
+        
+        size_t total = 1;
+        for (const auto& cpBins : allCpBins) {
+            if (cpBins.empty()) return 0;  // No bins in one dimension means no cross bins
+            total *= cpBins.size();
+        }
+        return total;
+    }
+    
+    // Generate inline cross bins (current approach for small crosses)
+    void generateInlineCrossBins(AstCoverCross* crossp,
+                                const std::vector<AstCoverpoint*>& coverpointRefs,
+                                const std::vector<std::vector<AstCoverBin*>>& allCpBins) {
+        UINFO(4, "    Using inline cross bin generation" << endl);
+        generateCrossBinsRecursive(crossp, coverpointRefs, allCpBins, {}, 0);
+    }
+    
+    // Generate sparse map-based cross bins (for large crosses)
+    void generateSparseCrossBins(AstCoverCross* crossp,
+                                const std::vector<AstCoverpoint*>& coverpointRefs,
+                                const std::vector<std::vector<AstCoverBin*>>& allCpBins) {
+        FileLine* fl = crossp->fileline();
+        
+        UINFO(4, "    Using sparse map cross bin generation" << endl);
+        
+        // Calculate total bins for array size
+        size_t totalBins = computeTotalCrossBins(allCpBins);
+        
+        // For now, use a simple approach: create an array to hold all possible bins
+        // This avoids std::map emission complexity while still being more efficient
+        // than generating individual variables for large crosses
+        string arrayName = "__Vcov_" + crossp->name() + "_bins";
+        
+        // Create array variable: IData __Vcov_<name>_bins[totalBins]
+        AstUnpackArrayDType* const arrayDtp = new AstUnpackArrayDType{
+            fl, coverpointRefs[0]->findUInt32DType(), 
+            new AstRange{fl, static_cast<int>(totalBins - 1), 0}};
+        
+        AstVar* arrayVarp = new AstVar{fl, VVarType::MEMBER, arrayName, arrayDtp};
+        arrayVarp->isStatic(false);
+        m_covergroupp->addMembersp(arrayVarp);
+        
+        UINFO(4, "      Created bin array: " << arrayName << " with " << totalBins << " elements" << endl);
+        
+        // Generate bin index lookup code for each coverpoint
+        std::vector<AstVar*> binIndexVars;
+        for (size_t cpIdx = 0; cpIdx < coverpointRefs.size(); ++cpIdx) {
+            AstVar* binIdxVar = generateBinIndexLookup(coverpointRefs[cpIdx], 
+                                                       allCpBins[cpIdx], cpIdx);
+            binIndexVars.push_back(binIdxVar);
+        }
+        
+        // Generate array-based sample code
+        generateArrayBasedSampleCode(crossp, coverpointRefs, binIndexVars, arrayVarp, allCpBins);
+        
+        // Track cross bin for coverage computation  
+        // Create a pseudo-bin for the entire cross (for coverage tracking)
+        AstCoverBin* pseudoBinp = new AstCoverBin{
+            fl, crossp->name() + "_array", static_cast<AstNode*>(nullptr), false, false};
+        
+        // Mark the array variable for special handling in coverage computation
+        arrayVarp->user1(3);  // Flag 3 = array-based cross
+        arrayVarp->user3(totalBins);  // Store total bins count
+        
+        m_binInfos.push_back(BinInfo(pseudoBinp, arrayVarp, 1, nullptr, crossp));
+        
+        // Store total bins count in the cross node for later use
+        crossp->user1(totalBins);
+    }
+    
+    // Generate array-based sample code for cross coverage
+    void generateArrayBasedSampleCode(AstCoverCross* crossp,
+                                     const std::vector<AstCoverpoint*>& coverpointRefs,
+                                     const std::vector<AstVar*>& binIndexVars,
+                                     AstVar* arrayVarp,
+                                     const std::vector<std::vector<AstCoverBin*>>& allCpBins) {
+        FileLine* fl = crossp->fileline();
+        
+        // Build condition: if (__Vbin_cp0 >= 0 && __Vbin_cp1 >= 0 && ...)
+        AstNodeExpr* allMatchedCond = nullptr;
+        for (AstVar* binIdxVar : binIndexVars) {
+            AstNodeExpr* cond = new AstGte{
+                fl,
+                new AstVarRef{fl, binIdxVar, VAccess::READ},
+                new AstConst{fl, AstConst::Signed32{}, 0}};
+            
+            if (allMatchedCond) {
+                allMatchedCond = new AstAnd{fl, allMatchedCond, cond};
+            } else {
+                allMatchedCond = cond;
+            }
+        }
+        
+        if (!allMatchedCond) return;
+        
+        // Compute linear index from bin indices
+        // index = bin0 + bin1*size0 + bin2*size0*size1 + ...
+        AstNodeExpr* indexExpr = nullptr;
+        size_t multiplier = 1;
+        
+        for (size_t i = 0; i < binIndexVars.size(); ++i) {
+            AstNodeExpr* binIdx = new AstVarRef{fl, binIndexVars[i], VAccess::READ};
+            
+            if (i > 0) {
+                // Multiply by cumulative size
+                AstNodeExpr* mult = new AstConst{fl, AstConst::Signed32{}, 
+                                                 static_cast<int32_t>(multiplier)};
+                binIdx = new AstMul{fl, binIdx, mult};
+            }
+            
+            if (indexExpr) {
+                indexExpr = new AstAdd{fl, indexExpr, binIdx};
+            } else {
+                indexExpr = binIdx;
+            }
+            
+            multiplier *= allCpBins[i].size();
+        }
+        
+        // Generate: array[index]++
+        AstNodeExpr* arrayAccess = new AstArraySel{fl,
+            new AstVarRef{fl, arrayVarp, VAccess::READ},
+            indexExpr};
+        
+        AstNodeStmt* incrStmt = new AstAssign{
+            fl,
+            arrayAccess->cloneTree(false),
+            new AstAdd{fl, arrayAccess, 
+                      new AstConst{fl, AstConst::WidthedValue{}, 32, 1}}};
+        
+        AstIf* ifp = new AstIf{fl, allMatchedCond, incrStmt};
+        m_sampleFuncp->addStmtsp(ifp);
+        
+        UINFO(4, "      Generated array-based sample code for " << crossp->name() << endl);
+    }
+    
+    // Generate bin index lookup for a coverpoint (returns which bin matched, or -1)
+    AstVar* generateBinIndexLookup(AstCoverpoint* cpp, 
+                                   const std::vector<AstCoverBin*>& bins,
+                                   size_t cpIdx) {
+        FileLine* fl = cpp->fileline();
+        
+        // Create local variable: int __Vbin_cp{N} = -1;
+        string varName = "__Vbin_cp" + std::to_string(cpIdx);
+        AstVar* binIdxVar = new AstVar{fl, VVarType::BLOCKTEMP, varName,
+                                      cpp->findSigned32DType()};
+        binIdxVar->funcLocal(true);
+        m_sampleFuncp->addStmtsp(binIdxVar);
+        
+        // Initialize to -1 (no match)
+        AstNodeStmt* initStmt = new AstAssign{
+            fl,
+            new AstVarRef{fl, binIdxVar, VAccess::WRITE},
+            new AstConst{fl, AstConst::Signed32{}, -1}};
+        m_sampleFuncp->addStmtsp(initStmt);
+        
+        // Build if-else chain for each bin
+        AstNodeStmt* lastIfp = nullptr;
+        for (size_t binIdx = 0; binIdx < bins.size(); ++binIdx) {
+            AstCoverBin* binp = bins[binIdx];
+            AstNodeExpr* exprp = cpp->exprp();
+            if (!exprp) continue;
+            
+            // Build condition: if (expr matches bin)
+            AstNodeExpr* condp = buildBinCondition(binp, exprp);
+            if (!condp) continue;
+            
+            // Build action: __Vbin_cp{N} = binIdx;
+            AstNodeStmt* actionp = new AstAssign{
+                binp->fileline(),
+                new AstVarRef{binp->fileline(), binIdxVar, VAccess::WRITE},
+                new AstConst{binp->fileline(), AstConst::Signed32{}, 
+                            static_cast<int32_t>(binIdx)}};
+            
+            AstIf* ifp = new AstIf{binp->fileline(), condp, actionp, nullptr};
+            
+            if (!lastIfp) {
+                m_sampleFuncp->addStmtsp(ifp);
+                lastIfp = ifp;
+            } else {
+                // Chain as else-if
+                VN_AS(lastIfp, If)->addElsesp(ifp);
+                lastIfp = ifp;
+            }
+        }
+        
+        UINFO(4, "      Generated bin index lookup for " << cpp->name() 
+              << " with " << bins.size() << " bins" << endl);
+        
+        return binIdxVar;
+    }
+    
+    // Generate sparse map sample code
+    
     // Recursive helper to generate Cartesian product of cross bins
     void generateCrossBinsRecursive(AstCoverCross* crossp,
                                     const std::vector<AstCoverpoint*>& coverpointRefs,
@@ -1060,8 +1353,20 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             allCpBins.push_back(cpBins);
         }
         
-        // Generate cross bins using Cartesian product
-        generateCrossBinsRecursive(crossp, coverpointRefs, allCpBins, {}, 0);
+        // Calculate total number of cross bins
+        size_t totalBins = computeTotalCrossBins(allCpBins);
+        
+        UINFO(4, "    Cross has " << totalBins << " total bins" << endl);
+        
+        // Check threshold and choose implementation strategy
+        int threshold = v3Global.opt.coverageCrossThreshold();
+        if (totalBins <= static_cast<size_t>(threshold)) {
+            UINFO(4, "    Using inline implementation (threshold=" << threshold << ")" << endl);
+            generateInlineCrossBins(crossp, coverpointRefs, allCpBins);
+        } else {
+            UINFO(4, "    Using sparse map implementation (threshold=" << threshold << ")" << endl);
+            generateSparseCrossBins(crossp, coverpointRefs, allCpBins);
+        }
     }
     
     AstNodeExpr* buildBinCondition(AstCoverBin* binp, AstNodeExpr* exprp) {
@@ -1290,20 +1595,63 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 continue;
             }
             
-            // if (bin_count >= at_least) covered_count++;
-            AstIf* ifp = new AstIf{
-                fl,
-                new AstGte{fl,
-                    new AstVarRef{fl, bi.varp, VAccess::READ},
-                    new AstConst{fl, AstConst::WidthedValue{}, 32, static_cast<uint32_t>(bi.atLeast)}},
-                new AstAssign{
+            // Check if this is an array-based cross bin
+            if (bi.crossp && bi.varp->user1() == 3) {
+                // Array-based cross bin - iterate array and count non-zero entries
+                // Get total possible bins from the cross node
+                size_t totalCrossBins = bi.crossp->user1();
+                
+                // Generate: for (int i = 0; i < arraySize; i++) { if (array[i] >= atLeast) covered++; }
+                string countCode = "{ for (size_t __Vi = 0; __Vi < " + 
+                                  std::to_string(totalCrossBins) + "; ++__Vi) { ";
+                countCode += "if (this->__PVT__" + bi.varp->name() + "[__Vi] >= " +  // Add __PVT__ prefix
+                            std::to_string(bi.atLeast) + ") ";
+                countCode += coveredCountp->name() + "++; } }";
+                
+                AstCStmt* arrayCountStmt = new AstCStmt{fl, countCode};
+                funcp->addStmtsp(arrayCountStmt);
+                
+                UINFO(6, "      Added array-based coverage counting for " << bi.crossp->name() 
+                      << " (total possible: " << totalCrossBins << ")" << endl);
+            } else if (bi.crossp && bi.varp->user1() == 1) {
+                // Old sparse map code (deprecated, kept for reference)
+                // Sparse cross bin - count how many entries are in the map
+                // Get total possible bins from the cross node
+                size_t totalCrossBins = bi.crossp->user1();
+                
+                // Extract map name from dummy variable name (remove "_dummy" suffix)
+                string dummyName = bi.varp->name();
+                string mapName = dummyName.substr(0, dummyName.find("_dummy"));
+                
+                // Use CStmt to iterate map and count covered bins
+                string countCode = "{ uint32_t __Vmap_covered = 0; ";
+                countCode += "for (const auto& __Ventry : this->" + mapName + ") { ";
+                countCode += "if (__Ventry.second >= " + std::to_string(bi.atLeast) + ") ";
+                countCode += "__Vmap_covered++; } ";
+                countCode += coveredCountp->name() + " += __Vmap_covered; }";
+                
+                AstCStmt* mapCountStmt = new AstCStmt{fl, countCode};
+                funcp->addStmtsp(mapCountStmt);
+                
+                UINFO(6, "      Added sparse map coverage counting for " << bi.crossp->name() 
+                      << " (total possible: " << totalCrossBins << ")" << endl);
+            } else {
+                // Regular inline bin - check if count >= at_least
+                // if (bin_count >= at_least) covered_count++;
+                AstIf* ifp = new AstIf{
                     fl,
-                    new AstVarRef{fl, coveredCountp, VAccess::WRITE},
-                    new AstAdd{fl,
-                        new AstVarRef{fl, coveredCountp, VAccess::READ},
-                        new AstConst{fl, AstConst::WidthedValue{}, 32, 1}}},
-                nullptr};
-            funcp->addStmtsp(ifp);
+                    new AstGte{fl,
+                        new AstVarRef{fl, bi.varp, VAccess::READ},
+                        new AstConst{fl, AstConst::WidthedValue{}, 32, static_cast<uint32_t>(bi.atLeast)}},
+                    new AstAssign{
+                        fl,
+                        new AstVarRef{fl, coveredCountp, VAccess::WRITE},
+                        new AstAdd{fl,
+                            new AstVarRef{fl, coveredCountp, VAccess::READ},
+                            new AstConst{fl, AstConst::WidthedValue{}, 32, 1}}},
+                    nullptr};
+                funcp->addStmtsp(ifp);
+            }
         }
         
         // Find the return variable
@@ -1377,6 +1725,13 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             // Skip illegal and ignore bins - they don't count towards coverage
             if (binp->binsType() == VCoverBinsType::IGNORE ||
                 binp->binsType() == VCoverBinsType::ILLEGAL) {
+                continue;
+            }
+            
+            // Skip array-based cross bins (user1==3) - they're registered via individual elements
+            // or tracked differently
+            if (crossp && varp->user1() == 3) {
+                UINFO(6, "    Skipping registration for array-based cross: " << crossp->name() << endl);
                 continue;
             }
             
