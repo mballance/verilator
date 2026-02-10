@@ -3595,6 +3595,25 @@ class LinkDotResolveVisitor final : public VNVisitor {
         m_ds.m_dotPos = DP_NONE;
         m_ds.m_dotErr = false;
     }
+    void visit(AstCovergroup* nodep) override {
+        // Covergroups are AstNodeModule but need explicit visitor to ensure proper handling
+        if (nodep->dead()) return;
+        LINKDOT_VISIT_START();
+        UINFO(8, indent() << "visit " << nodep);
+        checkNoDot(nodep);
+        m_ds.init(m_curSymp);
+        VSymEnt* const symp = m_statep->getNodeSym(nodep);
+        UASSERT_OBJ(symp, nodep, "Covergroup has no symbol table entry");
+        m_ds.m_dotSymp = m_curSymp = m_modSymp = symp;
+        m_cellp = nullptr;
+        m_modp = nodep;
+        m_modportNum = 0;
+        iterateChildren(nodep);
+        m_modp = nullptr;
+        m_ds.m_dotSymp = m_curSymp = m_modSymp = nullptr;
+        m_ds.m_dotPos = DP_NONE;
+        m_ds.m_dotErr = false;
+    }
     void visit(AstScope* nodep) override {
         LINKDOT_VISIT_START();
         UINFO(8, indent() << "visit " << nodep);
@@ -5478,6 +5497,23 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     typep->v3error("Attempting to extend using non-class");
                 }
             }
+        }
+    }
+    void visit(AstCovergroup* nodep) override {
+        // Covergroups don't have inheritance, so simpler than AstClass
+        if (nodep->user3SetOnce()) return;
+        LINKDOT_VISIT_START();
+        UINFO(5, indent() << "visit " << nodep);
+        checkNoDot(nodep);
+        VL_RESTORER(m_curSymp);
+        VL_RESTORER(m_modSymp);
+        VL_RESTORER(m_modp);
+        {
+            m_ds.init(m_curSymp);
+            // Until overridden by a SCOPE
+            m_ds.m_dotSymp = m_curSymp = m_modSymp = m_statep->getNodeSym(nodep);
+            m_modp = nodep;
+            iterateChildren(nodep);
         }
     }
     void visit(AstClass* nodep) override {
