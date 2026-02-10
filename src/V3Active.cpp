@@ -697,16 +697,22 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         const AstClassRefDType* const classRefp = VN_CAST(dtypep, ClassRefDType);
         if (!classRefp) return;
         
-        AstClass* const classp = classRefp->classp();
-        if (!classp || !classp->isCovergroup()) return;
+        // Get the module (can be AstClass or AstCovergroup)
+        AstNodeModule* const modulep = classRefp->modulep();
+        if (!modulep) return;
+        
+        // Check if it's a covergroup
+        const bool isCovergroup = VN_IS(modulep, Covergroup) 
+            || (VN_IS(modulep, Class) && VN_AS(modulep, Class)->isCovergroup());
+        if (!isCovergroup) return;
         
         // Check if this covergroup has an automatic sampling event
-        AstSenTree* const eventp = getCovergroupEvent(classp);
+        AstSenTree* const eventp = getCovergroupEvent(modulep);
         if (!eventp) return;  // No automatic sampling for this covergroup
         
         // Get the sample CFunc - we need to find it in the class scope
         // The class scope name is like "TOP.t__03a__03acg" for class "t__03a__03acg"
-        const string classScopeName = string("TOP.") + classp->name();
+        const string classScopeName = string("TOP.") + modulep->name();
         
         AstCFunc* sampleCFuncp = nullptr;
         // Search through all scopes to find the class scope and its sample CFunc
@@ -735,14 +741,14 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         
         if (!sampleCFuncp) {
             // Fallback: try the cached version
-            auto it = s_covergroupSampleFuncs.find(classp);
+            auto it = s_covergroupSampleFuncs.find(modulep);
             if (it != s_covergroupSampleFuncs.end()) {
                 sampleCFuncp = it->second;
             }
         }
         
         if (!sampleCFuncp) {
-            UINFO(4, "Could not find sample() CFunc for covergroup " << classp->name() << endl);
+            UINFO(4, "Could not find sample() CFunc for covergroup " << modulep->name() << endl);
             return;  // CFunc not found
         }
         UASSERT_OBJ(sampleCFuncp, nodep, "Sample CFunc is null for covergroup");

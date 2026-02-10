@@ -1855,59 +1855,13 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     }
 
     void visit(AstClass* nodep) override {
-        UINFO(9, "Visiting class: " << nodep->name() 
-              << " isCovergroup=" << nodep->isCovergroup() << endl);
-        if (nodep->isCovergroup()) {
-            VL_RESTORER(m_covergroupp);
-            m_covergroupp = nodep;
-            m_sampleFuncp = nullptr;
-            m_constructorp = nullptr;
-            m_coverpoints.clear();
-            m_coverCrosses.clear();
-            
-            // Extract and store the clocking event from AstCovergroupTemp node
-            // The parser creates this node to preserve the event information
-            for (AstNode* itemp = nodep->membersp(); itemp;) {
-                AstNode* nextp = itemp->nextp();
-                if (AstCovergroupTemp* const cgp = VN_CAST(itemp, CovergroupTemp)) {
-                    // Store the event in the global map for V3Active to retrieve later
-                    if (cgp->eventp()) {
-                        // Access the global map defined in V3Active.cpp (widened to AstNodeModule*)
-                        extern std::unordered_map<const AstNodeModule*, AstSenTree*> s_covergroupEvents;
-                        s_covergroupEvents[nodep] = cgp->eventp();
-                        cgp->eventp()->unlinkFrBack();  // Unlink to prevent deletion
-                        UINFO(4, "Stored clocking event for covergroup " << nodep->name() << endl);
-                    }
-                    // Remove the AstCovergroupTemp node - it's just a holder for the event
-                    cgp->unlinkFrBack();
-                    VL_DO_DANGLING(cgp->deleteTree(), cgp);
-                }
-                itemp = nextp;
-            }
-            
-            // Find the sample() method and constructor
-            int findCount = 0;
-            for (AstNode* itemp = nodep->membersp(); itemp; itemp = itemp->nextp()) {
-                if (++findCount > 10000) {
-                    nodep->v3error("Too many members or infinite loop in membersp iteration (3)");
-                    break;
-                }
-                if (AstFunc* const funcp = VN_CAST(itemp, Func)) {
-                    if (funcp->name() == "sample") {
-                        m_sampleFuncp = funcp;
-                        UINFO(9, "Found sample() method" << endl);
-                    } else if (funcp->name() == "new") {
-                        m_constructorp = funcp;
-                        UINFO(9, "Found constructor" << endl);
-                    }
-                }
-            }
-            
-            iterateChildren(nodep);
-            processCovergroup();
-        } else {
-            iterateChildren(nodep);
-        }
+        // Phase 4: Covergroups should now use AstCovergroup, not AstClass
+        UASSERT_OBJ(!nodep->isCovergroup(), nodep,
+                    "Covergroups should use AstCovergroup node type, not AstClass");
+        
+        UINFO(9, "Visiting class: " << nodep->name() << endl);
+        // Regular class handling (if we ever need it)
+        iterateChildren(nodep);
     }
 
     void visit(AstCoverpoint* nodep) override {

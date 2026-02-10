@@ -77,6 +77,18 @@ private:
                     if (AstClass::isCacheableChild(itemp)) memberInsert(mmapr, itemp);
                 }
             }
+        } else if (const AstCovergroup* const anodep = VN_CAST(nodep, Covergroup)) {
+            // Covergroups are similar to classes in structure
+            for (AstNode* itemp = anodep->membersp(); itemp; itemp = itemp->nextp()) {
+                if (const AstScope* const scopep = VN_CAST(itemp, Scope)) {
+                    for (AstNode* blockp = scopep->blocksp(); blockp; blockp = blockp->nextp()) {
+                        memberInsert(mmapr, blockp);
+                    }
+                } else {
+                    // Use same caching rules as classes for now
+                    if (AstClass::isCacheableChild(itemp)) memberInsert(mmapr, itemp);
+                }
+            }
         } else if (const AstIface* const anodep = VN_CAST(nodep, Iface)) {
             for (AstNode* itemp = anodep->stmtsp(); itemp; itemp = itemp->nextp()) {
                 if (const AstScope* const scopep = VN_CAST(itemp, Scope)) {
