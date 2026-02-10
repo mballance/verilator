@@ -1837,7 +1837,6 @@ bool AstClass::isClassExtendedFrom(const AstClass* refClassp, const AstClass* ba
 }
 void AstClass::dump(std::ostream& str) const {
     this->AstNodeModule::dump(str);
-    if (isCovergroup()) str << " [CG]";
     if (isExtended()) str << " [EXT]";
     if (isInterfaceClass()) str << " [IFCCLS]";
     if (isVirtual()) str << " [VIRT]";

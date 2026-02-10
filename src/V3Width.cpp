@@ -1691,15 +1691,9 @@ class WidthVisitor final : public VNVisitor {
                            !VN_IS(classMemberp->backp(), Class)) {
                         classMemberp = classMemberp->backp();
                     }
-                    // Try AstCovergroup first (preferred after Phase 4)
+                    // Set auto_bin_max in the covergroup
                     if (AstCovergroup* const cgp = VN_CAST(classMemberp->backp(), Covergroup)) {
                         cgp->autoBinMax(constp->toSInt());
-                    }
-                    // Fallback to AstClass (during Phase 3 transition)
-                    else if (AstClass* const classp = VN_CAST(classMemberp->backp(), Class)) {
-                        if (classp->isCovergroup()) {
-                            classp->autoBinMax(constp->toSInt());
-                        }
                     }
                 }
             }

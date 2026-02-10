@@ -2571,8 +2571,6 @@ class AstClass final : public AstNodeModule {
     // @astgen ptr := m_classOrPackagep : Optional[AstClassPackage]  // Package to be emitted with
     uint32_t m_declTokenNum;  // Declaration token number
     VBaseOverride m_baseOverride;  // BaseOverride (inital/final/extends)
-    int m_autoBinMax = -1;  // Covergroup option.auto_bin_max (-1 = not set, use global default)
-    bool m_covergroup = false;  // Is covergroup (TODO perhaps make a new Ast node type for CG?)
     bool m_extended = false;  // Is extension or extended by other classes
     bool m_interfaceClass = false;  // Interface class
     bool m_needRNG = false;  // Need RNG, uses srandom/randomize
@@ -2584,7 +2582,7 @@ public:
         : ASTGEN_SUPER_Class(fl, name, libname)
         , m_declTokenNum{fl->tokenNum()} {}
     ASTGEN_MEMBERS_AstClass;
-    string verilogKwd() const override { return isCovergroup() ? "covergroup" : "class"; }
+    string verilogKwd() const override { return "class"; }
     bool maybePointedTo() const override VL_MT_SAFE { return true; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
@@ -2593,8 +2591,6 @@ public:
     void classOrPackagep(AstClassPackage* classpackagep) { m_classOrPackagep = classpackagep; }
     AstNode* membersp() const VL_MT_STABLE { return stmtsp(); }
     void addMembersp(AstNode* nodep) { addStmtsp(nodep); }
-    bool isCovergroup() const { return m_covergroup; }
-    void isCovergroup(bool flag) { m_covergroup = flag; }
     bool isExtended() const { return m_extended; }
     void isExtended(bool flag) { m_extended = flag; }
     bool isInterfaceClass() const { return m_interfaceClass; }
@@ -2603,8 +2599,6 @@ public:
     void isVirtual(bool flag) { m_virtual = flag; }
     bool needRNG() const { return m_needRNG; }
     void needRNG(bool flag) { m_needRNG = flag; }
-    int autoBinMax() const { return m_autoBinMax; }
-    void autoBinMax(int value) { m_autoBinMax = value; }
     bool useVirtualPublic() const { return m_useVirtualPublic; }
     void useVirtualPublic(bool flag) { m_useVirtualPublic = flag; }
     // Return true if this class is an extension of base class (SLOW)
