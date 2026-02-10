@@ -1,0 +1,60 @@
+`begin_keywords "1800-2023"
+`line 1 "test_regress/t/t_covergroup_trans_ranges.v" 1
+ 
+ 
+ 
+
+`line 5 "test_regress/t/t_covergroup_trans_ranges.v" 0
+module t ( 
+    
+   clk
+   );
+   input clk;
+   
+   logic [2:0] state;
+
+`line 13 "test_regress/t/t_covergroup_trans_ranges.v" 0
+   covergroup cg;
+       
+      cp_array: coverpoint state {
+         bins trans_array[] = (0 => 1), (1 => 2), (2 => 3);
+      }
+   endgroup
+
+`line 20 "test_regress/t/t_covergroup_trans_ranges.v" 0
+   cg cg_inst = new;
+   
+   int cyc = 0;
+   
+   always @(posedge clk) begin
+      cyc <= cyc + 1;
+      
+      case (cyc)
+        0: state <= 0;
+        1: state <= 1;   
+        2: state <= 2;   
+        3: state <= 3;   
+        4: begin
+           real cov = cg_inst.get_inst_coverage();
+           $display("Coverage: %f%%", cov);
+            
+           if (cov >= 99.0) begin
+              $write("*-* All Finished *-*\n");
+              $finish;
+           end else begin
+              $display("ERROR: Expected 100%% coverage, got %f%%", cov);
+              $stop;
+           end
+        end
+      endcase
+      
+      cg_inst.sample();
+      
+      if (cyc > 10) begin
+         $display("ERROR: Test timed out");
+         $stop;
+      end
+   end
+endmodule
+
+`line 55 "test_regress/t/t_covergroup_trans_ranges.v" 0

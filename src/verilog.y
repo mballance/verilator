@@ -6905,12 +6905,12 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
         /*cont*/ yENDGROUP endLabelE
                         { AstClass *cgClassp = new AstClass{$<fl>2, *$2, PARSEP->libname()};
                           cgClassp->isCovergroup(true);
-                          // Create an AstCovergroup node to hold the clocking event
+                          // Create an AstCovergroupTemp node to hold the clocking event
                           // This will be accessible later for automatic sampling
                           if ($4) {
                               // $4 is an AstSenItem, wrap it in AstSenTree for storage
                               AstSenTree* senTreep = new AstSenTree{$<fl>1, VN_AS($4, SenItem)};
-                              AstCovergroup* const cgNodep = new AstCovergroup{$<fl>1, *$2, nullptr, senTreep};
+                              AstCovergroupTemp* const cgNodep = new AstCovergroupTemp{$<fl>1, *$2, nullptr, senTreep};
                               cgClassp->addMembersp(cgNodep);
                           }
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};

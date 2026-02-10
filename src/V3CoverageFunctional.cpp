@@ -1801,11 +1801,11 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             m_coverpoints.clear();
             m_coverCrosses.clear();
             
-            // Extract and store the clocking event from AstCovergroup node
+            // Extract and store the clocking event from AstCovergroupTemp node
             // The parser creates this node to preserve the event information
             for (AstNode* itemp = nodep->membersp(); itemp;) {
                 AstNode* nextp = itemp->nextp();
-                if (AstCovergroup* const cgp = VN_CAST(itemp, Covergroup)) {
+                if (AstCovergroupTemp* const cgp = VN_CAST(itemp, CovergroupTemp)) {
                     // Store the event in the global map for V3Active to retrieve later
                     if (cgp->eventp()) {
                         // Access the global map defined in V3Active.cpp
@@ -1814,7 +1814,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                         cgp->eventp()->unlinkFrBack();  // Unlink to prevent deletion
                         UINFO(4, "Stored clocking event for covergroup " << nodep->name() << endl);
                     }
-                    // Remove the AstCovergroup node - it's just a holder for the event
+                    // Remove the AstCovergroupTemp node - it's just a holder for the event
                     cgp->unlinkFrBack();
                     VL_DO_DANGLING(cgp->deleteTree(), cgp);
                 }

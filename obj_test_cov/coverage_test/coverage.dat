@@ -1,0 +1,38 @@
+# SystemC::Coverage-3
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl103n14tlinepagev_line/semaphoreoblockS103-104hTOP.std::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl107n19tlinepagev_line/semaphoreoblockS107-108hTOP.std::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl111n10tlinepagev_line/semaphoreoblockS111hTOP.std::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl120n18tlinepagev_line/semaphoreoblockS120,125hTOP.std::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl121n7tbranchpagev_branch/semaphoreoifS121-123hTOP.std::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl121n8tbranchpagev_branch/semaphoreoelsehTOP.std::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl130n3tlinepagev_line/processoblockS130hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl142n29tlinepagev_line/processoblockS142-143,147hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl150n29tlinepagev_line/processoblockS150hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl156n20tlinepagev_line/processoblockS156,160hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl164n19tlinepagev_line/processoblockS164-165hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl172n19tlinepagev_line/processoblockS172-173hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl176n10tlinepagev_line/processoblockS176hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl182n17tlinepagev_line/processoblockS182hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl229n21tlinepagev_line/processoblockS229,231,233-234hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl237n19tlinepagev_line/processoblockS237-238hTOP.std::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl243n16tlinepagev_line/stdoblockS243-244hTOP.std' 0
+C 'ftest_regress/t/t_funccov_bin_counts.vl11n17ttogglepagev_toggle/todata[0]:0->1hTOP.t' 0
+C 'ftest_regress/t/t_funccov_bin_counts.vl11n17ttogglepagev_toggle/todata[0]:1->0hTOP.t' 0
+C 'ftest_regress/t/t_funccov_bin_counts.vl11n17ttogglepagev_toggle/todata[1]:0->1hTOP.t' 1
+C 'ftest_regress/t/t_funccov_bin_counts.vl11n17ttogglepagev_toggle/todata[1]:1->0hTOP.t' 0
+C 'ftest_regress/t/t_funccov_bin_counts.vl11n17ttogglepagev_toggle/todata[2]:0->1hTOP.t' 0
+C 'ftest_regress/t/t_funccov_bin_counts.vl11n17ttogglepagev_toggle/todata[2]:1->0hTOP.t' 0
+C 'ftest_regress/t/t_funccov_bin_counts.vl11n17ttogglepagev_toggle/todata[3]:0->1hTOP.t' 1
+C 'ftest_regress/t/t_funccov_bin_counts.vl11n17ttogglepagev_toggle/todata[3]:1->0hTOP.t' 0
+C 'ftest_regress/t/t_funccov_bin_counts.vl13n16tlinepagev_line/cgoblockS13hTOP.t::cg__Vclpkg' 8
+C 'ftest_regress/t/t_funccov_bin_counts.vl13n5tlinepagev_line/cgoblockS13-18hTOP.t::cg__Vclpkg' 1
+C 'ftest_regress/t/t_funccov_bin_counts.vl24n5tlinepagev_line/toblockS24-25,28-33,36,38-39hTOP.t' 1
+C 'ftest_regress/t/t_funccov_bin_counts.vl42n10tlinepagev_line/toblockS42,44-45hTOP.t' 1
+C 'ftest_regress/t/t_funccov_bin_counts.vl46n10tlinepagev_line/toelsehTOP.t' 1
+C 'ftest_regress/t/t_funccov_bin_counts.vl46n34texprpagev_expr/to((cov < (expected - 0.5))==0 && (cov > (expected + 0.5))==0) => 0hTOP.t' 1
+C 'ftest_regress/t/t_funccov_bin_counts.vl46n34texprpagev_expr/to((cov < (expected - 0.5))==1) => 1hTOP.t' 0
+C 'ftest_regress/t/t_funccov_bin_counts.vl46n34texprpagev_expr/to((cov > (expected + 0.5))==1) => 1hTOP.t' 0
+C 't_userpagesp_user/Vt_funccov_bin_counts_t__03a__03acg__Vclpkg__0tfunccovftest_regress/t/t_funccov_bin_counts.vl15n18binzerohcg.data.zero' 1
+C 't_userpagesp_user/Vt_funccov_bin_counts_t__03a__03acg__Vclpkg__0tfunccovftest_regress/t/t_funccov_bin_counts.vl16n18binlowhcg.data.low' 3
+C 't_userpagesp_user/Vt_funccov_bin_counts_t__03a__03acg__Vclpkg__0tfunccovftest_regress/t/t_funccov_bin_counts.vl17n18binmidhcg.data.mid' 1
+C 't_userpagesp_user/Vt_funccov_bin_counts_t__03a__03acg__Vclpkg__0tfunccovftest_regress/t/t_funccov_bin_counts.vl18n18binhighhcg.data.high' 1

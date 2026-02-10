@@ -1,0 +1,15 @@
+	   docs/guide/exe_verilator_coverage.rst
+	   docs/guide/simulating.rst
+	   src/V3AstNodeOther.h
+	   src/V3CoverageFunctional.cpp
+	   src/V3EmitCHeaders.cpp
+	   src/V3Options.cpp
+	   src/V3Options.h
+	   src/V3Width.cpp
+
+	test_regress/t/t_covergroup_autobins.v
+	test_regress/t/t_covergroup_cross_large.pl
+	test_regress/t/t_covergroup_cross_large.v
+	test_regress/t/t_covergroup_cross_large_main.cpp
+	test_regress/t/t_covergroup_cross_small.v
+
