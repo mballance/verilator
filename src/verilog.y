@@ -6905,8 +6905,8 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                  yCOVERGROUP idAny cgPortListE coverage_eventE ';'
         /*cont*/    coverage_spec_or_optionListE
         /*cont*/ yENDGROUP endLabelE
-                        { AstClass *cgClassp = new AstClass{$<fl>2, *$2, PARSEP->libname()};
-                          cgClassp->isCovergroup(true);
+                        { // Create AstCovergroup instead of AstClass (Phase 2)
+                          AstCovergroup* cgClassp = new AstCovergroup{$<fl>2, *$2, PARSEP->libname()};
                           // Create an AstCovergroupTemp node to hold the clocking event
                           // This will be accessible later for automatic sampling
                           if ($4) {
@@ -6931,8 +6931,8 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
         |        yCOVERGROUP yEXTENDS idAny ';'
         /*cont*/     coverage_spec_or_optionListE
         /*cont*/ yENDGROUP endLabelE
-                        { AstClass *cgClassp = new AstClass{$<fl>3, *$3, PARSEP->libname()};
-                          cgClassp->isCovergroup(true);
+                        { // Create AstCovergroup instead of AstClass (Phase 2)
+                          AstCovergroup* cgClassp = new AstCovergroup{$<fl>3, *$3, PARSEP->libname()};
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};
                           newp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
                           newp->classMethod(true);
