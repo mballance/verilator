@@ -1674,21 +1674,28 @@ class WidthVisitor final : public VNVisitor {
         if (m_vup->prelim()) iterateCheckSizedSelf(nodep, "LHS", nodep->lhsp(), SELF, BOTH);
     }
     void visit(AstCgOptionAssign* nodep) override {
-        // Extract auto_bin_max and store in parent covergroup class before deleting
+        // Extract auto_bin_max and store in parent covergroup (AstCovergroup or AstClass)
         if (!nodep->typeOption() && nodep->name() == "auto_bin_max") {
             if (const AstConst* const constp = VN_CAST(nodep->valuep(), Const)) {
-                // Find the parent covergroup class
+                // Find the parent covergroup
                 AstNode* parentp = nodep->backp();
                 while (parentp && !VN_IS(parentp, NodeFTask)) {
                     parentp = parentp->backp();
                 }
                 if (AstNodeFTask* const ftaskp = VN_CAST(parentp, NodeFTask)) {
-                    // Constructor function - find its class
+                    // Constructor function - find its parent module (covergroup or class)
                     AstNode* classMemberp = ftaskp;
-                    while (classMemberp && !VN_IS(classMemberp->backp(), Class)) {
+                    while (classMemberp && 
+                           !VN_IS(classMemberp->backp(), Covergroup) &&
+                           !VN_IS(classMemberp->backp(), Class)) {
                         classMemberp = classMemberp->backp();
                     }
-                    if (AstClass* const classp = VN_CAST(classMemberp->backp(), Class)) {
+                    // Try AstCovergroup first (preferred after Phase 4)
+                    if (AstCovergroup* const cgp = VN_CAST(classMemberp->backp(), Covergroup)) {
+                        cgp->autoBinMax(constp->toSInt());
+                    }
+                    // Fallback to AstClass (during Phase 3 transition)
+                    else if (AstClass* const classp = VN_CAST(classMemberp->backp(), Class)) {
                         if (classp->isCovergroup()) {
                             classp->autoBinMax(constp->toSInt());
                         }
