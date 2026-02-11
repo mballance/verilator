@@ -4508,8 +4508,7 @@ class WidthVisitor final : public VNVisitor {
                 }
                 // Process arguments - same as class code at line 4554
                 if (withp) nodep->addPinsp(withp);
-                // Set didWidth before processing args to avoid recursion
-                nodep->didWidth(true);
+                // Call processFTaskRefArgs which will set didWidth
                 processFTaskRefArgs(nodep);
                 return;
             }

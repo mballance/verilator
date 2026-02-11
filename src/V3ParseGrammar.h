@@ -117,10 +117,54 @@ public:
             nodep->addStmtsp(varp);
         }
 
+        // If sample has parameters, create member variables for them
+        // These parameters need to be visible in the covergroup body
+        AstNode* sampleFuncArgs = nullptr;
+        if (sampleArgs) {
+            // First pass: create member variables
+            for (AstNode* argp = sampleArgs; argp; argp = argp->nextp()) {
+                AstVar* const paramVarp = VN_CAST(argp, Var);
+                if (paramVarp) {
+                    // Create a member variable with the same name and type
+                    AstVar* const memberVarp = new AstVar{paramVarp->fileline(), VVarType::MEMBER,
+                                                          paramVarp->name(), VFlagChildDType{},
+                                                          paramVarp->childDTypep() ? paramVarp->childDTypep()->cloneTree(false) : nullptr};
+                    if (paramVarp->dtypep()) memberVarp->dtypep(paramVarp->dtypep());
+                    nodep->addStmtsp(memberVarp);
+                }
+            }
+            
+            // Second pass: create function parameter list
+            for (AstNode* argp = sampleArgs; argp; argp = argp->nextp()) {
+                AstVar* const paramVarp = VN_CAST(argp, Var);
+                if (paramVarp) {
+                    // Create function parameter (INPUT direction, PORT type)
+                    AstVar* const funcParamVarp = new AstVar{paramVarp->fileline(), VVarType::PORT,
+                                                             paramVarp->name(), VFlagChildDType{},
+                                                             paramVarp->childDTypep() ? paramVarp->childDTypep()->cloneTree(false) : nullptr};
+                    funcParamVarp->funcLocal(true);
+                    funcParamVarp->direction(VDirection::INPUT);
+                    if (paramVarp->dtypep()) funcParamVarp->dtypep(paramVarp->dtypep());
+                    // Preserve default value if present
+                    if (paramVarp->valuep()) {
+                        funcParamVarp->valuep(paramVarp->valuep()->cloneTree(false));
+                    }
+                    if (!sampleFuncArgs) {
+                        sampleFuncArgs = funcParamVarp;
+                    } else {
+                        sampleFuncArgs->addNext(funcParamVarp);
+                    }
+                }
+            }
+        }
+
         // IEEE: function void sample()
         {
             AstFunc* const funcp = new AstFunc{nodep->fileline(), "sample", nullptr, nullptr};
-            funcp->addStmtsp(sampleArgs);
+            // Add function parameters
+            if (sampleFuncArgs) {
+                funcp->addStmtsp(sampleFuncArgs);
+            }
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
             nodep->addStmtsp(funcp);
