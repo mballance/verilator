@@ -5329,9 +5329,8 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 const AstClassExtends* classExtendsp = nullptr;
                 if (AstClass* const classp = VN_CAST(m_modp, Class)) {
                     classExtendsp = classp->extendsp();
-                } else if (AstCovergroup* const covergroupp = VN_CAST(m_modp, Covergroup)) {
-                    classExtendsp = covergroupp->extendsp();
                 }
+                // Covergroups don't support inheritance, so no extendsp() check needed
                 if (m_explicitSuperNewp && !m_explicitSuperNewp->isImplicit() && classExtendsp
                     && classExtendsp->argsp()) {
                     m_explicitSuperNewp->v3error(

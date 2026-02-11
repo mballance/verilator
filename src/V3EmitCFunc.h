@@ -154,6 +154,7 @@ protected:
     string m_classOrPackageHash;  // Hash of class or package name
 
     bool constructorNeedsProcess(const AstClass* const classp) {
+        if (!classp) return false;  // Handle null (e.g., covergroups)
         const AstNode* const newp = m_memberMap.findMember(classp, "new");
         if (!newp) return false;
         const AstCFunc* const ctorp = VN_CAST(newp, CFunc);
@@ -163,8 +164,14 @@ protected:
     }
 
     bool constructorNeedsProcess(const AstNodeDType* const dtypep) {
-        if (const AstClassRefDType* const crefdtypep = VN_CAST(dtypep, ClassRefDType))
-            return constructorNeedsProcess(crefdtypep->classp());
+        if (const AstClassRefDType* const crefdtypep = VN_CAST(dtypep, ClassRefDType)) {
+            // ClassRefDType can point to AstClass or AstCovergroup
+            if (AstClass* const classp = crefdtypep->classp()) {
+                return constructorNeedsProcess(classp);
+            }
+            // Covergroups don't need process parameter
+            return false;
+        }
         return false;
     }
 

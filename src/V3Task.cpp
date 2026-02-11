@@ -132,11 +132,13 @@ public:
     }
     AstClass* getClassp(AstNodeFTask* nodep) {
         AstClass* const classp = m_funcToClassMap[nodep];
-        UASSERT_OBJ(classp, nodep, "No class for ctor func");
+        // Covergroup constructors won't be in the map; that's OK
         return classp;
     }
     void remapFuncClassp(AstNodeFTask* nodep, AstNodeFTask* newp) {
-        m_funcToClassMap[newp] = getClassp(nodep);
+        AstClass* classp = getClassp(nodep);
+        if (classp) m_funcToClassMap[newp] = classp;
+        // If no class, it might be a covergroup constructor, which is fine
     }
     bool ftaskNoInline(AstNodeFTask* nodep) { return getFTaskVertex(nodep)->noInline(); }
     AstCFunc* ftaskCFuncp(AstNodeFTask* nodep) { return getFTaskVertex(nodep)->cFuncp(); }

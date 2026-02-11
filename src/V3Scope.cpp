@@ -219,7 +219,7 @@ class ScopeVisitor final : public VNVisitor {
 
         // Create scope for the current usage of this cell
         AstNode::user1ClearTree();
-        nodep->addStmtsp(m_scopep);
+        nodep->addMembersp(m_scopep);
 
         iterateChildren(nodep);
     }

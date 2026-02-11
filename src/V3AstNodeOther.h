@@ -2643,20 +2643,24 @@ public:
     void classp(AstClass* classp) { m_classp = classp; }
 };
 // AstCovergroup - SystemVerilog covergroup construct (added 2026)
-// Separate from AstClass because covergroups have different semantics:
-// - Cannot be extended (except via SystemVerilog's optional "extend" feature)
+// Separate node type that parallels AstClass to avoid polluting class with coverage fields.
+// Covergroups share many similarities with classes:
+// - Have constructors, methods, and members
+// - Need symbol table and scope handling
+// - Are instantiable types with object semantics
+// However, they are separate because:
+// - Cannot be extended/inherited (no class hierarchy)
 // - Have coverage-specific options (auto_bin_max, at_least, weight, goal, etc.)
-// - Generate different code (coverage collection runtime, not object instantiation)
-// - No inheritance, randomization, or class-based features
-// Previously represented as AstClass with m_covergroup flag (pre-2026),
-// but this polluted AstClass with covergroup-specific fields and checks.
+// - Generate coverage collection code instead of general OOP code
+// By keeping covergroups as AstNodeModule (sibling to AstClass), we maintain type safety
+// and keep AstClass instances clean of coverage-specific state.
 class AstCovergroup final : public AstNodeModule {
     // A covergroup declaration (functional coverage construct)
-    // Unlike AstClass, this is purely for coverage collection, not object orientation
-    // @astgen op4 := extendsp : List[AstClassExtends]  // Reserved for future use
+    // Parallel to AstClass but for coverage, not OOP
+    // but adds coverage-specific fields and prevents class-specific features (inheritance)
     // MEMBERS
-    // @astgen ptr := m_classOrPackagep : Optional[AstClassPackage]  // Package to emit with
-    uint32_t m_declTokenNum;  // Declaration token number
+    AstNodeModule* m_classOrPackagep = nullptr;  // Package for lookup
+    uint32_t m_declTokenNum = 0;  // Token number where declared, for error messaging
     int m_autoBinMax = -1;  // option.auto_bin_max (-1 = use global default)
     // Additional covergroup options can be added here as needed:
     // int m_atLeast = 1;      // option.at_least
@@ -2666,31 +2670,28 @@ class AstCovergroup final : public AstNodeModule {
 
 public:
     AstCovergroup(FileLine* fl, const string& name, const string& libname)
-        : ASTGEN_SUPER_Covergroup(fl, name, libname)
-        , m_declTokenNum{fl->tokenNum()} {}
+        : ASTGEN_SUPER_Covergroup(fl, name, libname) {}
     ASTGEN_MEMBERS_AstCovergroup;
 
-    // Overrides from AstNodeModule
+    // Module methods
     string verilogKwd() const override { return "covergroup"; }
-    bool maybePointedTo() const override VL_MT_SAFE { return true; }
-    void dump(std::ostream& str) const override;
-    void dumpJson(std::ostream& str) const override;
-    bool timescaleMatters() const override { return false; }
-
-    // Accessors matching AstClass interface (for compatibility during migration)
-    AstClassPackage* classOrPackagep() const VL_MT_STABLE { return m_classOrPackagep; }
-    void classOrPackagep(AstClassPackage* classpackagep) { m_classOrPackagep = classpackagep; }
-    AstNode* membersp() const VL_MT_STABLE { return stmtsp(); }
+    bool timescaleMatters() const override { return false; }  // Covergroups don't have timescale concerns
+    AstNodeModule* classOrPackagep() const { return m_classOrPackagep; }
+    void classOrPackagep(AstNodeModule* nodep) { m_classOrPackagep = nodep; }
+    AstNode* membersp() const { return stmtsp(); }
     void addMembersp(AstNode* nodep) { addStmtsp(nodep); }
-
-    // Covergroup-specific accessors
-    int autoBinMax() const { return m_autoBinMax; }
-    void autoBinMax(int value) { m_autoBinMax = value; }
-
     uint32_t declTokenNum() const override { return m_declTokenNum; }
     void declTokenNumSetMin(uint32_t tokenNum) override {
         m_declTokenNum = std::min(m_declTokenNum, tokenNum);
     }
+    
+    // Covergroup-specific accessors
+    int autoBinMax() const { return m_autoBinMax; }
+    void autoBinMax(int value) { m_autoBinMax = value; }
+    
+    // Dump methods
+    void dump(std::ostream& str) const override;
+    void dumpJson(std::ostream& str) const override;
 };
 class AstIface final : public AstNodeModule {
     // An interface declaration
