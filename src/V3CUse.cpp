@@ -52,7 +52,12 @@ class CUseVisitor final : public VNVisitorConst {
 
     // VISITORS
     void visit(AstClassRefDType* nodep) override {
-        addNewUse(nodep, VUseType::INT_FWD_CLASS, nodep->classp()->name());
+        // Can point to either AstClass or AstCovergroup (which extends AstNodeModule)
+        if (AstClass* const classp = nodep->classp()) {
+            addNewUse(nodep, VUseType::INT_FWD_CLASS, classp->name());
+        } else if (AstCovergroup* const covergroupp = VN_CAST(nodep->modulep(), Covergroup)) {
+            addNewUse(nodep, VUseType::INT_FWD_CLASS, covergroupp->name());
+        }
     }
     void visit(AstCFunc* nodep) override {
         if (nodep->user1SetOnce()) return;
