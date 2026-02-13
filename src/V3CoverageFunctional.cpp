@@ -193,6 +193,204 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         return 1;  // Default: at least 1 hit required
     }
 
+    // Get auto_bin_max option value (check coverpoint options, then covergroup)
+    int getAutoBinMax(AstCoverpoint* coverpointp) {
+        // Check coverpoint options first
+        for (AstNode* optionp = coverpointp->optionsp(); optionp; optionp = optionp->nextp()) {
+            if (AstCoverOption* optp = VN_CAST(optionp, CoverOption)) {
+                if (optp->optionType() == VCoverOptionType::AUTO_BIN_MAX) {
+                    if (AstConst* constp = VN_CAST(optp->valuep(), Const)) {
+                        return constp->toSInt();
+                    }
+                }
+            }
+        }
+        // Check covergroup-level option stored in AstClass
+        if (m_covergroupp && m_covergroupp->cgAutoBinMax() >= 0) {
+            // Value was explicitly set (>= 0)
+            return m_covergroupp->cgAutoBinMax();
+        }
+        return 64;  // Default per IEEE 1800-2017
+    }
+
+    // Extract values to exclude from automatic bins (from ignore_bins and illegal_bins)
+    std::set<uint64_t> getExcludedValues(AstCoverpoint* coverpointp) {
+        std::set<uint64_t> excluded;
+        
+        // Scan existing bins for ignore/illegal types
+        for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
+            AstCoverBin* cbinp = VN_CAST(binp, CoverBin);
+            if (!cbinp) continue;
+            
+            VCoverBinsType btype = cbinp->binsType();
+            if (btype != VCoverBinsType::IGNORE && btype != VCoverBinsType::ILLEGAL) {
+                continue;
+            }
+            
+            // Extract values from the bin's range expression
+            if (AstNode* rangep = cbinp->rangesp()) {
+                extractValuesFromRange(rangep, excluded);
+            }
+        }
+        
+        return excluded;
+    }
+    
+    // Extract individual values from a range expression
+    void extractValuesFromRange(AstNode* nodep, std::set<uint64_t>& values) {
+        if (!nodep) return;
+        
+        if (AstConst* constp = VN_CAST(nodep, Const)) {
+            // Single constant value
+            values.insert(constp->toUQuad());
+        } else if (AstInsideRange* rangep = VN_CAST(nodep, InsideRange)) {
+            // Range [lo:hi]
+            AstConst* loConstp = VN_CAST(rangep->lhsp(), Const);
+            AstConst* hiConstp = VN_CAST(rangep->rhsp(), Const);
+            if (loConstp && hiConstp) {
+                uint64_t lo = loConstp->toUQuad();
+                uint64_t hi = hiConstp->toUQuad();
+                // Add all values in range (but limit to reasonable size)
+                if (hi - lo < 1000) {  // Sanity check
+                    for (uint64_t v = lo; v <= hi && v <= lo + 1000; v++) {
+                        values.insert(v);
+                    }
+                }
+            }
+        }
+        
+        // Recurse into list of nodes
+        extractValuesFromRange(nodep->op1p(), values);
+        extractValuesFromRange(nodep->op2p(), values);
+        extractValuesFromRange(nodep->op3p(), values);
+        extractValuesFromRange(nodep->op4p(), values);
+    }
+
+    // Check if coverpoint has any regular bins (not just ignore/illegal)
+    bool hasRegularBins(AstCoverpoint* coverpointp) {
+        for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
+            if (AstCoverBin* cbinp = VN_CAST(binp, CoverBin)) {
+                VCoverBinsType btype = cbinp->binsType();
+                if (btype != VCoverBinsType::IGNORE && btype != VCoverBinsType::ILLEGAL) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Create implicit automatic bins when coverpoint has no explicit regular bins
+    void createImplicitAutoBins(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {
+        // If already has regular bins, nothing to do
+        if (hasRegularBins(coverpointp)) return;
+
+        UINFO(4, "  Creating implicit automatic bins for coverpoint: " << coverpointp->name()
+                                                                        << endl);
+
+        // Get excluded values from ignore_bins and illegal_bins
+        std::set<uint64_t> excluded = getExcludedValues(coverpointp);
+        
+        if (!excluded.empty()) {
+            UINFO(4, "    Found " << excluded.size() << " excluded values" << endl);
+        }
+
+        // Get auto_bin_max option
+        const int autoBinMax = getAutoBinMax(coverpointp);
+        const int width = exprp->width();
+        const uint64_t maxVal = (width >= 64) ? UINT64_MAX : ((1ULL << width) - 1);
+        const uint64_t numTotalValues = (width >= 64) ? UINT64_MAX : (1ULL << width);
+        const uint64_t numValidValues = numTotalValues - excluded.size();
+
+        // Determine number of bins to create (based on non-excluded values)
+        int numBins;
+        if (numValidValues <= static_cast<uint64_t>(autoBinMax)) {
+            // Create one bin per valid value
+            numBins = numValidValues;
+        } else {
+            // Create autoBinMax bins, dividing range
+            numBins = autoBinMax;
+        }
+
+        UINFO(4, "    Width=" << width << " numTotalValues=" << numTotalValues 
+                              << " numValidValues=" << numValidValues << " autoBinMax="
+                              << autoBinMax << " creating " << numBins << " bins" << endl);
+
+        // Strategy: Create bins for each value (if numValidValues <= autoBinMax)
+        // or create range bins that avoid excluded values
+        if (numValidValues <= static_cast<uint64_t>(autoBinMax)) {
+            // Create one bin per valid value
+            int binCount = 0;
+            for (uint64_t v = 0; v <= maxVal && binCount < numBins; v++) {
+                // Skip excluded values
+                if (excluded.find(v) != excluded.end()) continue;
+                
+                // Create single-value bin
+                AstConst* valConstp = new AstConst{coverpointp->fileline(), 
+                                                    V3Number(coverpointp->fileline(), width, v)};
+                AstConst* valConstp2 = new AstConst{coverpointp->fileline(), 
+                                                     V3Number(coverpointp->fileline(), width, v)};
+                
+                AstInsideRange* rangep = new AstInsideRange{coverpointp->fileline(), 
+                                                            valConstp, valConstp2};
+                rangep->dtypeFrom(exprp);
+                
+                const string binName = "auto_" + std::to_string(binCount);
+                AstCoverBin* newBinp = new AstCoverBin{coverpointp->fileline(), binName, 
+                                                        rangep, false, false};
+                
+                coverpointp->addBinsp(newBinp);
+                binCount++;
+            }
+            UINFO(4, "    Created " << binCount << " single-value automatic bins" << endl);
+        } else {
+            // Create range bins (more complex - need to handle excluded values in ranges)
+            // For simplicity, create bins and let excluded values not match any bin
+            const uint64_t binSize = (maxVal + 1) / numBins;
+            
+            for (int i = 0; i < numBins; i++) {
+                const uint64_t lo = i * binSize;
+                const uint64_t hi = (i == numBins - 1) ? maxVal : ((i + 1) * binSize - 1);
+                
+                // Check if entire range is excluded
+                bool anyValid = false;
+                for (uint64_t v = lo; v <= hi && v <= lo + 1000; v++) {
+                    if (excluded.find(v) == excluded.end()) {
+                        anyValid = true;
+                        break;
+                    }
+                }
+                
+                if (!anyValid && (hi - lo < 1000)) {
+                    // Skip this bin entirely if all values are excluded
+                    UINFO(4, "    Skipping bin [" << lo << ":" << hi 
+                                                   << "] - all values excluded" << endl);
+                    continue;
+                }
+                
+                // Create constants for range
+                AstConst* loConstp = new AstConst{coverpointp->fileline(), 
+                                                   V3Number(coverpointp->fileline(), width, lo)};
+                AstConst* hiConstp = new AstConst{coverpointp->fileline(), 
+                                                   V3Number(coverpointp->fileline(), width, hi)};
+                
+                // Create InsideRange [lo:hi]
+                AstInsideRange* rangep = new AstInsideRange{coverpointp->fileline(), 
+                                                            loConstp, hiConstp};
+                rangep->dtypeFrom(exprp);
+                
+                // Create bin name
+                const string binName = "auto_" + std::to_string(i);
+                AstCoverBin* newBinp = new AstCoverBin{coverpointp->fileline(), binName, 
+                                                        rangep, false, false};
+                
+                // Add to coverpoint
+                coverpointp->addBinsp(newBinp);
+            }
+            
+            UINFO(4, "    Created range-based automatic bins" << endl);
+        }
+    }
+
     // Check if coverpoint has any transition bins and create previous value variable if needed
     bool hasTransitionBins(AstCoverpoint* coverpointp) {
         for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
@@ -273,6 +471,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
         // Expand automatic bins before processing
         expandAutomaticBins(coverpointp, exprp);
+
+        // Create implicit automatic bins if no regular bins exist
+        createImplicitAutoBins(coverpointp, exprp);
 
         // Extract option values for this coverpoint
         int atLeastValue = getCoverpointAtLeast(coverpointp);
@@ -730,19 +931,35 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 singleCondp = new AstEq{constp->fileline(), exprp->cloneTree(false),
                                         constp->cloneTree(false)};
             } else if (AstRange* rangep = VN_CAST(valp, Range)) {
-                // Range [min:max]: check if value is in range
-                singleCondp = new AstAnd{rangep->fileline(),
-                                         new AstGte{rangep->fileline(), exprp->cloneTree(false),
-                                                    rangep->leftp()->cloneTree(false)},
-                                         new AstLte{rangep->fileline(), exprp->cloneTree(false),
-                                                    rangep->rightp()->cloneTree(false)}};
+                // Range [min:max]: check if value is in range (use signed if expr is signed)
+                if (exprp->isSigned()) {
+                    singleCondp = new AstAnd{rangep->fileline(),
+                                             new AstGteS{rangep->fileline(), exprp->cloneTree(false),
+                                                         rangep->leftp()->cloneTree(false)},
+                                             new AstLteS{rangep->fileline(), exprp->cloneTree(false),
+                                                         rangep->rightp()->cloneTree(false)}};
+                } else {
+                    singleCondp = new AstAnd{rangep->fileline(),
+                                             new AstGte{rangep->fileline(), exprp->cloneTree(false),
+                                                        rangep->leftp()->cloneTree(false)},
+                                             new AstLte{rangep->fileline(), exprp->cloneTree(false),
+                                                        rangep->rightp()->cloneTree(false)}};
+                }
             } else if (AstInsideRange* inrangep = VN_CAST(valp, InsideRange)) {
-                // InsideRange [min:max]: similar to Range
-                singleCondp = new AstAnd{inrangep->fileline(),
-                                         new AstGte{inrangep->fileline(), exprp->cloneTree(false),
-                                                    inrangep->lhsp()->cloneTree(false)},
-                                         new AstLte{inrangep->fileline(), exprp->cloneTree(false),
-                                                    inrangep->rhsp()->cloneTree(false)}};
+                // InsideRange [min:max]: similar to Range (use signed if expr is signed)
+                if (exprp->isSigned()) {
+                    singleCondp = new AstAnd{inrangep->fileline(),
+                                             new AstGteS{inrangep->fileline(), exprp->cloneTree(false),
+                                                         inrangep->lhsp()->cloneTree(false)},
+                                             new AstLteS{inrangep->fileline(), exprp->cloneTree(false),
+                                                         inrangep->rhsp()->cloneTree(false)}};
+                } else {
+                    singleCondp = new AstAnd{inrangep->fileline(),
+                                             new AstGte{inrangep->fileline(), exprp->cloneTree(false),
+                                                        inrangep->lhsp()->cloneTree(false)},
+                                             new AstLte{inrangep->fileline(), exprp->cloneTree(false),
+                                                        inrangep->rhsp()->cloneTree(false)}};
+                }
             } else {
                 // Unknown node type - try to handle as expression
                 UINFO(4, "      Transition item has unknown value node type: " << valp->typeName()
@@ -1076,11 +1293,20 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                                        minExprp->cloneTree(false)};
                             }
                         } else {
-                            // Range
-                            AstNodeExpr* gep = new AstGte{binp->fileline(), exprClonep,
-                                                          minExprp->cloneTree(false)};
-                            AstNodeExpr* lep = new AstLte{binp->fileline(), exprClone2p,
-                                                          maxExprp->cloneTree(false)};
+                            // Range - use signed comparisons if expression is signed
+                            AstNodeExpr* gep;
+                            AstNodeExpr* lep;
+                            if (exprClonep->isSigned()) {
+                                gep = new AstGteS{binp->fileline(), exprClonep,
+                                                  minExprp->cloneTree(false)};
+                                lep = new AstLteS{binp->fileline(), exprClone2p,
+                                                  maxExprp->cloneTree(false)};
+                            } else {
+                                gep = new AstGte{binp->fileline(), exprClonep,
+                                                 minExprp->cloneTree(false)};
+                                lep = new AstLte{binp->fileline(), exprClone2p,
+                                                 maxExprp->cloneTree(false)};
+                            }
                             rangeCondp = new AstAnd{binp->fileline(), gep, lep};
                         }
                     }

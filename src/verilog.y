@@ -6905,14 +6905,23 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
         /*cont*/ yENDGROUP endLabelE
                         { AstClass *cgClassp = new AstClass{$<fl>2, *$2, PARSEP->libname()};
                           cgClassp->isCovergroup(true);
-                          // Create an AstCovergroup node to hold the clocking event
-                          // This will be accessible later for automatic sampling
+                          
+                          AstNode* sampleArgs = nullptr;
+                          
+                          // coverage_eventE can be either a clocking event or sample arguments
                           if ($4) {
-                              // $4 is an AstSenItem, wrap it in AstSenTree for storage
-                              AstSenTree* senTreep = new AstSenTree{$<fl>1, VN_AS($4, SenItem)};
-                              AstCovergroup* const cgNodep = new AstCovergroup{$<fl>1, *$2, nullptr, senTreep};
-                              cgClassp->addMembersp(cgNodep);
+                              if (VN_IS($4, SenItem)) {
+                                  // Clocking event: @(posedge clk)
+                                  // Create an AstCovergroup node to hold the clocking event
+                                  AstSenTree* senTreep = new AstSenTree{$<fl>1, VN_AS($4, SenItem)};
+                                  AstCovergroup* const cgNodep = new AstCovergroup{$<fl>1, *$2, nullptr, senTreep};
+                                  cgClassp->addMembersp(cgNodep);
+                              } else {
+                                  // Sample arguments: with function sample(...)
+                                  sampleArgs = $4;
+                              }
                           }
+                          
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};
                           newp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
                           newp->classMethod(true);
@@ -6921,7 +6930,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                           newp->addStmtsp($3);
                           newp->addStmtsp($6);
                           cgClassp->addMembersp(newp);
-                          GRAMMARP->createCoverGroupMethods(cgClassp, nullptr);  // Don't pass event as sample args
+                          GRAMMARP->createCoverGroupMethods(cgClassp, sampleArgs);
 
                           $$ = cgClassp;
                           GRAMMARP->endLabel($<fl>8, $$, $8);

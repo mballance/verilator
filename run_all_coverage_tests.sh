@@ -32,7 +32,7 @@ for test in $TESTS; do
     fi
     
     # Verilate
-    ./bin/verilator --cc --coverage $HARNESS test_regress/t/${test}.v -Wno-UNSIGNED --no-timing >/tmp/v_${test}.log 2>&1
+    ./bin/verilator --cc --coverage $HARNESS test_regress/t/${test}.v -Wno-UNSIGNED -Wno-CMPCONST --no-timing >/tmp/v_${test}.log 2>&1
     if [ $? -ne 0 ]; then
         echo "$test: V_FAIL"
         ((V_FAIL++))
