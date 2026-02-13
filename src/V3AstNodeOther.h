@@ -2577,6 +2577,8 @@ class AstClass final : public AstNodeModule {
     bool m_needRNG = false;  // Need RNG, uses srandom/randomize
     bool m_useVirtualPublic = false;  // Subclasses need virtual public as uses interface class
     bool m_virtual = false;  // Virtual class
+    // Covergroup options (when m_covergroup is true)
+    int m_cgAutoBinMax = -1;  // option.auto_bin_max value (-1 = not set, use default 64)
 
 public:
     AstClass(FileLine* fl, const string& name, const string& libname)
@@ -2604,6 +2606,9 @@ public:
     void needRNG(bool flag) { m_needRNG = flag; }
     bool useVirtualPublic() const { return m_useVirtualPublic; }
     void useVirtualPublic(bool flag) { m_useVirtualPublic = flag; }
+    // Covergroup options accessors
+    int cgAutoBinMax() const { return m_cgAutoBinMax; }
+    void cgAutoBinMax(int value) { m_cgAutoBinMax = value; }
     // Return true if this class is an extension of base class (SLOW)
     // Accepts nullptrs
     static bool isClassExtendedFrom(const AstClass* refClassp, const AstClass* baseClassp);

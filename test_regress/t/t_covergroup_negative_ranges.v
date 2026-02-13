@@ -13,6 +13,7 @@ module t (/*AUTOARG*/
 
    int signed value;
    
+   /* verilator lint_off CMPCONST */
    covergroup cg;
       cp_neg: coverpoint value {
          bins negative = {[-100:-1]};
@@ -21,6 +22,7 @@ module t (/*AUTOARG*/
          bins mixed = {[-10:10]};
       }
    endgroup
+   /* verilator lint_on CMPCONST */
 
    cg cg_inst = new;
 

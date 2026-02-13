@@ -15,6 +15,7 @@
 //*************************************************************************
 
 #include "V3Ast.h"
+#include "V3Const.h"
 #include "V3Control.h"
 #include "V3Global.h"
 #include "V3ParseImp.h"  // Defines YYTYPE; before including bison header
@@ -123,10 +124,17 @@ public:
             nodep->addMembersp(varp);
         }
 
-        // IEEE: function void sample()
+        // IEEE: function void sample([arguments])
         {
             AstFunc* const funcp = new AstFunc{nodep->fileline(), "sample", nullptr, nullptr};
-            funcp->addStmtsp(sampleArgs);
+            
+            // Add sample arguments as function parameters (if provided)
+            if (sampleArgs) {
+                // The arguments come as a linked list of AstVar nodes (parameters)
+                // Add them to the function's statement list (where parameters go)
+                funcp->addStmtsp(sampleArgs);
+            }
+            
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
             nodep->addMembersp(funcp);

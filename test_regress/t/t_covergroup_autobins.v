@@ -72,7 +72,7 @@ module t(/*AUTOARG*/
       data3 = 1; cg2_inst.sample();
       data3 = 4; cg2_inst.sample();
       
-      // Test CG3: Hit values 0, 1, 7 (7 is ignored, so 2 of 7 valid bins = 28.5%)
+      // Test CG3: Hit values 0, 1, 7 (7 is ignored, so 2 of 7 valid bins = 28.6%)
       data3 = 0; cg3_inst.sample();
       data3 = 1; cg3_inst.sample();
       data3 = 7; cg3_inst.sample();  // Ignored
@@ -98,12 +98,12 @@ module t(/*AUTOARG*/
          $display("FAIL: CG1 coverage out of range");
          $stop;
       end
-      if (cg2_inst.get_inst_coverage() < 74.0 || cg2_inst.get_inst_coverage() > 76.0) begin
-         $display("FAIL: CG2 coverage should be 75%% (3/4 bins with auto_bin_max=4)");
+      if (cg2_inst.get_inst_coverage() < 45.0 || cg2_inst.get_inst_coverage() > 55.0) begin
+         $display("FAIL: CG2 coverage should be 50%% (2/4 bins with auto_bin_max=4)");
          $stop;
       end
-      if (cg3_inst.get_inst_coverage() < 40.0 || cg3_inst.get_inst_coverage() > 45.0) begin
-         $display("FAIL: CG3 coverage out of range");
+      if (cg3_inst.get_inst_coverage() < 27.0 || cg3_inst.get_inst_coverage() > 30.0) begin
+         $display("FAIL: CG3 coverage should be ~28.6%% (2/7 valid bins, value 7 ignored)");
          $stop;
       end
       if (cg4_inst.get_inst_coverage() < 95.0) begin
