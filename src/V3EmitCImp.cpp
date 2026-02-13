@@ -153,6 +153,31 @@ class EmitCImp final : public EmitCFunc {
 
         puts("}\n");
     }
+    void emitCovergroupCtorImp(const AstNodeModule* modp) {
+        // Emit constructor and destructor for covergroup
+        const std::string modName = EmitCUtil::prefixNameProtect(modp);
+        
+        puts("\n");
+        m_lazyDecls.emit("void " + modName + "__", protect("_ctor_var_reset"),
+                         "(" + modName + "* vlSelf);");
+        puts("\n");
+        
+        // Covergroups have a real constructor (not ctor method)
+        putns(modp, modName + "::" + modName + "(" + EmitCUtil::symClassName() + "* symsp) {\n");
+        puts("vlSymsp = symsp;\n");
+        // Set a default name for the covergroup (can be changed with set_inst_name)
+        puts("vlNamep = strdup(\"" + modp->name() + "\");\n");
+        
+        putsDecoration(modp, "// Reset structure values\n");
+        puts(modName + "__" + protect("_ctor_var_reset") + "(this);\n");
+        
+        puts("}\n");
+        
+        // Emit destructor
+        putns(modp, "\n" + modName + "::~" + modName + "() {\n");
+        puts("if (vlNamep) std::free(const_cast<char*>(vlNamep));\n");
+        puts("}\n");
+    }
     void emitConfigureImp(const AstNodeModule* modp) {
         const string modName = EmitCUtil::prefixNameProtect(modp);
 
@@ -362,7 +387,11 @@ class EmitCImp final : public EmitCFunc {
     void doCommonImp(const AstNodeModule* modp) {
         if (m_slow) {
             emitStaticVarDefns(modp);
-            if (!VN_IS(modp, Class)) {
+            if (VN_IS(modp, Covergroup)) {
+                emitCovergroupCtorImp(modp);
+                emitConfigureImp(modp);
+                emitCoverageImp();
+            } else if (!VN_IS(modp, Class)) {
                 emitParamDefns(modp);
                 emitCtorImp(modp);
                 emitConfigureImp(modp);
@@ -397,6 +426,7 @@ class EmitCImp final : public EmitCFunc {
         std::vector<AstCFunc*> funcps;
 
         const auto gather = [this, &funcps](const AstNodeModule* modp) {
+            const bool isCovergroup = VN_IS(modp, Covergroup);
             for (AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
                 AstCFunc* const funcp = VN_CAST(nodep, CFunc);
                 if (!funcp) continue;
@@ -405,6 +435,8 @@ class EmitCImp final : public EmitCFunc {
                 if (funcp->dpiImportPrototype()) continue;
                 if (funcp->dpiExportDispatcher()) continue;
                 if (funcp->slow() != m_slow) continue;
+                // Skip covergroup constructors (emitted manually)
+                if (isCovergroup && funcp->isConstructor()) continue;
                 funcps.push_back(funcp);
             }
         };
@@ -877,6 +909,30 @@ public:
 };
 
 //######################################################################
+// Helper visitor to find covergroups within modules
+
+class CovergroupFinder final : public VNVisitor {
+private:
+    std::vector<AstCovergroup*> m_covergroups;
+    
+    void visit(AstCovergroup* nodep) override {
+        m_covergroups.push_back(nodep);
+        // Don't recurse - we just need the covergroup itself
+    }
+    
+    void visit(AstNode* nodep) override {
+        iterateChildren(nodep);
+    }
+    
+public:
+    explicit CovergroupFinder(AstNode* nodep) {
+        iterate(nodep);
+    }
+    
+    const std::vector<AstCovergroup*>& covergroups() const { return m_covergroups; }
+};
+
+//######################################################################
 // EmitC class functions
 
 void V3EmitC::emitcImp() {
@@ -891,6 +947,19 @@ void V3EmitC::emitcImp() {
         for (const AstNode* nodep = v3Global.rootp()->modulesp(); nodep; nodep = nodep->nextp()) {
             if (VN_IS(nodep, Class)) continue;  // Imped with ClassPackage
             const AstNodeModule* const modp = VN_AS(nodep, NodeModule);
+            
+            // Find and emit any covergroups within this module
+            CovergroupFinder finder(const_cast<AstNode*>(nodep));
+            for (AstCovergroup* cgp : finder.covergroups()) {
+                UINFO(2, "Emitting covergroup implementation: " << cgp->name() << "\n");
+                cfiles.emplace_back();
+                std::vector<AstCFile*>& cg_slow = cfiles.back();
+                threadScope.enqueue([cgp, &cg_slow] { cg_slow = EmitCImp::main(cgp, /* slow: */ true); });
+                cfiles.emplace_back();
+                std::vector<AstCFile*>& cg_fast = cfiles.back();
+                threadScope.enqueue([cgp, &cg_fast] { cg_fast = EmitCImp::main(cgp, /* slow: */ false); });
+            }
+            
             cfiles.emplace_back();
             std::vector<AstCFile*>& slow = cfiles.back();
             threadScope.enqueue([modp, &slow] { slow = EmitCImp::main(modp, /* slow: */ true); });

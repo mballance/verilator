@@ -29,8 +29,29 @@ EmitCParentModule::EmitCParentModule() {
             if (VN_IS(nodep, CFunc) || VN_IS(nodep, Var)) nodep->user4p(modp);
         }
     };
+    
+    // Helper visitor to find and process covergroups
+    class CovergroupVisitor final : public VNVisitor {
+    private:
+        std::function<void(AstNodeModule*)> m_setAll;
+        void visit(AstCovergroup* nodep) override {
+            m_setAll(nodep);
+            // Don't recurse into nested covergroups
+        }
+        void visit(AstNode* nodep) override {
+            iterateChildren(nodep);
+        }
+    public:
+        explicit CovergroupVisitor(std::function<void(AstNodeModule*)> setAll) : m_setAll(setAll) {}
+        void process(AstNode* nodep) { iterate(nodep); }
+    };
+    
+    CovergroupVisitor cgVisitor(setAll);
+    
     for (AstNode* modp = v3Global.rootp()->modulesp(); modp; modp = modp->nextp()) {
         setAll(VN_AS(modp, NodeModule));
+        // Also process any covergroups within this module
+        cgVisitor.process(modp);
     }
     setAll(v3Global.rootp()->constPoolp()->modp());
 }
