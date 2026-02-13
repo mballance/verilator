@@ -5609,6 +5609,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
         }
 
         // Resolve its reference
+        UINFO(5, indent() << "RefDType visit: " << nodep->name() << " typedefp=" << (nodep->typedefp() ? "yes" : "no") << " subDTypep=" << (nodep->subDTypep() ? "yes" : "no"));
         if (V3LinkDotIfaceCapture::find(nodep)) {
             UINFO(9, indent() << "iface capture visit captured typedef ptr=" << nodep
                               << " user2=" << nodep->user2p());
@@ -5752,6 +5753,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 VSymEnt* const lookupSymp = m_ds.m_dotSymp ? m_ds.m_dotSymp : m_curSymp;
                 foundp = lookupSymp->findIdFlat(nodep->name());
             }
+            UINFO(5, indent() << "RefDType lookup: name=" << nodep->name() << " foundp=" << foundp << (foundp ? foundp->nodep()->typeName() : ""));
             if (ifaceCaptured && capturedTypedefp) {
                 // When we have a captured interface typedef context, use the captured typedef
                 // instead of any local lookup result. This handles the case where the local
@@ -5825,12 +5827,17 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 } else if (AstCovergroup* const defp
                            = foundp ? VN_CAST(foundp->nodep(), Covergroup) : nullptr) {
                     // Covergroups are treated like classes for type references
+                    UINFO(5, indent() << "Found covergroup for RefDType: " << nodep->name() << " -> " << (defp ? defp->name() : "NULL!"));
+                    if (!defp) {
+                        UINFO(5, indent() << "ERROR: defp is NULL but foundp exists!");
+                    }
                     if (!nodep->classOrPackagep()) checkDeclOrder(nodep, defp);
                     AstPin* const paramsp = nodep->paramsp();
                     if (paramsp) paramsp->unlinkFrBackWithNext();
                     AstClassRefDType* const newp
                         = new AstClassRefDType{nodep->fileline(), defp, paramsp};
                     newp->classOrPackagep(foundp->classOrPackagep());
+                    UINFO(5, indent() << "Created ClassRefDType with classp=" << (newp->classp() ? newp->classp()->name() : "NULL!"));
                     resolvedCapturedTypedef = true;
                     retireCapture("resolved");  // Must retire before replacing node
                     nodep->replaceWith(newp);

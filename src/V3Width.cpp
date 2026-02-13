@@ -3250,8 +3250,9 @@ class WidthVisitor final : public VNVisitor {
     }
     void visit(AstInsideRange* nodep) override {
         // Just do each side; AstInside will rip these nodes out later
-        userIterateAndNext(nodep->lhsp(), m_vup);
-        userIterateAndNext(nodep->rhsp(), m_vup);
+        // Create proper context for children (like AstInside does)
+        userIterateAndNext(nodep->lhsp(), WidthVP{CONTEXT_DET, PRELIM}.p());
+        userIterateAndNext(nodep->rhsp(), WidthVP{CONTEXT_DET, PRELIM}.p());
         nodep->dtypeFrom(nodep->lhsp());
     }
 
