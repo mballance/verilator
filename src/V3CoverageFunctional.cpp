@@ -1507,13 +1507,29 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         
         // Generate code for get_coverage() (type-level)
         // NOTE: Full type-level coverage requires instance tracking infrastructure
-        // For now, return 0.0 as a placeholder
-        if (getCoveragep) {
+        // For now, just delegate to get_inst_coverage() for the current instance
+        if (getCoveragep && getInstCoveragep) {
             AstVar* returnVarp = VN_AS(getCoveragep->fvarp(), Var);
             if (returnVarp) {
-                // TODO: Implement proper type-level coverage aggregation
-                // This requires tracking all instances and averaging their coverage
-                // For now, return 0.0
+                // Call get_inst_coverage() and return its result
+                // Generate: return_var = this->get_inst_coverage();
+                FileLine* fl = getCoveragep->fileline();
+                
+                // Create function call to get_inst_coverage
+                AstFuncRef* funcCallp = new AstFuncRef{fl, "get_inst_coverage", nullptr};
+                funcCallp->taskp(getInstCoveragep);
+                funcCallp->dtypep(getInstCoveragep->dtypep());
+                
+                getCoveragep->addStmtsp(new AstAssign{
+                    fl,
+                    new AstVarRef{fl, returnVarp, VAccess::WRITE},
+                    funcCallp});
+                UINFO(4, "    Made get_coverage() delegate to get_inst_coverage()" << endl);
+            }
+        } else if (getCoveragep) {
+            // Fallback: return 0.0 if get_inst_coverage doesn't exist
+            AstVar* returnVarp = VN_AS(getCoveragep->fvarp(), Var);
+            if (returnVarp) {
                 getCoveragep->addStmtsp(new AstAssign{
                     getCoveragep->fileline(),
                     new AstVarRef{getCoveragep->fileline(), returnVarp, VAccess::WRITE},

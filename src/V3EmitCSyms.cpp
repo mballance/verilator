@@ -328,6 +328,7 @@ class EmitCSyms final : EmitCBaseVisitorConst {
     }
     void visit(AstScope* nodep) override {
         if (VN_IS(m_modp, Class)) return;  // The ClassPackage is what is visible
+        if (VN_IS(nodep->modp(), Covergroup)) return;  // Covergroups are class-like, not scopes
         nameCheck(nodep);
 
         m_scopes.emplace_back(nodep, m_modp);
@@ -427,9 +428,31 @@ void EmitCSyms::emitSymHdr() {
     puts("\n#include \"" + topClassName() + ".h\"\n");
 
     puts("\n// INCLUDE MODULE CLASSES\n");
+    // Helper to find covergroups
+    class CovergroupHeaderFinder final : public VNVisitor {
+    private:
+        std::vector<AstCovergroup*> m_covergroups;
+        void visit(AstCovergroup* nodep) override {
+            m_covergroups.push_back(nodep);
+        }
+        void visit(AstNode* nodep) override {
+            iterateChildren(nodep);
+        }
+    public:
+        explicit CovergroupHeaderFinder(AstNode* nodep) { iterate(nodep); }
+        const std::vector<AstCovergroup*>& covergroups() const { return m_covergroups; }
+    };
+    
     for (AstNodeModule *nodep = v3Global.rootp()->modulesp(), *nextp; nodep; nodep = nextp) {
         nextp = VN_AS(nodep->nextp(), NodeModule);
         if (VN_IS(nodep, Class)) continue;  // Class included earlier
+        
+        // Include covergroup headers first (they might be used by the module)
+        CovergroupHeaderFinder finder(nodep);
+        for (AstCovergroup* cgp : finder.covergroups()) {
+            putns(cgp, "#include \"" + EmitCUtil::prefixNameProtect(cgp) + ".h\"\n");
+        }
+        
         putns(nodep, "#include \"" + EmitCUtil::prefixNameProtect(nodep) + ".h\"\n");
     }
 

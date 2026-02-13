@@ -143,12 +143,22 @@ class EmitCHeader final : public EmitCConstInit {
         emitCurrentList();
     }
     void emitInternalVarDecls(const AstNodeModule* modp) {
-        if (const AstClass* const classp = VN_CAST(modp, Class)) {
-            if (classp->needRNG()) {
-                putsDecoration(nullptr, "\n// INTERNAL VARIABLES\n");
-                puts("VlRNG __Vm_rng;\n");
+        const bool isClass = VN_IS(modp, Class);
+        const bool isCovergroup = VN_IS(modp, Covergroup);
+        
+        if (isClass) {
+            if (const AstClass* const classp = VN_CAST(modp, Class)) {
+                if (classp->needRNG()) {
+                    putsDecoration(nullptr, "\n// INTERNAL VARIABLES\n");
+                    puts("VlRNG __Vm_rng;\n");
+                }
             }
-        } else {  // not class
+        } else if (isCovergroup) {
+            // Covergroups need vlSymsp and vlNamep for coverage tracking
+            putsDecoration(nullptr, "\n// INTERNAL VARIABLES\n");
+            puts(EmitCUtil::symClassName() + "* vlSymsp;\n");
+            puts("const char* vlNamep;\n");
+        } else {  // regular module
             putsDecoration(nullptr, "\n// INTERNAL VARIABLES\n");
             puts(EmitCUtil::symClassName() + "* vlSymsp;\n");
             puts("const char* vlNamep;\n");
@@ -596,6 +606,38 @@ class EmitCHeader final : public EmitCConstInit {
                                 + ".h\"\n");
             }
         }
+        
+        // For covergroups, include headers for any struct types used in member variables
+        if (VN_IS(modp, Covergroup)) {
+            std::set<std::string> includedHeaders;
+            for (const AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
+                if (const AstVar* varp = VN_CAST(nodep, Var)) {
+                    const AstNodeDType* dtypep = varp->dtypep()->skipRefp();
+                    if (const AstNodeUOrStructDType* const structp = VN_CAST(dtypep, NodeUOrStructDType)) {
+                        if (const AstNodeModule* const packp = structp->classOrPackagep()) {
+                            const std::string headerName = EmitCUtil::prefixNameProtect(packp) + ".h";
+                            if (includedHeaders.insert(headerName).second) {
+                                puts("#include \"" + headerName + "\"\n");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Include covergroup headers for any covergroup members
+        // Modules that contain covergroups need to include them
+        if (!VN_IS(modp, Covergroup) && !VN_IS(modp, Class)) {
+            for (const AstNode* nodep = modp->stmtsp(); nodep; nodep = nodep->nextp()) {
+                if (const AstVar* varp = VN_CAST(nodep, Var)) {
+                    if (const AstClassRefDType* const refp = VN_CAST(varp->dtypep(), ClassRefDType)) {
+                        if (const AstCovergroup* const cgp = VN_CAST(refp->modulep(), Covergroup)) {
+                            puts("#include \"" + EmitCUtil::prefixNameProtect(cgp) + ".h\"\n");
+                        }
+                    }
+                }
+            }
+        }
 
         // Forward declarations required by this AstNodeModule
         puts("\nclass " + EmitCUtil::symClassName() + ";\n");
@@ -608,7 +650,8 @@ class EmitCHeader final : public EmitCConstInit {
         // Open class body {{{
         puts("\n");
         putns(modp, "class ");
-        if (!VN_IS(modp, Class)) puts("alignas(VL_CACHE_LINE_BYTES) ");
+        const bool isClassLike = VN_IS(modp, Class) || VN_IS(modp, Covergroup);
+        if (!isClassLike) puts("alignas(VL_CACHE_LINE_BYTES) ");
         puts(EmitCUtil::prefixNameProtect(modp));
         if (const AstClass* const classp = VN_CAST(modp, Class)) {
             puts(" : ");
@@ -626,6 +669,9 @@ class EmitCHeader final : public EmitCConstInit {
             } else {
                 puts("public virtual VlClass");
             }
+        } else if (VN_IS(modp, Covergroup)) {
+            // Covergroups also inherit from VlClass like regular classes
+            puts(" : public virtual VlClass");
         } else {
             puts(" final");
         }
@@ -709,12 +755,44 @@ public:
 //######################################################################
 // EmitC class functions
 
+// Helper visitor to find covergroups within modules
+class CovergroupFinder final : public VNVisitor {
+private:
+    std::vector<AstCovergroup*> m_covergroups;
+    
+    void visit(AstCovergroup* nodep) override {
+        m_covergroups.push_back(nodep);
+        // Don't recurse - we just need the covergroup itself
+    }
+    
+    void visit(AstNode* nodep) override {
+        iterateChildren(nodep);
+    }
+    
+public:
+    explicit CovergroupFinder(AstNode* nodep) {
+        iterate(nodep);
+    }
+    
+    const std::vector<AstCovergroup*>& covergroups() const { return m_covergroups; }
+};
+
 void V3EmitC::emitcHeaders() {
     UINFO(2, __FUNCTION__ << ":");
 
     // Process each module in turn
     for (const AstNode* nodep = v3Global.rootp()->modulesp(); nodep; nodep = nodep->nextp()) {
         if (VN_IS(nodep, Class)) continue;  // Declared with the ClassPackage
+        
+        // Find and emit any covergroups within this module FIRST
+        // (before the module itself, since module may have covergroup members)
+        CovergroupFinder finder(const_cast<AstNode*>(nodep));
+        for (AstCovergroup* cgp : finder.covergroups()) {
+            UINFO(2, "Emitting covergroup: " << cgp->name() << "\n");
+            EmitCHeader::main(cgp);
+        }
+        
+        // Now emit the module header
         EmitCHeader::main(VN_AS(nodep, NodeModule));
     }
 }
