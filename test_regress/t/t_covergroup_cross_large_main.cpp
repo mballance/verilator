@@ -5,15 +5,17 @@
 // SPDX-License-Identifier: CC0-1.0
 
 #include <verilated.h>
+
 #include "Vt_covergroup_cross_large.h"
 
 int main(int argc, char** argv) {
     const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
     contextp->commandArgs(argc, argv);
-    const std::unique_ptr<Vt_covergroup_cross_large> topp{new Vt_covergroup_cross_large{contextp.get()}};
+    const std::unique_ptr<Vt_covergroup_cross_large> topp{
+        new Vt_covergroup_cross_large{contextp.get()}};
 
     topp->clk = 0;
-    
+
     while (!contextp->gotFinish() && contextp->time() < 100) {
         topp->clk = !topp->clk;
         topp->eval();
@@ -22,6 +24,6 @@ int main(int argc, char** argv) {
 
     topp->final();
     contextp->coveragep()->write();
-    
+
     return 0;
 }
