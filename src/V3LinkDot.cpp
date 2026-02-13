@@ -1227,47 +1227,6 @@ class LinkDotFindVisitor final : public VNVisitor {
         }
     }
 
-    void visit(AstCovergroup* nodep) override {  // FindVisitor::
-        // Phase 4: AstCovergroup now flows natively through pipeline (no conversion)
-        UASSERT_OBJ(m_curSymp, nodep, "Covergroup not under module/package/$unit");
-        UINFO(8, "   " << nodep);
-        VL_RESTORER(m_scope);
-        VL_RESTORER(m_classOrPackagep);
-        VL_RESTORER(m_modSymp);
-        VL_RESTORER(m_curSymp);
-        VL_RESTORER(m_paramNum);
-        VL_RESTORER(m_modBlockNum);
-        VL_RESTORER(m_modWithNum);
-        VL_RESTORER(m_modArgNum);
-        VL_RESTORER(m_explicitNew);
-        {
-            UINFO(4, "     Link Covergroup: " << nodep);
-            VSymEnt* const upperSymp = m_curSymp;
-            m_scope = m_scope + "." + nodep->name();
-            m_classOrPackagep = nodep;
-            m_curSymp = m_modSymp
-                = m_statep->insertBlock(upperSymp, nodep->name(), nodep, m_classOrPackagep);
-            m_statep->insertMap(m_curSymp, m_scope);
-            UINFO(9, "New covergroup scope " << m_curSymp);
-            //
-            m_paramNum = 0;
-            m_modBlockNum = 0;
-            m_modWithNum = 0;
-            m_modArgNum = 0;
-            m_explicitNew = false;
-            // Iterate
-            iterateChildren(nodep);
-            nodep->user4(true);
-            // Note: Covergroups don't need implicit new like classes do
-            // The parser already creates the constructor
-        }
-    }
-    void visit(AstCovergroupTemp* nodep) override {  // FindVisitor::
-        // AstCovergroupTemp is a temporary parser node that will be removed by V3CoverageFunctional
-        // Skip it during symbol table construction - its SenTree/SenItem children don't need linking
-        UINFO(8, "   Skipping AstCovergroupTemp");
-        // Don't call iterateChildren - we don't want to create symbols for its contents
-    }
     void visit(AstClass* nodep) override {  // FindVisitor::
         UASSERT_OBJ(m_curSymp, nodep, "Class not under module/package/$unit");
         UINFO(8, "   " << nodep);
@@ -1525,11 +1484,9 @@ class LinkDotFindVisitor final : public VNVisitor {
                 v3fatalSrc("Unhandled extern function definition package");
             }
         }
-        // Set the class or covergroup as package for iteration
+        // Set the class as package for iteration
         if (VN_IS(m_curSymp->nodep(), Class)) {
             m_classOrPackagep = VN_AS(m_curSymp->nodep(), Class);
-        } else if (VN_IS(m_curSymp->nodep(), Covergroup)) {
-            m_classOrPackagep = VN_AS(m_curSymp->nodep(), Covergroup);
         }
         // Create symbol table for the task's vars
         const string name = (nodep->isExternProto() ? "extern "s : ""s) + nodep->name();
@@ -3577,14 +3534,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
         m_ds.m_dotPos = DP_NONE;
         m_ds.m_dotErr = false;
     }
-    void visit(AstCovergroupTemp* nodep) override {
-        // AstCovergroupTemp is a temporary parser node that holds clocking events
-        // It will be removed by V3CoverageFunctional, so skip it in V3LinkDot
-        LINKDOT_VISIT_START();
-        UINFO(8, indent() << "visit (skipping) " << nodep);
-        // Don't iterate children - the SenTree/SenItem inside may reference
-        // variables that aren't fully resolved yet
-    }
     void visit(AstScope* nodep) override {
         LINKDOT_VISIT_START();
         UINFO(8, indent() << "visit " << nodep);
@@ -3648,13 +3597,13 @@ class LinkDotResolveVisitor final : public VNVisitor {
         // Can be under dot if called as package::class and that class resolves, so no checkNoDot
         VL_RESTORER(m_usedPins);
         m_usedPins.clear();
-        UASSERT_OBJ(nodep->modulep(), nodep, "ClassRef has unlinked module");
+        UASSERT_OBJ(nodep->classp(), nodep, "ClassRef has unlinked class");
         UASSERT_OBJ(m_statep->forPrimary() || !nodep->paramsp() || V3Error::errorCount(), nodep,
                     "class reference parameter not removed by V3Param");
         VL_RESTORER(m_pinSymp);
         {
             // ClassRef's have pins, so track
-            m_pinSymp = m_statep->getNodeSym(nodep->modulep());
+            m_pinSymp = m_statep->getNodeSym(nodep->classp());
             UINFO(4, indent() << "(Backto) visit " << nodep);
             // UINFOTREE(1, nodep, "", "linkcell");
             // UINFOTREE(1, nodep->modp(), "", "linkcemd");
@@ -5302,11 +5251,7 @@ class LinkDotResolveVisitor final : public VNVisitor {
             if (isNew) m_explicitSuperNewp = nullptr;
             iterateChildren(nodep);
             if (isNew) {
-                const AstClassExtends* classExtendsp = nullptr;
-                if (AstClass* const classp = VN_CAST(m_modp, Class)) {
-                    classExtendsp = classp->extendsp();
-                }
-                // Covergroups don't support inheritance, so no extendsp() check needed
+                const AstClassExtends* const classExtendsp = VN_AS(m_modp, Class)->extendsp();
                 if (m_explicitSuperNewp && !m_explicitSuperNewp->isImplicit() && classExtendsp
                     && classExtendsp->argsp()) {
                     m_explicitSuperNewp->v3error(
@@ -5469,22 +5414,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
             }
         }
     }
-    void visit(AstCovergroup* nodep) override {
-        // Covergroups are simpler than classes - no inheritance to process
-        if (nodep->user3SetOnce()) return;
-        LINKDOT_VISIT_START();
-        UINFO(5, indent() << "visit " << nodep);
-        checkNoDot(nodep);
-        VL_RESTORER(m_curSymp);
-        VL_RESTORER(m_modSymp);
-        VL_RESTORER(m_modp);
-        {
-            m_ds.init(m_curSymp);
-            m_ds.m_dotSymp = m_curSymp = m_modSymp = m_statep->getNodeSym(nodep);
-            m_modp = nodep;
-            iterateChildren(nodep);
-        }
-    }
     void visit(AstClass* nodep) override {
         if (nodep->user3SetOnce()) return;
         LINKDOT_VISIT_START();
@@ -5609,7 +5538,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
         }
 
         // Resolve its reference
-        UINFO(5, indent() << "RefDType visit: " << nodep->name() << " typedefp=" << (nodep->typedefp() ? "yes" : "no") << " subDTypep=" << (nodep->subDTypep() ? "yes" : "no"));
         if (V3LinkDotIfaceCapture::find(nodep)) {
             UINFO(9, indent() << "iface capture visit captured typedef ptr=" << nodep
                               << " user2=" << nodep->user2p());
@@ -5753,7 +5681,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
                 VSymEnt* const lookupSymp = m_ds.m_dotSymp ? m_ds.m_dotSymp : m_curSymp;
                 foundp = lookupSymp->findIdFlat(nodep->name());
             }
-            UINFO(5, indent() << "RefDType lookup: name=" << nodep->name() << " foundp=" << foundp << (foundp ? foundp->nodep()->typeName() : ""));
             if (ifaceCaptured && capturedTypedefp) {
                 // When we have a captured interface typedef context, use the captured typedef
                 // instead of any local lookup result. This handles the case where the local
@@ -5819,25 +5746,6 @@ class LinkDotResolveVisitor final : public VNVisitor {
                     AstClassRefDType* const newp
                         = new AstClassRefDType{nodep->fileline(), defp, paramsp};
                     newp->classOrPackagep(foundp->classOrPackagep());
-                    resolvedCapturedTypedef = true;
-                    retireCapture("resolved");  // Must retire before replacing node
-                    nodep->replaceWith(newp);
-                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
-                    return;
-                } else if (AstCovergroup* const defp
-                           = foundp ? VN_CAST(foundp->nodep(), Covergroup) : nullptr) {
-                    // Covergroups are treated like classes for type references
-                    UINFO(5, indent() << "Found covergroup for RefDType: " << nodep->name() << " -> " << (defp ? defp->name() : "NULL!"));
-                    if (!defp) {
-                        UINFO(5, indent() << "ERROR: defp is NULL but foundp exists!");
-                    }
-                    if (!nodep->classOrPackagep()) checkDeclOrder(nodep, defp);
-                    AstPin* const paramsp = nodep->paramsp();
-                    if (paramsp) paramsp->unlinkFrBackWithNext();
-                    AstClassRefDType* const newp
-                        = new AstClassRefDType{nodep->fileline(), defp, paramsp};
-                    newp->classOrPackagep(foundp->classOrPackagep());
-                    UINFO(5, indent() << "Created ClassRefDType with classp=" << (newp->classp() ? newp->classp()->name() : "NULL!"));
                     resolvedCapturedTypedef = true;
                     retireCapture("resolved");  // Must retire before replacing node
                     nodep->replaceWith(newp);

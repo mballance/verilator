@@ -6905,20 +6905,15 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                  yCOVERGROUP idAny cgPortListE coverage_eventE ';'
         /*cont*/    coverage_spec_or_optionListE
         /*cont*/ yENDGROUP endLabelE
-                        { // Create AstCovergroup instead of AstClass (Phase 2)
-                          AstCovergroup* cgClassp = new AstCovergroup{$<fl>2, *$2, PARSEP->libname()};
-                          AstNode* sampleArgs = nullptr;
-                          // $4 can be either a clocking event (AstSenItem) or sample function parameters (AstVar list)
+                        { AstClass *cgClassp = new AstClass{$<fl>2, *$2, PARSEP->libname()};
+                          cgClassp->isCovergroup(true);
+                          // Create an AstCovergroup node to hold the clocking event
+                          // This will be accessible later for automatic sampling
                           if ($4) {
-                              if (VN_IS($4, SenItem)) {
-                                  // Clocking event for automatic sampling
-                                  AstSenTree* senTreep = new AstSenTree{$<fl>1, VN_AS($4, SenItem)};
-                                  AstCovergroupTemp* const cgNodep = new AstCovergroupTemp{$<fl>1, *$2, nullptr, senTreep};
-                                  cgClassp->addMembersp(cgNodep);
-                              } else {
-                                  // Sample function parameters from "with function sample(...)"
-                                  sampleArgs = $4;
-                              }
+                              // $4 is an AstSenItem, wrap it in AstSenTree for storage
+                              AstSenTree* senTreep = new AstSenTree{$<fl>1, VN_AS($4, SenItem)};
+                              AstCovergroup* const cgNodep = new AstCovergroup{$<fl>1, *$2, nullptr, senTreep};
+                              cgClassp->addMembersp(cgNodep);
                           }
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};
                           newp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
@@ -6928,7 +6923,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                           newp->addStmtsp($3);
                           newp->addStmtsp($6);
                           cgClassp->addMembersp(newp);
-                          GRAMMARP->createCoverGroupMethods(cgClassp, sampleArgs);  // Pass sample args if present
+                          GRAMMARP->createCoverGroupMethods(cgClassp, nullptr);  // Don't pass event as sample args
 
                           $$ = cgClassp;
                           GRAMMARP->endLabel($<fl>8, $$, $8);
@@ -6936,8 +6931,8 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
         |        yCOVERGROUP yEXTENDS idAny ';'
         /*cont*/     coverage_spec_or_optionListE
         /*cont*/ yENDGROUP endLabelE
-                        { // Create AstCovergroup instead of AstClass (Phase 2)
-                          AstCovergroup* cgClassp = new AstCovergroup{$<fl>3, *$3, PARSEP->libname()};
+                        { AstClass *cgClassp = new AstClass{$<fl>3, *$3, PARSEP->libname()};
+                          cgClassp->isCovergroup(true);
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};
                           newp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
                           newp->classMethod(true);

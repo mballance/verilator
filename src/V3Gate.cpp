@@ -226,12 +226,6 @@ class GateBuildVisitor final : public VNVisitorConst {
     }
 
     // VISITORS
-    void visit(AstClass* nodep) override {
-        // Don't process classes - they have their own scope handling
-    }
-    void visit(AstCovergroup* nodep) override {
-        // Don't process covergroups - they have their own scope handling
-    }
     void visit(AstNodeModule* nodep) override {
         UASSERT_OBJ(!m_modp, nodep, "Should not nest");
         VL_RESTORER(m_modp);

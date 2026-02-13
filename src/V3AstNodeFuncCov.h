@@ -176,9 +176,7 @@ public:
     void dumpJson(std::ostream& str) const override;
 };
 
-class AstCovergroupTemp final : public AstNode {
-    // Temporary node used during parsing to hold clocking event information
-    // This node is created by the parser and immediately consumed/deleted by V3CoverageFunctional
+class AstCovergroup final : public AstNode {
     // @astgen op1 := argsp : List[AstVar]
     // @astgen op2 := membersp : List[AstNode]
     // @astgen op3 := eventp : Optional[AstSenTree]
@@ -190,7 +188,7 @@ public:
         if (membersp) addMembersp(membersp);
         this->eventp(eventp);
     }
-    ASTGEN_MEMBERS_AstCovergroupTemp;
+    ASTGEN_MEMBERS_AstCovergroup;
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     string name() const override VL_MT_STABLE { return m_name; }

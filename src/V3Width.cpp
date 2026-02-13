@@ -1675,29 +1675,6 @@ class WidthVisitor final : public VNVisitor {
         if (m_vup->prelim()) iterateCheckSizedSelf(nodep, "LHS", nodep->lhsp(), SELF, BOTH);
     }
     void visit(AstCgOptionAssign* nodep) override {
-        // Extract auto_bin_max and store in parent covergroup (AstCovergroup or AstClass)
-        if (!nodep->typeOption() && nodep->name() == "auto_bin_max") {
-            if (const AstConst* const constp = VN_CAST(nodep->valuep(), Const)) {
-                // Find the parent covergroup
-                AstNode* parentp = nodep->backp();
-                while (parentp && !VN_IS(parentp, NodeFTask)) {
-                    parentp = parentp->backp();
-                }
-                if (AstNodeFTask* const ftaskp = VN_CAST(parentp, NodeFTask)) {
-                    // Constructor function - find its parent module (covergroup or class)
-                    AstNode* classMemberp = ftaskp;
-                    while (classMemberp && 
-                           !VN_IS(classMemberp->backp(), Covergroup) &&
-                           !VN_IS(classMemberp->backp(), Class)) {
-                        classMemberp = classMemberp->backp();
-                    }
-                    // Set auto_bin_max in the covergroup
-                    if (AstCovergroup* const cgp = VN_CAST(classMemberp->backp(), Covergroup)) {
-                        cgp->autoBinMax(constp->toSInt());
-                    }
-                }
-            }
-        }
         // We report COVERIGN on the whole covergroup; if get more fine-grained add this
         // nodep->v3warn(COVERIGN, "Ignoring unsupported: coverage option");
         VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
@@ -3250,9 +3227,8 @@ class WidthVisitor final : public VNVisitor {
     }
     void visit(AstInsideRange* nodep) override {
         // Just do each side; AstInside will rip these nodes out later
-        // Create proper context for children (like AstInside does)
-        userIterateAndNext(nodep->lhsp(), WidthVP{CONTEXT_DET, PRELIM}.p());
-        userIterateAndNext(nodep->rhsp(), WidthVP{CONTEXT_DET, PRELIM}.p());
+        userIterateAndNext(nodep->lhsp(), m_vup);
+        userIterateAndNext(nodep->rhsp(), m_vup);
         nodep->dtypeFrom(nodep->lhsp());
     }
 
@@ -3366,11 +3342,6 @@ class WidthVisitor final : public VNVisitor {
             nodep->dtypep(iterateEditMoveDTypep(nodep, nodep->childDTypep()));
         }
     }
-    void visit(AstCovergroupTemp* nodep) override {
-        // AstCovergroupTemp is a temporary parser node that will be removed by V3CoverageFunctional
-        // Skip it during width processing - its contents (SenTree/SenItem) will be handled separately
-        // when V3CoverageFunctional extracts and processes the clocking event
-    }
     void visit(AstMemberDType* nodep) override {
         if (nodep->didWidthAndSet()) return;  // This node is a dtype & not both PRELIMed+FINALed
         // Iterate into subDTypep() to resolve that type and update pointer.
@@ -3476,40 +3447,9 @@ class WidthVisitor final : public VNVisitor {
             return true;
         }
         // Returns true if ok
-        // No need to width-resolve the class/covergroup, as it was done when we did the child
-        AstNodeModule* const first_modulep = adtypep->modulep();
-        UASSERT_OBJ(first_modulep, nodep, "Unlinked");
-        
-        // Handle covergroups (no inheritance, simpler)
-        if (AstCovergroup* const covergroupp = VN_CAST(first_modulep, Covergroup)) {
-            if (AstNode* const foundp = m_memberMap.findMember(covergroupp, nodep->name())) {
-                if (AstVar* const varp = VN_CAST(foundp, Var)) {
-                    if (!varp->didWidth()) userIterate(varp, nullptr);
-                    nodep->dtypep(foundp->dtypep());
-                    nodep->varp(varp);
-                    nodep->didWidth(true);
-                    return true;
-                }
-                if (AstNodeFTask* ftaskp = VN_CAST(foundp, NodeFTask)) {
-                    AstMethodCall* newp = new AstMethodCall{
-                        nodep->fileline(), nodep->fromp()->unlinkFrBack(), nodep->name(), nullptr};
-                    newp->taskp(ftaskp);
-                    newp->dtypep(ftaskp->dtypep());
-                    newp->classOrPackagep(covergroupp);
-                    nodep->replaceWith(newp);
-                    VL_DO_DANGLING(pushDeletep(nodep), nodep);
-                    return true;
-                }
-            }
-            // Not found - error will be reported below
-            nodep->v3error("Member '" << nodep->name() << "' not found in covergroup "
-                          << covergroupp->prettyNameQ());
-            return false;
-        }
-        
-        // Handle classes (with inheritance)
-        AstClass* const first_classp = VN_CAST(first_modulep, Class);
-        UASSERT_OBJ(first_classp, nodep, "Expected Class or Covergroup");
+        // No need to width-resolve the class, as it was done when we did the child
+        AstClass* const first_classp = adtypep->classp();
+        UASSERT_OBJ(first_classp, nodep, "Unlinked");
         for (AstClass* classp = first_classp; classp;) {
             if (AstNode* const foundp = m_memberMap.findMember(classp, nodep->name())) {
                 if (AstVar* const varp = VN_CAST(foundp, Var)) {
@@ -4464,16 +4404,10 @@ class WidthVisitor final : public VNVisitor {
         }
     }
     void methodCallClass(AstMethodCall* nodep, AstClassRefDType* adtypep) {
-        // No need to width-resolve the class/covergroup, as it was done when we did the child
-        AstNodeModule* const first_modulep = adtypep->modulep();
-        UASSERT_OBJ(first_modulep, nodep, "Unlinked");
-        
-        AstClass* const first_classp = VN_CAST(first_modulep, Class);
-        AstCovergroup* const first_covergroupp = VN_CAST(first_modulep, Covergroup);
-        
-        // Handle class-specific methods (randomize, srandom)
+        // No need to width-resolve the class, as it was done when we did the child
+        AstClass* const first_classp = adtypep->classp();
         AstWith* withp = nullptr;
-        if (first_classp && nodep->name() == "randomize") {
+        if (nodep->name() == "randomize") {
             VL_RESTORER(m_randomizeFromp);
             m_randomizeFromp = nodep->fromp();
             withp = methodWithArgument(nodep, false, false, adtypep->findVoidDType(),
@@ -4486,42 +4420,13 @@ class WidthVisitor final : public VNVisitor {
             methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
             V3Randomize::newRandomizeFunc(m_memberMap, first_classp);
             handleRandomizeArgs(nodep, first_classp);
-        } else if (first_classp && nodep->name() == "srandom") {
+        } else if (nodep->name() == "srandom") {
             methodOkArguments(nodep, 1, 1);
             iterateCheckSigned32(nodep, "argument", methodArg(nodep, 0), BOTH);
             methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
             V3Randomize::newSRandomFunc(m_memberMap, first_classp);
         }
-        
-        // For covergroups, directly look up the method (no inheritance)
-        if (first_covergroupp) {
-            if (AstNodeFTask* const ftaskp
-                = VN_CAST(m_memberMap.findMember(first_covergroupp, nodep->name()), NodeFTask)) {
-                userIterate(ftaskp, nullptr);
-                // Covergroup methods are never static
-                nodep->taskp(ftaskp);
-                nodep->dtypeFrom(ftaskp);
-                nodep->classOrPackagep(first_covergroupp);
-                if (VN_IS(ftaskp, Task)) {
-                    if (m_vup && m_vup->prelim() && !VN_IS(nodep->backp(), StmtExpr)) {
-                        nodep->v3error(
-                            "Cannot call a task/void-function as a member function: "
-                            << nodep->prettyNameQ());
-                    }
-                    nodep->dtypeSetVoid();
-                }
-                // Process arguments - same as class code at line 4554
-                if (withp) nodep->addPinsp(withp);
-                // Call processFTaskRefArgs which will set didWidth
-                processFTaskRefArgs(nodep);
-                return;
-            }
-            nodep->v3error("No function/task '" << nodep->prettyName() << "' in covergroup "
-                          << first_covergroupp->prettyNameQ());
-            return;
-        }
-        
-        // For classes, check inheritance hierarchy
+        UASSERT_OBJ(first_classp, nodep, "Unlinked");
         for (AstClass* classp = first_classp; classp;) {
             if (nodep->fileline()->timingOn()) {
                 if (classp->name() == "semaphore" || classp->name() == "process"
@@ -4902,27 +4807,15 @@ class WidthVisitor final : public VNVisitor {
             }
             nodep->dtypep(refp);
 
-            AstNodeModule* const modulep = refp->modulep();
-            UASSERT_OBJ(modulep, nodep, "Unlinked");
-            classp = VN_CAST(modulep, Class);
-            if (classp) {
-                if (AstNodeFTask* const ftaskp
-                    = VN_CAST(m_memberMap.findMember(classp, "new"), Func)) {
-                    nodep->taskp(ftaskp);
-                    nodep->classOrPackagep(classp);
-                } else {
-                    // Either made explicitly or V3LinkDot made implicitly
-                    classp->v3fatalSrc("Can't find class's new");
-                }
-            } else if (AstCovergroup* const covergroupp = VN_CAST(modulep, Covergroup)) {
-                // Covergroups also have constructors
-                if (AstNodeFTask* const ftaskp
-                    = VN_CAST(m_memberMap.findMember(covergroupp, "new"), Func)) {
-                    nodep->taskp(ftaskp);
-                    nodep->classOrPackagep(covergroupp);
-                } else {
-                    covergroupp->v3fatalSrc("Can't find covergroup's new");
-                }
+            classp = refp->classp();
+            UASSERT_OBJ(classp, nodep, "Unlinked");
+            if (AstNodeFTask* const ftaskp
+                = VN_CAST(m_memberMap.findMember(classp, "new"), Func)) {
+                nodep->taskp(ftaskp);
+                nodep->classOrPackagep(classp);
+            } else {
+                // Either made explicitly or V3LinkDot made implicitly
+                classp->v3fatalSrc("Can't find class's new");
             }
         } else {  // super.new case
             // in this case class and taskp() should be properly linked in V3LinkDot.cpp during

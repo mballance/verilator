@@ -1,0 +1,19 @@
+# SystemC::Coverage-3
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl103n14tlinepagev_line/semaphoreoblockS103-104hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl107n19tlinepagev_line/semaphoreoblockS107-108hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl111n10tlinepagev_line/semaphoreoblockS111hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl120n18tlinepagev_line/semaphoreoblockS120,125hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl121n7tbranchpagev_branch/semaphoreoifS121-123hstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl121n8tbranchpagev_branch/semaphoreoelsehstd::semaphore__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl130n3tlinepagev_line/processoblockS130hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl142n29tlinepagev_line/processoblockS142-143,147hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl150n29tlinepagev_line/processoblockS150hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl156n20tlinepagev_line/processoblockS156,160hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl164n19tlinepagev_line/processoblockS164-165hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl172n19tlinepagev_line/processoblockS172-173hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl176n10tlinepagev_line/processoblockS176hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl182n17tlinepagev_line/processoblockS182hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl229n21tlinepagev_line/processoblockS229,231,233-234hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl237n19tlinepagev_line/processoblockS237-238hstd::process__Vclpkg' 0
+C 'f/home/mballance/projects/verilator/verilator-funccov/include/verilated_std.svl243n16tlinepagev_line/stdoblockS243-244hstd' 0
+C 'f/tmp/test_partial_coverage.vl11n4tlinepagev_line/toblockS11,13,16-17,19,22-23,25,27-28ht' 1
