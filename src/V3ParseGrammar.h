@@ -127,14 +127,14 @@ public:
         // IEEE: function void sample([arguments])
         {
             AstFunc* const funcp = new AstFunc{nodep->fileline(), "sample", nullptr, nullptr};
-            
+
             // Add sample arguments as function parameters (if provided)
             if (sampleArgs) {
                 // The arguments come as a linked list of AstVar nodes (parameters)
                 // Add them to the function's statement list (where parameters go)
                 funcp->addStmtsp(sampleArgs);
             }
-            
+
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
             nodep->addMembersp(funcp);
