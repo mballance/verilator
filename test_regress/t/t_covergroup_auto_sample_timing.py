@@ -12,7 +12,7 @@ import vltest_bootstrap
 # Test automatic sampling with --timing
 test.scenarios('vlt')
 
-# Use the same .v file as the non-timing test  
+# Use the same .v file as the non-timing test
 test.top_filename = "t/t_covergroup_auto_sample.v"
 
 test.compile(v_flags2=["--timing"])

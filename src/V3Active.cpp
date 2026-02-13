@@ -628,9 +628,9 @@ public:
 // Key: AstNodeModule pointer (AstCovergroup or AstClass), Value: SenTree
 std::unordered_map<const AstNodeModule*, AstSenTree*> s_covergroupEvents;
 
-// Global map to store sample CFuncs for covergroups  
-// Key: AstNodeModule pointer (AstCovergroup or AstClass), Value: sample CFunc
-std::unordered_map<const AstNodeModule*, AstCFunc*> s_covergroupSampleFuncs;
+// Global map to store sample CFuncs for covergroups
+// Key: AstClass pointer, Value: sample CFunc
+std::unordered_map<const AstClass*, AstCFunc*> s_covergroupSampleFuncs;
 
 class CovergroupSamplingVisitor final : public VNVisitor {
     // STATE
@@ -638,12 +638,10 @@ class CovergroupSamplingVisitor final : public VNVisitor {
     AstScope* m_scopep = nullptr;  // Current scope
     bool m_inFirstPass = true;  // First pass collects CFuncs, second pass adds sampling
 
-    // Helper to get the clocking event from a covergroup (AstCovergroup or AstClass)
-    AstSenTree* getCovergroupEvent(AstNodeModule* covergroupp) {
-        auto it = s_covergroupEvents.find(covergroupp);
-        if (it != s_covergroupEvents.end()) {
-            return it->second;
-        }
+    // Helper to get the clocking event from a covergroup class
+    AstSenTree* getCovergroupEvent(AstClass* classp) {
+        auto it = s_covergroupEvents.find(classp);
+        if (it != s_covergroupEvents.end()) { return it->second; }
         return nullptr;
     }
 
@@ -651,7 +649,7 @@ class CovergroupSamplingVisitor final : public VNVisitor {
     void visit(AstScope* nodep) override {
         m_scopep = nodep;
         m_namer.main(nodep);  // Initialize active naming for this scope
-        
+
         // First pass: collect sample CFuncs from covergroup class scopes
         if (m_inFirstPass) {
             // Check if this is a covergroup class scope (contains sample CFunc)
@@ -677,7 +675,7 @@ class CovergroupSamplingVisitor final : public VNVisitor {
                 }
             }
         }
-        
+
         iterateChildren(nodep);
         m_scopep = nullptr;
     }
@@ -685,33 +683,29 @@ class CovergroupSamplingVisitor final : public VNVisitor {
     void visit(AstVarScope* nodep) override {
         // Only process VarScopes in the second pass
         if (m_inFirstPass) return;
-        
+
         // Get the underlying var
         AstVar* const varp = nodep->varp();
         if (!varp) return;
-        
+
         // Check if the variable is of covergroup class type
         const AstNodeDType* const dtypep = varp->dtypep();
         if (!dtypep) return;
-        
+
         const AstClassRefDType* const classRefp = VN_CAST(dtypep, ClassRefDType);
         if (!classRefp) return;
-        
-        // Get the module (can be AstClass or AstCovergroup)
-        AstNodeModule* const modulep = classRefp->modulep();
-        if (!modulep) return;
-        
-        // Check if it's a covergroup (only native AstCovergroup now)
-        if (!VN_IS(modulep, Covergroup)) return;
-        
+
+        AstClass* const classp = classRefp->classp();
+        if (!classp || !classp->isCovergroup()) return;
+
         // Check if this covergroup has an automatic sampling event
         AstSenTree* const eventp = getCovergroupEvent(modulep);
         if (!eventp) return;  // No automatic sampling for this covergroup
-        
+
         // Get the sample CFunc - we need to find it in the class scope
         // The class scope name is like "TOP.t__03a__03acg" for class "t__03a__03acg"
-        const string classScopeName = string("TOP.") + modulep->name();
-        
+        const string classScopeName = string("TOP.") + classp->name();
+
         AstCFunc* sampleCFuncp = nullptr;
         // Search through all scopes to find the class scope and its sample CFunc
         for (AstNode* scopeNode = m_scopep; scopeNode; scopeNode = scopeNode->backp()) {
@@ -721,7 +715,8 @@ class CovergroupSamplingVisitor final : public VNVisitor {
                     if (AstScope* scopep = VN_CAST(modp, Scope)) {
                         if (scopep->name() == classScopeName) {
                             // Found the class scope, now find the sample CFunc
-                            for (AstNode* itemp = scopep->blocksp(); itemp; itemp = itemp->nextp()) {
+                            for (AstNode* itemp = scopep->blocksp(); itemp;
+                                 itemp = itemp->nextp()) {
                                 if (AstCFunc* cfuncp = VN_CAST(itemp, CFunc)) {
                                     if (cfuncp->name().find("sample") != string::npos) {
                                         sampleCFuncp = cfuncp;
@@ -736,43 +731,42 @@ class CovergroupSamplingVisitor final : public VNVisitor {
                 break;
             }
         }
-        
+
         if (!sampleCFuncp) {
             // Fallback: try the cached version
-            auto it = s_covergroupSampleFuncs.find(modulep);
-            if (it != s_covergroupSampleFuncs.end()) {
-                sampleCFuncp = it->second;
-            }
+            auto it = s_covergroupSampleFuncs.find(classp);
+            if (it != s_covergroupSampleFuncs.end()) { sampleCFuncp = it->second; }
         }
-        
+
         if (!sampleCFuncp) {
             UINFO(4, "Could not find sample() CFunc for covergroup " << modulep->name() << endl);
             return;  // CFunc not found
         }
         UASSERT_OBJ(sampleCFuncp, nodep, "Sample CFunc is null for covergroup");
-        
+
         // Create a VarRef to the covergroup instance for the method call
         FileLine* const fl = nodep->fileline();
         AstVarRef* const varrefp = new AstVarRef{fl, nodep, VAccess::READ};
-        
+
         // Create the CMethodCall to sample()
         // Note: We don't pass arguments in argsp since vlSymsp is passed via argTypes
-        AstCMethodCall* const cmethodCallp = new AstCMethodCall{fl, varrefp, sampleCFuncp, nullptr};
-        
+        AstCMethodCall* const cmethodCallp
+            = new AstCMethodCall{fl, varrefp, sampleCFuncp, nullptr};
+
         // Mark this as an automatic covergroup sampling call so other passes can identify it
         // Use user3() as a marker (1 = automatic sampling call)
         cmethodCallp->user3(1);
-        
+
         // Set dtype to void since sample() doesn't return a value
         cmethodCallp->dtypeSetVoid();
-        
+
         // Set argTypes to "vlSymsp" so the emit code will pass it automatically
         cmethodCallp->argTypes("vlSymsp");
-        
+
         // Clone the sensitivity for this active block
         // Each VarRef in the sensitivity needs to be updated for the current scope
         AstSenTree* senTreep = eventp->cloneTree(false);
-        
+
         // Fix up VarRefs in the cloned sensitivity - they need varScopep set
         senTreep->foreach([this](AstVarRef* refp) {
             if (!refp->varScopep() && refp->varp()) {
@@ -788,18 +782,18 @@ class CovergroupSamplingVisitor final : public VNVisitor {
                 }
                 if (vscp) {
                     refp->varScopep(vscp);
-                    UINFO(9, "Fixed VarRef in SenTree: " << refp->varp()->name() 
-                         << " -> " << vscp->name() << endl);
+                    UINFO(9, "Fixed VarRef in SenTree: " << refp->varp()->name() << " -> "
+                                                         << vscp->name() << endl);
                 }
             }
         });
-        
+
         // Get or create the AstActive node for this sensitivity
         AstActive* const activep = m_namer.getActive(fl, senTreep);
-        
+
         // Add the CMethodCall statement to the active domain
         activep->addStmtsp(cmethodCallp->makeStmt());
-        
+
         UINFO(4, "  Added automatic sample() call for covergroup " << varp->name() << endl);
     }
 
@@ -812,11 +806,11 @@ public:
         // NOTE: Automatic sampling now works with --timing
         // Previously disabled due to compatibility issues with V3Timing transformations
         // The current implementation injects sampling before V3Active, allowing both modes to work
-        
+
         // First pass: collect sample CFuncs from covergroup class scopes
         m_inFirstPass = true;
         iterate(nodep);
-        
+
         // Second pass: add automatic sampling to covergroup instances
         m_inFirstPass = false;
         iterate(nodep);
