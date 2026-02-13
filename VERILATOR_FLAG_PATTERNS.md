@@ -205,3 +205,25 @@ This shows the Verilator team **explicitly considered** a separate type and chos
 The attempted `AstCovergroup : public AstNodeModule` approach was **fighting against established patterns**. The current approach **follows them perfectly**.
 
 **Result: Current architecture is validated as "Verilator style"** ✅
+
+---
+
+## ADDENDUM: TODO Comment Author
+
+**Author:** Wilson Snyder (Verilator maintainer)
+**Date:** December 4, 2025
+**Commit:** `2f4b17895` - "Support parsing only of covergroup.option.option_name"
+
+The TODO comment was added by **Wilson Snyder himself**, the creator and primary maintainer of Verilator. This is significant because:
+
+1. **He explicitly considered** making a separate node type
+2. **He chose the flag approach** despite considering alternatives
+3. **This was an informed decision** by the person who best understands Verilator's architecture
+4. The comment acknowledges the question but **doesn't implement** a separate type
+
+The fact that Wilson Snyder added this TODO and then **continued with the flag approach** for months of development is strong evidence that:
+- The flag pattern was deemed appropriate after consideration
+- No compelling reason to change was found during implementation
+- The approach works well in practice
+
+**Conclusion strengthened:** The covergroup implementation follows a pattern explicitly chosen by Verilator's architect.
