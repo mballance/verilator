@@ -131,11 +131,6 @@ class InlineMarkVisitor final : public VNVisitor {
         cantInline("class", true);
         iterateChildren(nodep);
     }
-    void visit(AstCovergroup* nodep) override {
-        // Covergroups cannot be inlined
-        cantInline("covergroup", true);
-        iterateChildren(nodep);
-    }
     void visit(AstCell* nodep) override {
         m_moduleState(nodep->modp()).m_cellRefs++;
         m_moduleState(m_modp).m_childCells.push_back(nodep);
@@ -276,10 +271,6 @@ class InlineRelinkVisitor final : public VNVisitor {
         iterateChildren(nodep);
     }
     void visit(AstClass* nodep) override {
-        nodep->name(m_cellp->name() + "__DOT__" + nodep->name());
-        iterateChildren(nodep);
-    }
-    void visit(AstCovergroup* nodep) override {
         nodep->name(m_cellp->name() + "__DOT__" + nodep->name());
         iterateChildren(nodep);
     }

@@ -187,12 +187,6 @@ class CombineVisitor final : VNVisitor {
         // Combine functions
         process(nodep);
     }
-    void visit(AstClass* nodep) override {
-        // Don't process classes
-    }
-    void visit(AstCovergroup* nodep) override {
-        // Don't process covergroups
-    }
     void visit(AstNodeModule* nodep) override {
         UASSERT_OBJ(!m_modp, nodep, "Should not nest");
         VL_RESTORER(m_modp);

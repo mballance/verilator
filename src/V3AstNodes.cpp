@@ -1839,6 +1839,7 @@ bool AstClass::isClassExtendedFrom(const AstClass* refClassp, const AstClass* ba
 }
 void AstClass::dump(std::ostream& str) const {
     this->AstNodeModule::dump(str);
+    if (isCovergroup()) str << " [CG]";
     if (isExtended()) str << " [EXT]";
     if (isInterfaceClass()) str << " [IFCCLS]";
     if (isVirtual()) str << " [VIRT]";
@@ -1846,6 +1847,7 @@ void AstClass::dump(std::ostream& str) const {
 }
 void AstClass::dumpJson(std::ostream& str) const {
     // dumpJsonNumFunc(str, declTokenNum);  // Not dumped as adding token changes whole file
+    dumpJsonBoolFuncIf(str, isCovergroup);
     dumpJsonBoolFunc(str, isExtended);
     dumpJsonBoolFunc(str, isInterfaceClass);
     dumpJsonBoolFunc(str, isVirtual);
@@ -1859,14 +1861,6 @@ void AstClassExtends::dump(std::ostream& str) const {
 void AstClassExtends::dumpJson(std::ostream& str) const {
     dumpJsonBoolFunc(str, isImplements);
     dumpJsonGen(str);
-}
-void AstCovergroup::dump(std::ostream& str) const {
-    this->AstNodeModule::dump(str);
-    if (m_autoBinMax >= 0) str << " [autobinmax:" << m_autoBinMax << "]";
-}
-void AstCovergroup::dumpJson(std::ostream& str) const {
-    AstNodeModule::dumpJson(str);
-    if (m_autoBinMax >= 0) dumpJsonNum(str, "autoBinMax", m_autoBinMax);
 }
 AstClass* AstClassExtends::classOrNullp() const {
     const AstNodeDType* const dtp = dtypep() ? dtypep() : childDTypep();
@@ -1899,7 +1893,7 @@ void AstClassRefDType::dumpSmall(std::ostream& str) const {
     str << "class:" << name();
 }
 string AstClassRefDType::prettyDTypeName(bool) const { return "class{}"s + prettyName(); }
-string AstClassRefDType::name() const { return modulep() ? modulep()->name() : "<unlinked>"; }
+string AstClassRefDType::name() const { return classp() ? classp()->name() : "<unlinked>"; }
 void AstNodeCoverOrAssert::dump(std::ostream& str) const {
     this->AstNodeStmt::dump(str);
     str << " ["s + this->type().ascii() + "]";

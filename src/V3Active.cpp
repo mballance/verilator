@@ -625,8 +625,8 @@ public:
 // declared with sensitivity events (e.g., covergroup cg @(posedge clk);)
 
 // Global map to store clocking events for covergroups
-// Key: AstNodeModule pointer (AstCovergroup or AstClass), Value: SenTree
-std::unordered_map<const AstNodeModule*, AstSenTree*> s_covergroupEvents;
+// Key: AstClass pointer, Value: SenTree
+std::unordered_map<const AstClass*, AstSenTree*> s_covergroupEvents;
 
 // Global map to store sample CFuncs for covergroups
 // Key: AstClass pointer, Value: sample CFunc
@@ -699,7 +699,7 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         if (!classp || !classp->isCovergroup()) return;
 
         // Check if this covergroup has an automatic sampling event
-        AstSenTree* const eventp = getCovergroupEvent(modulep);
+        AstSenTree* const eventp = getCovergroupEvent(classp);
         if (!eventp) return;  // No automatic sampling for this covergroup
 
         // Get the sample CFunc - we need to find it in the class scope
@@ -739,7 +739,7 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         }
 
         if (!sampleCFuncp) {
-            UINFO(4, "Could not find sample() CFunc for covergroup " << modulep->name() << endl);
+            UINFO(4, "Could not find sample() CFunc for covergroup " << classp->name() << endl);
             return;  // CFunc not found
         }
         UASSERT_OBJ(sampleCFuncp, nodep, "Sample CFunc is null for covergroup");

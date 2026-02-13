@@ -149,9 +149,7 @@ class NameVisitor final : public VNVisitorConst {
                         : VN_IS(m_modp, Class) ? ("TOP." + m_modp->name())
                         : VN_IS(m_modp, ClassPackage)
                             ? ("TOP." + m_modp->name())
-                        : VN_IS(nodep->modp(), Covergroup)
-                            ? (nodep->aboveScopep()->name() + "." + nodep->modp()->name())
-                        : (nodep->aboveScopep()->name() + "." + nodep->aboveCellp()->name()));
+                            : (nodep->aboveScopep()->name() + "." + nodep->aboveCellp()->name()));
             nodep->editCountInc();
             iterateChildrenConst(nodep);
         }

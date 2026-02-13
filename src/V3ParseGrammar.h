@@ -92,7 +92,13 @@ public:
         nodep->trace(singletonp()->allTracingOn(fileline));
         return nodep;
     }
-    void createCoverGroupMethods(AstNodeModule* nodep, AstNode* sampleArgs) {
+    void createCoverGroupMethods(AstClass* nodep, AstNode* sampleArgs) {
+        // Hidden static to take unspecified reference argument results
+        AstVar* const defaultVarp
+            = new AstVar{nodep->fileline(), VVarType::MEMBER, "__Vint", nodep->findIntDType()};
+        defaultVarp->lifetime(VLifetime::STATIC_EXPLICIT);
+        nodep->addStmtsp(defaultVarp);
+
         // IEEE: option
         {
             v3Global.setUsesStdPackage();
@@ -102,7 +108,7 @@ public:
                                              new AstClassOrPackageRef{nodep->fileline(), "std",
                                                                       nullptr, nullptr},
                                              nullptr}};
-            nodep->addStmtsp(varp);
+            nodep->addMembersp(varp);
         }
 
         // IEEE: type_option
@@ -114,60 +120,16 @@ public:
                                              new AstClassOrPackageRef{nodep->fileline(), "std",
                                                                       nullptr, nullptr},
                                              nullptr}};
-            nodep->addStmtsp(varp);
-        }
-
-        // If sample has parameters, create member variables for them
-        // These parameters need to be visible in the covergroup body
-        AstNode* sampleFuncArgs = nullptr;
-        if (sampleArgs) {
-            // First pass: create member variables
-            for (AstNode* argp = sampleArgs; argp; argp = argp->nextp()) {
-                AstVar* const paramVarp = VN_CAST(argp, Var);
-                if (paramVarp) {
-                    // Create a member variable with the same name and type
-                    AstVar* const memberVarp = new AstVar{paramVarp->fileline(), VVarType::MEMBER,
-                                                          paramVarp->name(), VFlagChildDType{},
-                                                          paramVarp->childDTypep() ? paramVarp->childDTypep()->cloneTree(false) : nullptr};
-                    if (paramVarp->dtypep()) memberVarp->dtypep(paramVarp->dtypep());
-                    nodep->addStmtsp(memberVarp);
-                }
-            }
-            
-            // Second pass: create function parameter list
-            for (AstNode* argp = sampleArgs; argp; argp = argp->nextp()) {
-                AstVar* const paramVarp = VN_CAST(argp, Var);
-                if (paramVarp) {
-                    // Create function parameter (INPUT direction, PORT type)
-                    AstVar* const funcParamVarp = new AstVar{paramVarp->fileline(), VVarType::PORT,
-                                                             paramVarp->name(), VFlagChildDType{},
-                                                             paramVarp->childDTypep() ? paramVarp->childDTypep()->cloneTree(false) : nullptr};
-                    funcParamVarp->funcLocal(true);
-                    funcParamVarp->direction(VDirection::INPUT);
-                    if (paramVarp->dtypep()) funcParamVarp->dtypep(paramVarp->dtypep());
-                    // Preserve default value if present
-                    if (paramVarp->valuep()) {
-                        funcParamVarp->valuep(paramVarp->valuep()->cloneTree(false));
-                    }
-                    if (!sampleFuncArgs) {
-                        sampleFuncArgs = funcParamVarp;
-                    } else {
-                        sampleFuncArgs->addNext(funcParamVarp);
-                    }
-                }
-            }
+            nodep->addMembersp(varp);
         }
 
         // IEEE: function void sample()
         {
             AstFunc* const funcp = new AstFunc{nodep->fileline(), "sample", nullptr, nullptr};
-            // Add function parameters
-            if (sampleFuncArgs) {
-                funcp->addStmtsp(sampleFuncArgs);
-            }
+            funcp->addStmtsp(sampleArgs);
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
-            nodep->addStmtsp(funcp);
+            nodep->addMembersp(funcp);
         }
 
         // IEEE: function void start(), void stop()
@@ -175,20 +137,18 @@ public:
             AstFunc* const funcp = new AstFunc{nodep->fileline(), name, nullptr, nullptr};
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
-            nodep->addStmtsp(funcp);
+            nodep->addMembersp(funcp);
         }
 
         // IEEE: static function real get_coverage(optional ref int, optional ref int)
         // IEEE: function real get_inst_coverage(optional ref int, optional ref int)
-        // Note: For simplicity, Verilator implements these without the optional ref int parameters
-        // The parameters are rarely used and complicate the implementation
         for (const string& name : {"get_coverage"s, "get_inst_coverage"s}) {
             AstFunc* const funcp = new AstFunc{nodep->fileline(), name, nullptr, nullptr};
             funcp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
             funcp->isStatic(name == "get_coverage");
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
-            nodep->addStmtsp(funcp);
+            nodep->addMembersp(funcp);
             {
                 AstVar* const varp = new AstVar{nodep->fileline(), VVarType::MEMBER, name,
                                                 nodep->findDoubleDType()};
@@ -198,6 +158,15 @@ public:
                 varp->funcReturn(true);
                 funcp->fvarp(varp);
             }
+            for (const string& varname : {"covered_bins"s, "total_bins"s}) {
+                AstVar* const varp = new AstVar{nodep->fileline(), VVarType::MEMBER, varname,
+                                                nodep->findStringDType()};
+                varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+                varp->funcLocal(true);
+                varp->direction(VDirection::INPUT);
+                varp->valuep(new AstVarRef{nodep->fileline(), defaultVarp, VAccess::READ});
+                funcp->addStmtsp(varp);
+            }
         }
         // IEEE: function void set_inst_name(string)
         {
@@ -205,7 +174,7 @@ public:
                 = new AstFunc{nodep->fileline(), "set_inst_name", nullptr, nullptr};
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
-            nodep->addStmtsp(funcp);
+            nodep->addMembersp(funcp);
             AstVar* const varp = new AstVar{nodep->fileline(), VVarType::MEMBER, "name",
                                             nodep->findStringDType()};
             varp->lifetime(VLifetime::AUTOMATIC_EXPLICIT);

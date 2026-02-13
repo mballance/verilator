@@ -14,7 +14,7 @@
 //
 //*************************************************************************
 // FUNCTIONAL COVERAGE TRANSFORMATIONS:
-//      For each covergroup (AstCovergroup):
+//      For each covergroup (AstClass with isCovergroup()):
 //          For each coverpoint (AstCoverpoint):
 //              Generate member variable for VerilatedCoverpoint
 //              Generate initialization in constructor
@@ -346,7 +346,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             AstVar* const varp = new AstVar{defBinp->fileline(), VVarType::MEMBER, varName,
                                             defBinp->findUInt32DType()};
             varp->isStatic(false);
-            m_covergroupp->addStmtsp(varp);
+            m_covergroupp->addMembersp(varp);
             UINFO(4, "    Created default bin variable: " << varName << endl);
 
             // Track for coverage computation
@@ -829,7 +829,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             AstVar* const varp = new AstVar{arrayBinp->fileline(), VVarType::MEMBER, varName,
                                             arrayBinp->findUInt32DType()};
             varp->isStatic(false);
-            m_covergroupp->addStmtsp(varp);
+            m_covergroupp->addMembersp(varp);
             UINFO(4, "    Created array bin [" << index << "]: " << varName << endl);
 
             // Track for coverage computation
@@ -1141,7 +1141,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstFunc* getInstCoveragep = nullptr;
 
         int memberCount = 0;
-        for (AstNode* itemp = m_covergroupp->stmtsp(); itemp; itemp = itemp->nextp()) {
+        for (AstNode* itemp = m_covergroupp->membersp(); itemp; itemp = itemp->nextp()) {
             if (++memberCount > 10000) {
                 m_covergroupp->v3error(
                     "Too many members or infinite loop in membersp iteration (1)");
@@ -1174,29 +1174,13 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
         // Generate code for get_coverage() (type-level)
         // NOTE: Full type-level coverage requires instance tracking infrastructure
-        // For now, just delegate to get_inst_coverage() for the current instance
-        if (getCoveragep && getInstCoveragep) {
+        // For now, return 0.0 as a placeholder
+        if (getCoveragep) {
             AstVar* returnVarp = VN_AS(getCoveragep->fvarp(), Var);
             if (returnVarp) {
-                // Call get_inst_coverage() and return its result
-                // Generate: return_var = this->get_inst_coverage();
-                FileLine* fl = getCoveragep->fileline();
-                
-                // Create function call to get_inst_coverage
-                AstFuncRef* funcCallp = new AstFuncRef{fl, "get_inst_coverage", nullptr};
-                funcCallp->taskp(getInstCoveragep);
-                funcCallp->dtypep(getInstCoveragep->dtypep());
-                
-                getCoveragep->addStmtsp(new AstAssign{
-                    fl,
-                    new AstVarRef{fl, returnVarp, VAccess::WRITE},
-                    funcCallp});
-                UINFO(4, "    Made get_coverage() delegate to get_inst_coverage()" << endl);
-            }
-        } else if (getCoveragep) {
-            // Fallback: return 0.0 if get_inst_coverage doesn't exist
-            AstVar* returnVarp = VN_AS(getCoveragep->fvarp(), Var);
-            if (returnVarp) {
+                // TODO: Implement proper type-level coverage aggregation
+                // This requires tracking all instances and averaging their coverage
+                // For now, return 0.0
                 getCoveragep->addStmtsp(new AstAssign{
                     getCoveragep->fileline(),
                     new AstVarRef{getCoveragep->fileline(), returnVarp, VAccess::WRITE},
@@ -1444,9 +1428,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                     cgp->unlinkFrBack();
                     VL_DO_DANGLING(cgp->deleteTree(), cgp);
                 }
-                // Remove the AstCovergroupTemp node - it's just a holder for the event
-                cgp->unlinkFrBack();
-                VL_DO_DANGLING(cgp->deleteTree(), cgp);
+                itemp = nextp;
             }
 
             // Find the sample() method and constructor
@@ -1472,33 +1454,6 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         } else {
             iterateChildren(nodep);
         }
-        
-        // Find the sample() method and constructor
-        int findCount = 0;
-        for (AstNode* itemp = nodep->stmtsp(); itemp; itemp = itemp->nextp()) {
-            if (++findCount > 10000) {
-                nodep->v3error("Too many members or infinite loop in stmtsp iteration");
-                break;
-            }
-            if (AstFunc* const funcp = VN_CAST(itemp, Func)) {
-                if (funcp->name() == "sample") {
-                    m_sampleFuncp = funcp;
-                    UINFO(9, "Found sample() method" << endl);
-                } else if (funcp->name() == "new") {
-                    m_constructorp = funcp;
-                    UINFO(9, "Found constructor" << endl);
-                }
-            }
-        }
-        
-        iterateChildren(nodep);
-        processCovergroup();
-    }
-
-    void visit(AstClass* nodep) override {
-        UINFO(9, "Visiting class: " << nodep->name() << endl);
-        // Regular class handling (if we ever need it)
-        iterateChildren(nodep);
     }
 
     void visit(AstCoverpoint* nodep) override {
