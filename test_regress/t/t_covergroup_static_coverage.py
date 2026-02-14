@@ -13,9 +13,6 @@ test.scenarios('vlt')
 
 # Type-level (static) coverage using cg::get_coverage() is not yet supported
 # Only instance-level coverage via get_inst_coverage() is available
-test.compile(
-    fails=test.vlt_all,
-    expect=r'%Error:.*static.*get_coverage.*not.*supported'
-)
+test.compile(fails=test.vlt_all, expect=r'%Error:.*static.*get_coverage.*not.*supported')
 
 test.passes()

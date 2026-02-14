@@ -114,12 +114,12 @@ public:
                     }
                 }
             }
-            
+
             if (newFuncp) {
                 // Save the existing body statements and unlink them
                 AstNode* const existingBodyp = newFuncp->stmtsp();
                 if (existingBodyp) existingBodyp->unlinkFrBackWithNext();
-                
+
                 // Add function parameters and assignments
                 AstNode* nextArgp = nullptr;
                 for (AstNode* argp = constructorArgs; argp; argp = nextArgp) {
@@ -130,14 +130,16 @@ public:
                         paramp->funcLocal(true);
                         paramp->direction(VDirection::INPUT);
                         newFuncp->addStmtsp(paramp);
-                        
+
                         // Create assignment: member = parameter
-                        AstNodeExpr* const lhsp = new AstParseRef{origVarp->fileline(), origVarp->name()};
-                        AstNodeExpr* const rhsp = new AstParseRef{paramp->fileline(), paramp->name()};
+                        AstNodeExpr* const lhsp
+                            = new AstParseRef{origVarp->fileline(), origVarp->name()};
+                        AstNodeExpr* const rhsp
+                            = new AstParseRef{paramp->fileline(), paramp->name()};
                         newFuncp->addStmtsp(new AstAssign{origVarp->fileline(), lhsp, rhsp});
                     }
                 }
-                
+
                 // Finally, add back the existing body
                 if (existingBodyp) newFuncp->addStmtsp(existingBodyp);
             }
@@ -184,10 +186,12 @@ public:
                         paramp->funcLocal(true);
                         paramp->direction(VDirection::INPUT);
                         funcp->addStmtsp(paramp);
-                        
+
                         // Create assignment: member = parameter
-                        AstNodeExpr* const lhsp = new AstParseRef{origVarp->fileline(), origVarp->name()};
-                        AstNodeExpr* const rhsp = new AstParseRef{paramp->fileline(), paramp->name()};
+                        AstNodeExpr* const lhsp
+                            = new AstParseRef{origVarp->fileline(), origVarp->name()};
+                        AstNodeExpr* const rhsp
+                            = new AstParseRef{paramp->fileline(), paramp->name()};
                         funcp->addStmtsp(new AstAssign{origVarp->fileline(), lhsp, rhsp});
                     }
                 }
