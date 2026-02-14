@@ -1,7 +1,7 @@
 %Warning-COVERIGN: t/t_covergroup_unsup.v:65:25: Ignoring unsupported: coverage '@@' events
    65 |    covergroup cg_atat() @@ (begin funca or end funcb);
       |                         ^~
-                   ... For warning description see https://verilator.org/warn/COVERIGN?v=5.045
+                   ... For warning description see https://verilator.org/warn/COVERIGN?v=latest
                    ... Use "/* verilator lint_off COVERIGN */" and lint_on around source to disable this message.
 %Warning-COVERIGN: t/t_covergroup_unsup.v:99:23: Ignoring unsupported: cross iff condition
    99 |       cross a, b iff (!rst);
@@ -9,7 +9,7 @@
 %Warning-COVERIGN: t/t_covergroup_unsup.v:102:23: Ignoring unsupported: cross iff condition
   102 |       cross a, b iff (!rst) {}
       |                       ^
-%Error: Internal Error: t/t_covergroup_unsup.v:105:20: ../V3Ast.cpp:663: Node has no back, already unlinked?
+%Error: Internal Error: t/t_covergroup_unsup.v:105:20: ../V3Ast.cpp:#: Node has no back, already unlinked?
   105 |       cross a, b { option.comment = "cross"; option.weight = 12; }
       |                    ^~~~~~
-                        ... See the manual at https://verilator.org/verilator_doc.html?v=5.045 for more assistance.
+                        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
