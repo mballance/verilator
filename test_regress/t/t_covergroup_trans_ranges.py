@@ -10,11 +10,9 @@ import vltest_bootstrap
 
 test.scenarios('vlt')
 
-# Transition array bins are not yet supported - documented limitation
+# Transition array bins are now supported
 test.compile(
-    verilator_flags2=["-Wno-IMPLICITSTATIC"],
-    fails=test.vlt_all,
-    expect=r'%Error-UNSUPPORTED:.*Array bins for transition bins not yet supported'
+    verilator_flags2=["-Wno-IMPLICITSTATIC"]
 )
 
 test.passes()

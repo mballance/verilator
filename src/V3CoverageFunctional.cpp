@@ -491,17 +491,13 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 continue;
             }
 
-            // Array bins with transitions not yet supported - give clear error
-            if (cbinp->isArray() && cbinp->binsType() == VCoverBinsType::TRANSITION) {
-                cbinp->v3warn(E_UNSUPPORTED,
-                              "Array bins for transition bins not yet supported. "
-                              "Use separate named bins for each transition instead.");
-                continue;
-            }
-
-            // Handle array bins: create separate bin for each value
+            // Handle array bins: create separate bin for each value/transition
             if (cbinp->isArray()) {
-                generateArrayBins(coverpointp, cbinp, exprp, atLeastValue);
+                if (cbinp->binsType() == VCoverBinsType::TRANSITION) {
+                    generateTransitionArrayBins(coverpointp, cbinp, exprp, atLeastValue);
+                } else {
+                    generateArrayBins(coverpointp, cbinp, exprp, atLeastValue);
+                }
                 continue;
             }
 
@@ -690,17 +686,6 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                         AstNodeExpr* exprp, AstVar* hitVarp) {
         UINFO(4, "    Generating transition bin match for: " << binp->name() << endl);
 
-        // Get or create previous value variable
-        AstVar* prevVarp = createPrevValueVar(coverpointp, exprp);
-
-        // For now, only support non-array transition bins (single transition set)
-        // Array bins with transitions would require creating multiple hit variables
-        // and inserting them separately into the coverage database
-        if (binp->isArray()) {
-            binp->v3warn(E_UNSUPPORTED, "Array bins for transition bins not yet supported");
-            return;
-        }
-
         // Get the (single) transition set
         AstCoverTransSet* transSetp = binp->transp();
         if (!transSetp) {
@@ -708,84 +693,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             return;
         }
 
-        // Get transition items (the sequence: item1 => item2 => item3)
-        std::vector<AstCoverTransItem*> items;
-        for (AstNode* itemp = transSetp->itemsp(); itemp; itemp = itemp->nextp()) {
-            if (AstCoverTransItem* transp = VN_CAST(itemp, CoverTransItem)) {
-                items.push_back(transp);
-            }
-        }
-
-        if (items.empty()) {
-            binp->v3error("Transition set without items");
-            return;
-        }
-
-        // Check for unsupported repetition operators
-        for (AstCoverTransItem* item : items) {
-            if (item->repType() != VTransRepType::NONE) {
-                binp->v3warn(E_UNSUPPORTED,
-                             "Transition repetition operators ([*], [->], [=]) not yet supported");
-                return;
-            }
-        }
-
-        // Build transition sequence check
-        // For (a => b): prev == a && current == b  (use fast 2-value path)
-        // For (a => b => c => ...): Use state machine
-
-        if (items.size() == 1) {
-            // Single item transition not valid (need at least 2 values for =>)
-            binp->v3error("Transition requires at least two values");
-            return;
-        } else if (items.size() == 2) {
-            // Simple two-value transition: (val1 => val2)
-            // Use optimized direct comparison (no state machine needed)
-            AstNodeExpr* cond1p = buildTransitionItemCondition(
-                items[0], new AstVarRef{prevVarp->fileline(), prevVarp, VAccess::READ});
-            AstNodeExpr* cond2p = buildTransitionItemCondition(items[1], exprp->cloneTree(false));
-
-            if (!cond1p || !cond2p) {
-                binp->v3error("Could not build transition conditions");
-                return;
-            }
-
-            // Combine: prev matches val1 AND current matches val2
-            AstNodeExpr* fullCondp = new AstAnd{binp->fileline(), cond1p, cond2p};
-
-            // Apply iff condition if present
-            if (AstNodeExpr* iffp = coverpointp->iffp()) {
-                fullCondp = new AstAnd{binp->fileline(), iffp->cloneTree(false), fullCondp};
-            }
-
-            // Create increment statement
-            AstNode* stmtp = new AstAssign{
-                binp->fileline(), new AstVarRef{binp->fileline(), hitVarp, VAccess::WRITE},
-                new AstAdd{binp->fileline(),
-                           new AstVarRef{binp->fileline(), hitVarp, VAccess::READ},
-                           new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
-
-            // For illegal_bins, add an error message
-            if (binp->binsType() == VCoverBinsType::ILLEGAL) {
-                const string errMsg = "Illegal transition bin '" + binp->name()
-                                      + "' hit in coverpoint '" + coverpointp->name() + "'";
-                AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR,
-                                                    errMsg, nullptr, nullptr};
-                errorp->fmtp()->timeunit(m_covergroupp->timeunit());
-                stmtp = stmtp->addNext(errorp);
-                stmtp = stmtp->addNext(new AstStop{binp->fileline(), true});
-            }
-
-            // Create if statement
-            AstIf* const ifp = new AstIf{binp->fileline(), fullCondp, stmtp, nullptr};
-            m_sampleFuncp->addStmtsp(ifp);
-
-            UINFO(4, "      Successfully added 2-value transition if statement" << endl);
-        } else {
-            // Multi-value sequence (a => b => c => ...)
-            // Use state machine to track position in sequence
-            generateMultiValueTransitionCode(coverpointp, binp, exprp, hitVarp, items);
-        }
+        // Use the helper function to generate code for this transition
+        generateSingleTransitionCode(coverpointp, binp, exprp, hitVarp, transSetp);
     }
 
     // Generate state machine code for multi-value transition sequences
@@ -1102,6 +1011,144 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             return;
         }
         m_sampleFuncp->addStmtsp(ifp);
+    }
+
+    // Generate multiple bins for transition array bins
+    // Array bins with transitions create one bin per transition sequence
+    void generateTransitionArrayBins(AstCoverpoint* coverpointp, AstCoverBin* arrayBinp,
+                                     AstNodeExpr* exprp, int atLeastValue) {
+        UINFO(4, "    Generating transition array bins for: " << arrayBinp->name() << endl);
+
+        // Extract all transition sets
+        std::vector<AstCoverTransSet*> transSets;
+        for (AstNode* transSetp = arrayBinp->transp(); transSetp; transSetp = transSetp->nextp()) {
+            if (AstCoverTransSet* ts = VN_CAST(transSetp, CoverTransSet)) {
+                transSets.push_back(ts);
+            }
+        }
+
+        if (transSets.empty()) {
+            arrayBinp->v3error("Transition array bin without transition sets");
+            return;
+        }
+
+        UINFO(4, "      Found " << transSets.size() << " transition sets" << endl);
+
+        // Create a separate bin for each transition sequence
+        int index = 0;
+        for (AstCoverTransSet* transSetp : transSets) {
+            // Create bin name: originalName[index]
+            const string binName = arrayBinp->name() + "[" + std::to_string(index) + "]";
+            const string sanitizedName = arrayBinp->name() + "_" + std::to_string(index);
+            const string varName = "__Vcov_" + coverpointp->name() + "_" + sanitizedName;
+
+            // Create member variable for this bin
+            AstVar* const varp = new AstVar{arrayBinp->fileline(), VVarType::MEMBER, varName,
+                                            arrayBinp->findUInt32DType()};
+            varp->isStatic(false);
+            m_covergroupp->addMembersp(varp);
+            UINFO(4, "      Created transition array bin [" << index << "]: " << varName << endl);
+
+            // Track for coverage computation
+            m_binInfos.push_back(BinInfo(arrayBinp, varp, atLeastValue, coverpointp));
+
+            // Generate matching code for this specific transition
+            generateSingleTransitionCode(coverpointp, arrayBinp, exprp, varp, transSetp);
+
+            ++index;
+        }
+
+        UINFO(4, "    Generated " << index << " transition array bins" << endl);
+    }
+
+    // Generate code for a single transition sequence (used by both regular and array bins)
+    void generateSingleTransitionCode(AstCoverpoint* coverpointp, AstCoverBin* binp,
+                                      AstNodeExpr* exprp, AstVar* hitVarp,
+                                      AstCoverTransSet* transSetp) {
+        UINFO(4, "      Generating code for transition sequence" << endl);
+
+        // Get or create previous value variable
+        AstVar* prevVarp = createPrevValueVar(coverpointp, exprp);
+
+        if (!transSetp) {
+            binp->v3error("Transition bin without transition set");
+            return;
+        }
+
+        // Get transition items (the sequence: item1 => item2 => item3)
+        std::vector<AstCoverTransItem*> items;
+        for (AstNode* itemp = transSetp->itemsp(); itemp; itemp = itemp->nextp()) {
+            if (AstCoverTransItem* transp = VN_CAST(itemp, CoverTransItem)) {
+                items.push_back(transp);
+            }
+        }
+
+        if (items.empty()) {
+            binp->v3error("Transition set without items");
+            return;
+        }
+
+        // Check for unsupported repetition operators
+        for (AstCoverTransItem* item : items) {
+            if (item->repType() != VTransRepType::NONE) {
+                binp->v3warn(E_UNSUPPORTED,
+                             "Transition repetition operators ([*], [->], [=]) not yet supported");
+                return;
+            }
+        }
+
+        if (items.size() == 1) {
+            // Single item transition not valid (need at least 2 values for =>)
+            binp->v3error("Transition requires at least two values");
+            return;
+        } else if (items.size() == 2) {
+            // Simple two-value transition: (val1 => val2)
+            // Use optimized direct comparison (no state machine needed)
+            AstNodeExpr* cond1p = buildTransitionItemCondition(
+                items[0], new AstVarRef{prevVarp->fileline(), prevVarp, VAccess::READ});
+            AstNodeExpr* cond2p = buildTransitionItemCondition(items[1], exprp->cloneTree(false));
+
+            if (!cond1p || !cond2p) {
+                binp->v3error("Could not build transition conditions");
+                return;
+            }
+
+            // Combine: prev matches val1 AND current matches val2
+            AstNodeExpr* fullCondp = new AstAnd{binp->fileline(), cond1p, cond2p};
+
+            // Apply iff condition if present
+            if (AstNodeExpr* iffp = coverpointp->iffp()) {
+                fullCondp = new AstAnd{binp->fileline(), iffp->cloneTree(false), fullCondp};
+            }
+
+            // Create increment statement
+            AstNode* stmtp = new AstAssign{
+                binp->fileline(), new AstVarRef{binp->fileline(), hitVarp, VAccess::WRITE},
+                new AstAdd{binp->fileline(),
+                           new AstVarRef{binp->fileline(), hitVarp, VAccess::READ},
+                           new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
+
+            // For illegal_bins, add an error message
+            if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+                const string errMsg = "Illegal transition bin '" + binp->name()
+                                      + "' hit in coverpoint '" + coverpointp->name() + "'";
+                AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR,
+                                                    errMsg, nullptr, nullptr};
+                errorp->fmtp()->timeunit(m_covergroupp->timeunit());
+                stmtp = stmtp->addNext(errorp);
+                stmtp = stmtp->addNext(new AstStop{binp->fileline(), true});
+            }
+
+            // Create if statement
+            AstIf* const ifp = new AstIf{binp->fileline(), fullCondp, stmtp, nullptr};
+            m_sampleFuncp->addStmtsp(ifp);
+
+            UINFO(4, "        Successfully added 2-value transition if statement" << endl);
+        } else {
+            // Multi-value sequence (a => b => c => ...)
+            // Use state machine to track position in sequence
+            generateMultiValueTransitionCode(coverpointp, binp, exprp, hitVarp, items);
+        }
     }
 
     // Recursive helper to generate Cartesian product of cross bins
