@@ -13,9 +13,7 @@ test.scenarios('vlt')
 
 # Multi-value (3+) transition bins generate incomplete case statements
 # This is a known limitation - complex transitions not fully supported
-test.compile(
-    fails=test.vlt_all,
-    expect=r'%Warning-CASEINCOMPLETE:.*Case values incompletely covered'
-)
+test.compile(fails=test.vlt_all,
+             expect=r'%Warning-CASEINCOMPLETE:.*Case values incompletely covered')
 
 test.passes()
