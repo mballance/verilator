@@ -21,6 +21,7 @@
 #include "V3ParseImp.h"  // Defines YYTYPE; before including bison header
 
 #include <stack>
+#include <vector>
 
 class V3ParseGrammar final {
 public:
@@ -93,12 +94,52 @@ public:
         nodep->trace(singletonp()->allTracingOn(fileline));
         return nodep;
     }
-    void createCoverGroupMethods(AstClass* nodep, AstNode* sampleArgs) {
+    void createCoverGroupMethods(AstClass* nodep, AstNode* constructorArgs, AstNode* sampleArgs) {
         // Hidden static to take unspecified reference argument results
         AstVar* const defaultVarp
             = new AstVar{nodep->fileline(), VVarType::MEMBER, "__Vint", nodep->findIntDType()};
         defaultVarp->lifetime(VLifetime::STATIC_EXPLICIT);
         nodep->addStmtsp(defaultVarp);
+
+        // Handle constructor arguments - add function parameters and assignments
+        // Member variables have already been created in verilog.y
+        if (constructorArgs) {
+            // Find the 'new' function to add parameters to
+            AstFunc* newFuncp = nullptr;
+            for (AstNode* memberp = nodep->membersp(); memberp; memberp = memberp->nextp()) {
+                if (AstFunc* funcp = VN_CAST(memberp, Func)) {
+                    if (funcp->name() == "new") {
+                        newFuncp = funcp;
+                        break;
+                    }
+                }
+            }
+            
+            if (newFuncp) {
+                // Save the existing body statements and unlink them
+                AstNode* const existingBodyp = newFuncp->stmtsp();
+                if (existingBodyp) existingBodyp->unlinkFrBackWithNext();
+                
+                // Add function parameters and assignments
+                for (AstNode* argp = constructorArgs; argp; argp = argp->nextp()) {
+                    if (AstVar* const origVarp = VN_CAST(argp, Var)) {
+                        // Create a constructor parameter
+                        AstVar* const paramp = origVarp->cloneTree(false);
+                        paramp->funcLocal(true);
+                        paramp->direction(VDirection::INPUT);
+                        newFuncp->addStmtsp(paramp);
+                        
+                        // Create assignment: member = parameter
+                        AstNodeExpr* const lhsp = new AstParseRef{origVarp->fileline(), origVarp->name()};
+                        AstNodeExpr* const rhsp = new AstParseRef{paramp->fileline(), paramp->name()};
+                        newFuncp->addStmtsp(new AstAssign{origVarp->fileline(), lhsp, rhsp});
+                    }
+                }
+                
+                // Finally, add back the existing body
+                if (existingBodyp) newFuncp->addStmtsp(existingBodyp);
+            }
+        }
 
         // IEEE: option
         {
@@ -128,11 +169,24 @@ public:
         {
             AstFunc* const funcp = new AstFunc{nodep->fileline(), "sample", nullptr, nullptr};
             
-            // Add sample arguments as function parameters (if provided)
+            // Add sample arguments as function parameters and assignments
+            // Member variables have already been created in verilog.y
             if (sampleArgs) {
-                // The arguments come as a linked list of AstVar nodes (parameters)
-                // Add them to the function's statement list (where parameters go)
-                funcp->addStmtsp(sampleArgs);
+                // Add function parameters and assignments
+                for (AstNode* argp = sampleArgs; argp; argp = argp->nextp()) {
+                    if (AstVar* const origVarp = VN_CAST(argp, Var)) {
+                        // Create a function parameter
+                        AstVar* const paramp = origVarp->cloneTree(false);
+                        paramp->funcLocal(true);
+                        paramp->direction(VDirection::INPUT);
+                        funcp->addStmtsp(paramp);
+                        
+                        // Create assignment: member = parameter
+                        AstNodeExpr* const lhsp = new AstParseRef{origVarp->fileline(), origVarp->name()};
+                        AstNodeExpr* const rhsp = new AstParseRef{paramp->fileline(), paramp->name()};
+                        funcp->addStmtsp(new AstAssign{origVarp->fileline(), lhsp, rhsp});
+                    }
+                }
             }
             
             funcp->classMethod(true);

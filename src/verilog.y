@@ -6922,15 +6922,42 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                               }
                           }
                           
+                          // Convert constructor parameters to member variables
+                          // This must happen BEFORE the covergroup body is added,
+                          // so coverpoints can reference these members
+                          if ($3) {
+                              for (AstNode* argp = $3; argp; argp = argp->nextp()) {
+                                  if (AstVar* origVarp = VN_CAST(argp, Var)) {
+                                      AstVar* memberp = origVarp->cloneTree(false);
+                                      memberp->varType(VVarType::MEMBER);
+                                      memberp->funcLocal(false);
+                                      memberp->direction(VDirection::NONE);
+                                      cgClassp->addMembersp(memberp);
+                                  }
+                              }
+                          }
+                          
+                          // Convert sample parameters to member variables
+                          if (sampleArgs) {
+                              for (AstNode* argp = sampleArgs; argp; argp = argp->nextp()) {
+                                  if (AstVar* origVarp = VN_CAST(argp, Var)) {
+                                      AstVar* memberp = origVarp->cloneTree(false);
+                                      memberp->varType(VVarType::MEMBER);
+                                      memberp->funcLocal(false);
+                                      memberp->direction(VDirection::NONE);
+                                      cgClassp->addMembersp(memberp);
+                                  }
+                              }
+                          }
+                          
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};
                           newp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
                           newp->classMethod(true);
                           newp->isConstructor(true);
                           newp->dtypep(cgClassp->dtypep());
-                          newp->addStmtsp($3);
                           newp->addStmtsp($6);
                           cgClassp->addMembersp(newp);
-                          GRAMMARP->createCoverGroupMethods(cgClassp, sampleArgs);
+                          GRAMMARP->createCoverGroupMethods(cgClassp, $3, sampleArgs);
 
                           $$ = cgClassp;
                           GRAMMARP->endLabel($<fl>8, $$, $8);
@@ -6947,7 +6974,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                           newp->dtypep(cgClassp->dtypep());
                           newp->addStmtsp($5);
                           cgClassp->addMembersp(newp);
-                          GRAMMARP->createCoverGroupMethods(cgClassp, nullptr);
+                          GRAMMARP->createCoverGroupMethods(cgClassp, nullptr, nullptr);
 
                           $$ = cgClassp;
                           GRAMMARP->endLabel($<fl>7, $$, $7);
