@@ -536,8 +536,8 @@ Covergroups can be defined inside classes:
       endtask
    endclass
 
-Limitations
-^^^^^^^^^^^
+Limitations and Unsupported Features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 **Automatic Sampling:** The syntax ``covergroup cg @(posedge clk);`` is parsed
 but automatic sampling is not performed. Use explicit ``sample()`` calls:
@@ -556,6 +556,54 @@ but automatic sampling is not performed. Use explicit ``sample()`` calls:
    
    cg cg_inst = new;
    always @(posedge clk) cg_inst.sample();  // Explicit sampling
+
+**Covergroup Inheritance:** Covergroup inheritance using the ``extends`` keyword
+is not currently supported. This will generate an error:
+
+.. code-block:: sv
+
+   covergroup base_cg;
+      coverpoint value;
+   endgroup
+   
+   covergroup derived_cg extends base_cg;  // Not supported
+      coverpoint other_value;
+   endgroup
+
+As a workaround, duplicate the coverpoint definitions in each covergroup.
+
+**Type-Level (Static) Coverage:** Aggregated type-level coverage using the
+static ``get_coverage()`` method is not currently supported. Only instance-level
+coverage via ``get_inst_coverage()`` is available:
+
+.. code-block:: sv
+
+   covergroup cg;
+      coverpoint value;
+   endgroup
+   
+   cg cg1 = new;
+   cg cg2 = new;
+   
+   // This works - instance-level coverage
+   real inst_cov = cg1.get_inst_coverage();
+   
+   // This is not supported - type-level coverage
+   // real type_cov = cg::get_coverage();  // Will not aggregate across instances
+
+**Advanced Transition Features:** Complex transition patterns including
+multi-value transitions with more than 2 states may have incomplete case
+statement coverage in generated code. Simple 2-state transitions work correctly:
+
+.. code-block:: sv
+
+   coverpoint state {
+      // This works well
+      bins trans_2state = (0 => 1);
+      
+      // This may generate incomplete case statements
+      bins trans_3state = (0 => 1 => 2);  // Limited support
+   }
 
 **Transition Bin Repetition Operators:** The repetition operators ``[*N]``,
 ``[->N]``, and ``[=N]`` for transition bins are not supported. Use multiple
