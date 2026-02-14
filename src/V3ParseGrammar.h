@@ -121,7 +121,9 @@ public:
                 if (existingBodyp) existingBodyp->unlinkFrBackWithNext();
                 
                 // Add function parameters and assignments
-                for (AstNode* argp = constructorArgs; argp; argp = argp->nextp()) {
+                AstNode* nextArgp = nullptr;
+                for (AstNode* argp = constructorArgs; argp; argp = nextArgp) {
+                    nextArgp = argp->nextp();  // Save next before any modifications
                     if (AstVar* const origVarp = VN_CAST(argp, Var)) {
                         // Create a constructor parameter
                         AstVar* const paramp = origVarp->cloneTree(false);
@@ -173,7 +175,9 @@ public:
             // Member variables have already been created in verilog.y
             if (sampleArgs) {
                 // Add function parameters and assignments
-                for (AstNode* argp = sampleArgs; argp; argp = argp->nextp()) {
+                AstNode* nextArgp = nullptr;
+                for (AstNode* argp = sampleArgs; argp; argp = nextArgp) {
+                    nextArgp = argp->nextp();  // Save next before any modifications
                     if (AstVar* const origVarp = VN_CAST(argp, Var)) {
                         // Create a function parameter
                         AstVar* const paramp = origVarp->cloneTree(false);

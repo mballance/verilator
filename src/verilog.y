@@ -6927,8 +6927,11 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                           // Convert constructor parameters to member variables
                           // This must happen BEFORE the covergroup body is added,
                           // so coverpoints can reference these members
+                          // We iterate carefully to avoid issues with modified AST
                           if ($3) {
-                              for (AstNode* argp = $3; argp; argp = argp->nextp()) {
+                              AstNode* nextArgp = nullptr;
+                              for (AstNode* argp = $3; argp; argp = nextArgp) {
+                                  nextArgp = argp->nextp();  // Save next before any modifications
                                   if (AstVar* origVarp = VN_CAST(argp, Var)) {
                                       AstVar* memberp = origVarp->cloneTree(false);
                                       memberp->varType(VVarType::MEMBER);
@@ -6941,7 +6944,9 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                           
                           // Convert sample parameters to member variables
                           if (sampleArgs) {
-                              for (AstNode* argp = sampleArgs; argp; argp = argp->nextp()) {
+                              AstNode* nextArgp = nullptr;
+                              for (AstNode* argp = sampleArgs; argp; argp = nextArgp) {
+                                  nextArgp = argp->nextp();  // Save next before any modifications
                                   if (AstVar* origVarp = VN_CAST(argp, Var)) {
                                       AstVar* memberp = origVarp->cloneTree(false);
                                       memberp->varType(VVarType::MEMBER);
