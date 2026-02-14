@@ -491,6 +491,14 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 continue;
             }
 
+            // Array bins with transitions not yet supported - give clear error
+            if (cbinp->isArray() && cbinp->binsType() == VCoverBinsType::TRANSITION) {
+                cbinp->v3warn(E_UNSUPPORTED,
+                              "Array bins for transition bins not yet supported. "
+                              "Use separate named bins for each transition instead.");
+                continue;
+            }
+
             // Handle array bins: create separate bin for each value
             if (cbinp->isArray()) {
                 generateArrayBins(coverpointp, cbinp, exprp, atLeastValue);

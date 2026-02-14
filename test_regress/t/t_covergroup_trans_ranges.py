@@ -10,12 +10,11 @@ import vltest_bootstrap
 
 test.scenarios('vlt')
 
-# Transition array bins currently cause a segfault
-# This is a known limitation - transition bins with arrays not fully supported
+# Transition array bins are not yet supported - documented limitation
 test.compile(
     verilator_flags2=["-Wno-IMPLICITSTATIC"],
     fails=test.vlt_all,
-    expect=r'.*Internal Error.*|.*SEGV.*|.*ABORTING.*'
+    expect=r'%Error-UNSUPPORTED:.*Array bins for transition bins not yet supported'
 )
 
 test.passes()
