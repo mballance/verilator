@@ -70,7 +70,7 @@ public:
         , m_name{name} {}
     ASTGEN_MEMBERS_AstNodeFuncCovItem;
     string name() const override VL_MT_STABLE { return m_name; }
-    void name(const string& flag) { m_name = flag; }
+    void name(const string& flag) override { m_name = flag; }
     bool maybePointedTo() const override { return true; }
 };
 
@@ -227,7 +227,7 @@ public:
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     string name() const override VL_MT_STABLE { return m_name; }
-    void name(const string& name) { m_name = name; }
+    void name(const string& name) override { m_name = name; }
     bool isClass() const { return m_isClass; }
     void isClass(bool flag) { m_isClass = flag; }
     bool maybePointedTo() const override { return true; }
