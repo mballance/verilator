@@ -7273,6 +7273,9 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                                       // AstCgOptionAssign nodes are attached to the covergroup member list
                                       // Don't delete them here - V3Width will process them later
                                       // Just skip them in the cross body
+                                  } else if (VN_IS(itemp, Func)) {
+                                      // Function declarations in cross bodies are unsupported but
+                                      // shouldn't cause internal errors. Just skip them.
                                   } else {
                                       // Delete other unsupported items
                                       itemp->unlinkFrBack();
@@ -7303,6 +7306,9 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                                       // AstCgOptionAssign nodes are attached to the covergroup member list
                                       // Don't delete them here - V3Width will process them later
                                       // Just skip them in the cross body
+                                  } else if (VN_IS(itemp, Func)) {
+                                      // Function declarations in cross bodies are unsupported but
+                                      // shouldn't cause internal errors. Just skip them.
                                   } else {
                                       // Delete other unsupported items
                                       itemp->unlinkFrBack();
