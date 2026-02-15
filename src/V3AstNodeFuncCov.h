@@ -34,10 +34,10 @@ enum class VCoverBinsType : uint8_t {
     USER,
     ARRAY,
     AUTO,
-    IGNORE,
-    ILLEGAL,
+    BINS_IGNORE,  // Renamed to avoid Windows macro conflict
+    BINS_ILLEGAL,  // Renamed to avoid Windows macro conflict
     DEFAULT,
-    WILDCARD,
+    BINS_WILDCARD,  // Renamed to avoid Windows macro conflict
     TRANSITION
 };
 
@@ -94,9 +94,9 @@ public:
                 bool wildcard = false)
         : ASTGEN_SUPER_CoverBin(fl)
         , m_name{name}
-        , m_type{wildcard ? VCoverBinsType::WILDCARD
-                          : (illegal ? VCoverBinsType::ILLEGAL
-                                     : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::USER))} {
+        , m_type{wildcard ? VCoverBinsType::BINS_WILDCARD
+                          : (illegal ? VCoverBinsType::BINS_ILLEGAL
+                                     : (ignore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::USER))} {
         if (rangesp) addRangesp(rangesp);
     }
     // Constructor for automatic bins
@@ -119,8 +119,8 @@ public:
                 bool illegal, bool isArray = false)
         : ASTGEN_SUPER_CoverBin(fl)
         , m_name{name}
-        , m_type{illegal ? VCoverBinsType::ILLEGAL
-                         : (ignore ? VCoverBinsType::IGNORE : VCoverBinsType::TRANSITION)}
+        , m_type{illegal ? VCoverBinsType::BINS_ILLEGAL
+                         : (ignore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::TRANSITION)}
         , m_isArray{isArray} {
         if (transp) addTransp(transp);
     }

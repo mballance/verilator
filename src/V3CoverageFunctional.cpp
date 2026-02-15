@@ -223,7 +223,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             if (!cbinp) continue;
 
             VCoverBinsType btype = cbinp->binsType();
-            if (btype != VCoverBinsType::IGNORE && btype != VCoverBinsType::ILLEGAL) { continue; }
+            if (btype != VCoverBinsType::BINS_IGNORE && btype != VCoverBinsType::BINS_ILLEGAL) { continue; }
 
             // Extract values from the bin's range expression
             if (AstNode* rangep = cbinp->rangesp()) { extractValuesFromRange(rangep, excluded); }
@@ -265,7 +265,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
             if (AstCoverBin* cbinp = VN_CAST(binp, CoverBin)) {
                 VCoverBinsType btype = cbinp->binsType();
-                if (btype != VCoverBinsType::IGNORE && btype != VCoverBinsType::ILLEGAL) {
+                if (btype != VCoverBinsType::BINS_IGNORE && btype != VCoverBinsType::BINS_ILLEGAL) {
                     return true;
                 }
             }
@@ -513,8 +513,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             m_covergroupp->addMembersp(varp);
             UINFO(4, "    Created member variable: "
                          << varName << " type=" << static_cast<int>(cbinp->binsType())
-                         << (cbinp->binsType() == VCoverBinsType::IGNORE    ? " (IGNORE)"
-                             : cbinp->binsType() == VCoverBinsType::ILLEGAL ? " (ILLEGAL)"
+                         << (cbinp->binsType() == VCoverBinsType::BINS_IGNORE    ? " (IGNORE)"
+                             : cbinp->binsType() == VCoverBinsType::BINS_ILLEGAL ? " (ILLEGAL)"
                                                                             : " (USER)")
                          << endl);
 
@@ -593,7 +593,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                        new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
 
         // For illegal_bins, add an error message
-        if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+        if (binp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
             const string errMsg = "Illegal bin '" + binp->name() + "' hit in coverpoint '"
                                   + coverpointp->name() + "'";
             AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR, errMsg,
@@ -630,8 +630,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
             // Skip default, ignore, and illegal bins
             if (cbinp->binsType() == VCoverBinsType::DEFAULT
-                || cbinp->binsType() == VCoverBinsType::IGNORE
-                || cbinp->binsType() == VCoverBinsType::ILLEGAL) {
+                || cbinp->binsType() == VCoverBinsType::BINS_IGNORE
+                || cbinp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
                 continue;
             }
 
@@ -763,7 +763,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                            new AstConst{fl, AstConst::WidthedValue{}, 32, 1}}};
 
             // For illegal_bins, add error message
-            if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+            if (binp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
                 const string errMsg = "Illegal transition bin '" + binp->name()
                                       + "' hit in coverpoint '" + coverpointp->name() + "'";
                 AstDisplay* errorp
@@ -1016,7 +1016,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                        new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
 
         // For illegal_bins, add error message
-        if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+        if (binp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
             const string errMsg = "Illegal bin hit in coverpoint '" + coverpointp->name() + "'";
             AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR, errMsg,
                                                 nullptr, nullptr};
@@ -1151,7 +1151,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                            new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
 
             // For illegal_bins, add an error message
-            if (binp->binsType() == VCoverBinsType::ILLEGAL) {
+            if (binp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
                 const string errMsg = "Illegal transition bin '" + binp->name()
                                       + "' hit in coverpoint '" + coverpointp->name() + "'";
                 AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR,
@@ -1337,7 +1337,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         if (!rangep) return nullptr;
 
         // Check if this is a wildcard bin
-        bool isWildcard = (binp->binsType() == VCoverBinsType::WILDCARD);
+        bool isWildcard = (binp->binsType() == VCoverBinsType::BINS_WILDCARD);
 
         // Build condition by OR-ing all ranges together
         AstNodeExpr* fullCondp = nullptr;
@@ -1508,10 +1508,10 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         int totalBins = 0;
         for (const BinInfo& bi : m_binInfos) {
             UINFO(6, "      Bin: " << bi.binp->name() << " type=" << (int)bi.binp->binsType()
-                                   << " IGNORE=" << (int)VCoverBinsType::IGNORE
-                                   << " ILLEGAL=" << (int)VCoverBinsType::ILLEGAL << endl);
-            if (bi.binp->binsType() != VCoverBinsType::IGNORE
-                && bi.binp->binsType() != VCoverBinsType::ILLEGAL) {
+                                   << " IGNORE=" << (int)VCoverBinsType::BINS_IGNORE
+                                   << " ILLEGAL=" << (int)VCoverBinsType::BINS_ILLEGAL << endl);
+            if (bi.binp->binsType() != VCoverBinsType::BINS_IGNORE
+                && bi.binp->binsType() != VCoverBinsType::BINS_ILLEGAL) {
                 totalBins++;
             }
         }
@@ -1566,8 +1566,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // For each regular bin, if count > 0, increment covered_count
         for (const BinInfo& bi : m_binInfos) {
             // Skip ignore_bins and illegal_bins in coverage calculation
-            if (bi.binp->binsType() == VCoverBinsType::IGNORE
-                || bi.binp->binsType() == VCoverBinsType::ILLEGAL) {
+            if (bi.binp->binsType() == VCoverBinsType::BINS_IGNORE
+                || bi.binp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
                 continue;
             }
 
@@ -1650,8 +1650,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             AstCoverCross* crossp = binInfo.crossp;
 
             // Skip illegal and ignore bins - they don't count towards coverage
-            if (binp->binsType() == VCoverBinsType::IGNORE
-                || binp->binsType() == VCoverBinsType::ILLEGAL) {
+            if (binp->binsType() == VCoverBinsType::BINS_IGNORE
+                || binp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
                 continue;
             }
 
