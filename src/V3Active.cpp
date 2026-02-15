@@ -782,8 +782,12 @@ class CovergroupSamplingVisitor final : public VNVisitor {
                 }
                 if (vscp) {
                     refp->varScopep(vscp);
-                    UINFO(9, "Fixed VarRef in SenTree: " << refp->varp()->name() << " -> "
+                    UINFO(4, "Fixed VarRef in SenTree: " << refp->varp()->name() << " -> "
                                                          << vscp->name() << endl);
+                } else {
+                    UINFO(4, "WARNING: Could not find VarScope for " << refp->varp()->name()
+                                 << " in scope " << m_scopep->name()
+                                 << " - automatic sampling may not work for internal clocks" << endl);
                 }
             }
         });
@@ -807,6 +811,9 @@ public:
         // Previously disabled due to compatibility issues with V3Timing transformations
         // The current implementation injects sampling before V3Active, allowing both modes to work
 
+        UINFO(4, "CovergroupSamplingVisitor: Starting, found " << s_covergroupEvents.size()
+                                                                << " covergroup events" << endl);
+
         // First pass: collect sample CFuncs from covergroup class scopes
         m_inFirstPass = true;
         iterate(nodep);
@@ -814,6 +821,8 @@ public:
         // Second pass: add automatic sampling to covergroup instances
         m_inFirstPass = false;
         iterate(nodep);
+        
+        UINFO(4, "CovergroupSamplingVisitor: Complete" << endl);
     }
     ~CovergroupSamplingVisitor() override = default;
 };
