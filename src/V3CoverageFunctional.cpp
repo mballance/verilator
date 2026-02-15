@@ -855,11 +855,11 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                     AstNodeExpr* minExprp = rangep->leftp();
                     AstConst* minConstp = VN_CAST(minExprp, Const);
                     bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
-                    
+
                     if (skipLowerCheck) {
                         // Only check upper bound for [0:max]
                         singleCondp = new AstLte{rangep->fileline(), exprp->cloneTree(false),
-                                                rangep->rightp()->cloneTree(false)};
+                                                 rangep->rightp()->cloneTree(false)};
                     } else {
                         singleCondp
                             = new AstAnd{rangep->fileline(),
@@ -883,11 +883,11 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                     AstNodeExpr* minExprp = inrangep->lhsp();
                     AstConst* minConstp = VN_CAST(minExprp, Const);
                     bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
-                    
+
                     if (skipLowerCheck) {
                         // Only check upper bound for [0:max]
                         singleCondp = new AstLte{inrangep->fileline(), exprp->cloneTree(false),
-                                                inrangep->rhsp()->cloneTree(false)};
+                                                 inrangep->rhsp()->cloneTree(false)};
                     } else {
                         singleCondp
                             = new AstAnd{inrangep->fileline(),
@@ -1381,7 +1381,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                 // For unsigned, skip >= 0 check as it's always true
                                 AstConst* minConstp = VN_CAST(minExprp, Const);
                                 bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
-                                
+
                                 lep = new AstLte{binp->fileline(), exprClone2p,
                                                  maxExprp->cloneTree(false)};
                                 if (skipLowerCheck) {
