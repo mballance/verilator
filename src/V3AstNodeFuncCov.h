@@ -94,9 +94,10 @@ public:
                 bool wildcard = false)
         : ASTGEN_SUPER_CoverBin(fl)
         , m_name{name}
-        , m_type{wildcard ? VCoverBinsType::BINS_WILDCARD
-                          : (illegal ? VCoverBinsType::BINS_ILLEGAL
-                                     : (ignore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::USER))} {
+        , m_type{wildcard
+                     ? VCoverBinsType::BINS_WILDCARD
+                     : (illegal ? VCoverBinsType::BINS_ILLEGAL
+                                : (ignore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::USER))} {
         if (rangesp) addRangesp(rangesp);
     }
     // Constructor for automatic bins

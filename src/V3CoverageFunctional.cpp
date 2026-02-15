@@ -223,7 +223,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             if (!cbinp) continue;
 
             VCoverBinsType btype = cbinp->binsType();
-            if (btype != VCoverBinsType::BINS_IGNORE && btype != VCoverBinsType::BINS_ILLEGAL) { continue; }
+            if (btype != VCoverBinsType::BINS_IGNORE && btype != VCoverBinsType::BINS_ILLEGAL) {
+                continue;
+            }
 
             // Extract values from the bin's range expression
             if (AstNode* rangep = cbinp->rangesp()) { extractValuesFromRange(rangep, excluded); }
@@ -265,7 +267,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
             if (AstCoverBin* cbinp = VN_CAST(binp, CoverBin)) {
                 VCoverBinsType btype = cbinp->binsType();
-                if (btype != VCoverBinsType::BINS_IGNORE && btype != VCoverBinsType::BINS_ILLEGAL) {
+                if (btype != VCoverBinsType::BINS_IGNORE
+                    && btype != VCoverBinsType::BINS_ILLEGAL) {
                     return true;
                 }
             }
@@ -515,7 +518,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                          << varName << " type=" << static_cast<int>(cbinp->binsType())
                          << (cbinp->binsType() == VCoverBinsType::BINS_IGNORE    ? " (IGNORE)"
                              : cbinp->binsType() == VCoverBinsType::BINS_ILLEGAL ? " (ILLEGAL)"
-                                                                            : " (USER)")
+                                                                                 : " (USER)")
                          << endl);
 
             // Track this bin for coverage computation with at_least value
