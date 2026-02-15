@@ -7188,10 +7188,10 @@ bins_or_options<nodep>:  // ==IEEE: bins_or_options
                         { $$ = new AstCoverBin{$<fl>2, *$2, VCoverBinsType::DEFAULT};
                           DEL($6); }
         |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
-                        { $$ = new AstCoverBin{$<fl>2, *$2, VCoverBinsType::IGNORE};
+                        { $$ = new AstCoverBin{$<fl>2, *$2, VCoverBinsType::BINS_IGNORE};
                           DEL($6); }
         |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT iffE
-                        { $$ = new AstCoverBin{$<fl>2, *$2, VCoverBinsType::ILLEGAL};
+                        { $$ = new AstCoverBin{$<fl>2, *$2, VCoverBinsType::BINS_ILLEGAL};
                           DEL($6); }
         |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' yDEFAULT ySEQUENCE iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>6, "Ignoring unsupported: cover bin 'default' 'sequence'"); DEL($7); }

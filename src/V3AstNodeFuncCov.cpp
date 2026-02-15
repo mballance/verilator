@@ -44,10 +44,10 @@ void AstCoverBin::dump(std::ostream& str) const {
     case VCoverBinsType::USER: str << "user"; break;
     case VCoverBinsType::ARRAY: str << "array"; break;
     case VCoverBinsType::AUTO: str << "auto"; break;
-    case VCoverBinsType::IGNORE: str << "ignore"; break;
-    case VCoverBinsType::ILLEGAL: str << "illegal"; break;
+    case VCoverBinsType::BINS_IGNORE: str << "ignore"; break;
+    case VCoverBinsType::BINS_ILLEGAL: str << "illegal"; break;
     case VCoverBinsType::DEFAULT: str << "default"; break;
-    case VCoverBinsType::WILDCARD: str << "wildcard"; break;
+    case VCoverBinsType::BINS_WILDCARD: str << "wildcard"; break;
     case VCoverBinsType::TRANSITION: str << "transition"; break;
     }
     if (m_isArray) str << "[]";
@@ -61,10 +61,10 @@ void AstCoverBin::dumpJson(std::ostream& str) const {
     case VCoverBinsType::USER: str << "\"user\""; break;
     case VCoverBinsType::ARRAY: str << "\"array\""; break;
     case VCoverBinsType::AUTO: str << "\"auto\""; break;
-    case VCoverBinsType::IGNORE: str << "\"ignore\""; break;
-    case VCoverBinsType::ILLEGAL: str << "\"illegal\""; break;
+    case VCoverBinsType::BINS_IGNORE: str << "\"ignore\""; break;
+    case VCoverBinsType::BINS_ILLEGAL: str << "\"illegal\""; break;
     case VCoverBinsType::DEFAULT: str << "\"default\""; break;
-    case VCoverBinsType::WILDCARD: str << "\"wildcard\""; break;
+    case VCoverBinsType::BINS_WILDCARD: str << "\"wildcard\""; break;
     case VCoverBinsType::TRANSITION: str << "\"transition\""; break;
     }
     if (m_isArray) str << ", \"isArray\": true";
