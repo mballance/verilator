@@ -9,7 +9,16 @@
 %Warning-COVERIGN: t/t_covergroup_unsup.v:102:23: Ignoring unsupported: cross iff condition
   102 |       cross a, b iff (!rst) {}
       |                       ^
-%Error: Internal Error: t/t_covergroup_unsup.v:105:20: ../V3Ast.cpp:#: Node has no back, already unlinked?
-  105 |       cross a, b { option.comment = "cross"; option.weight = 12; }
-      |                    ^~~~~~
+%Warning-COVERIGN: t/t_covergroup_unsup.v:109:24: Ignoring unsupported: coverage cross 'function' declaration
+  109 |          function void crossfunc; endfunction
+      |                        ^~~~~~~~~
+%Warning-COVERIGN: t/t_covergroup_unsup.v:110:21: Ignoring unsupported: coverage select function call
+  110 |          bins one = crossfunc();
+      |                     ^~~~~~~~~
+%Warning-COVERIGN: t/t_covergroup_unsup.v:110:10: Ignoring unsupported: explicit coverage cross bins
+  110 |          bins one = crossfunc();
+      |          ^~~~
+%Error: Internal Error: t/t_covergroup_unsup.v:109:24: ../V3Ast.cpp:#: Node has no back, already unlinked?
+  109 |          function void crossfunc; endfunction
+      |                        ^~~~~~~~~
                         ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
