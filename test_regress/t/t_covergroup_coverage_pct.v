@@ -4,7 +4,11 @@
 // any use, without warranty, 2024 by Wilson Snyder.
 // SPDX-License-Identifier: CC0-1.0
 
-module t;
+module t (/*AUTOARG*/
+   // Inputs
+   clk
+   );
+   input clk;
    
    logic [1:0] data;
    
@@ -19,9 +23,6 @@ module t;
    endgroup
    
    cg cg_inst = new;
-   
-   logic clk = 0;
-   always #5 clk = ~clk;
    
    initial begin
       // Initially no bins covered - should be 0%
