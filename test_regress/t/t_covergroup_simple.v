@@ -6,7 +6,12 @@
 
 // Test basic covergroup with simple coverpoint
 
-module t;
+module t (/*AUTOARG*/
+   // Inputs
+   clk
+   );
+   input clk;
+
    logic [7:0] addr;
    logic cmd;
 
@@ -23,9 +28,6 @@ module t;
    endgroup
 
    cg cg_inst = new;
-
-   logic clk = 0;
-   always #5 clk = ~clk;
 
    initial begin
       // Sample some values
