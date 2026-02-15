@@ -7263,13 +7263,19 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                           if ($6) {  // cross_body items (options, bins)
                               for (AstNode* itemp = $6; itemp; ) {
                                   AstNode* nextp = itemp->nextp();
-                                  itemp->unlinkFrBack();
                                   if (AstCoverOption* optp = VN_CAST(itemp, CoverOption)) {
+                                      itemp->unlinkFrBack();
                                       nodep->addOptionsp(optp);
                                   } else if (AstCoverCrossBins* binp = VN_CAST(itemp, CoverCrossBins)) {
+                                      itemp->unlinkFrBack();
                                       nodep->addBinsp(binp);
+                                  } else if (VN_IS(itemp, CgOptionAssign)) {
+                                      // AstCgOptionAssign nodes are attached to the covergroup member list
+                                      // Don't delete them here - V3Width will process them later
+                                      // Just skip them in the cross body
                                   } else {
-                                      itemp->v3warn(COVERIGN, "Ignoring unsupported cross body item");
+                                      // Delete other unsupported items
+                                      itemp->unlinkFrBack();
                                       VL_DO_DANGLING(itemp->deleteTree(), itemp);
                                   }
                                   itemp = nextp;
@@ -7287,13 +7293,19 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                           if ($4) {  // cross_body items (options, bins)
                               for (AstNode* itemp = $4; itemp; ) {
                                   AstNode* nextp = itemp->nextp();
-                                  itemp->unlinkFrBack();
                                   if (AstCoverOption* optp = VN_CAST(itemp, CoverOption)) {
+                                      itemp->unlinkFrBack();
                                       nodep->addOptionsp(optp);
                                   } else if (AstCoverCrossBins* binp = VN_CAST(itemp, CoverCrossBins)) {
+                                      itemp->unlinkFrBack();
                                       nodep->addBinsp(binp);
+                                  } else if (VN_IS(itemp, CgOptionAssign)) {
+                                      // AstCgOptionAssign nodes are attached to the covergroup member list
+                                      // Don't delete them here - V3Width will process them later
+                                      // Just skip them in the cross body
                                   } else {
-                                      itemp->v3warn(COVERIGN, "Ignoring unsupported cross body item");
+                                      // Delete other unsupported items
+                                      itemp->unlinkFrBack();
                                       VL_DO_DANGLING(itemp->deleteTree(), itemp);
                                   }
                                   itemp = nextp;
