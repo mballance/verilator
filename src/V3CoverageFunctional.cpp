@@ -851,12 +851,23 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                      new AstLteS{rangep->fileline(), exprp->cloneTree(false),
                                                  rangep->rightp()->cloneTree(false)}};
                 } else {
-                    singleCondp
-                        = new AstAnd{rangep->fileline(),
-                                     new AstGte{rangep->fileline(), exprp->cloneTree(false),
-                                                rangep->leftp()->cloneTree(false)},
-                                     new AstLte{rangep->fileline(), exprp->cloneTree(false),
-                                                rangep->rightp()->cloneTree(false)}};
+                    // For unsigned, skip >= 0 check as it's always true
+                    AstNodeExpr* minExprp = rangep->leftp();
+                    AstConst* minConstp = VN_CAST(minExprp, Const);
+                    bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
+                    
+                    if (skipLowerCheck) {
+                        // Only check upper bound for [0:max]
+                        singleCondp = new AstLte{rangep->fileline(), exprp->cloneTree(false),
+                                                rangep->rightp()->cloneTree(false)};
+                    } else {
+                        singleCondp
+                            = new AstAnd{rangep->fileline(),
+                                         new AstGte{rangep->fileline(), exprp->cloneTree(false),
+                                                    rangep->leftp()->cloneTree(false)},
+                                         new AstLte{rangep->fileline(), exprp->cloneTree(false),
+                                                    rangep->rightp()->cloneTree(false)}};
+                    }
                 }
             } else if (AstInsideRange* inrangep = VN_CAST(valp, InsideRange)) {
                 // InsideRange [min:max]: similar to Range (use signed if expr is signed)
@@ -868,12 +879,23 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                      new AstLteS{inrangep->fileline(), exprp->cloneTree(false),
                                                  inrangep->rhsp()->cloneTree(false)}};
                 } else {
-                    singleCondp
-                        = new AstAnd{inrangep->fileline(),
-                                     new AstGte{inrangep->fileline(), exprp->cloneTree(false),
-                                                inrangep->lhsp()->cloneTree(false)},
-                                     new AstLte{inrangep->fileline(), exprp->cloneTree(false),
-                                                inrangep->rhsp()->cloneTree(false)}};
+                    // For unsigned, skip >= 0 check as it's always true
+                    AstNodeExpr* minExprp = inrangep->lhsp();
+                    AstConst* minConstp = VN_CAST(minExprp, Const);
+                    bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
+                    
+                    if (skipLowerCheck) {
+                        // Only check upper bound for [0:max]
+                        singleCondp = new AstLte{inrangep->fileline(), exprp->cloneTree(false),
+                                                inrangep->rhsp()->cloneTree(false)};
+                    } else {
+                        singleCondp
+                            = new AstAnd{inrangep->fileline(),
+                                         new AstGte{inrangep->fileline(), exprp->cloneTree(false),
+                                                    inrangep->lhsp()->cloneTree(false)},
+                                         new AstLte{inrangep->fileline(), exprp->cloneTree(false),
+                                                    inrangep->rhsp()->cloneTree(false)}};
+                    }
                 }
             } else {
                 // Unknown node type - try to handle as expression
@@ -1354,13 +1376,23 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                                   minExprp->cloneTree(false)};
                                 lep = new AstLteS{binp->fileline(), exprClone2p,
                                                   maxExprp->cloneTree(false)};
+                                rangeCondp = new AstAnd{binp->fileline(), gep, lep};
                             } else {
-                                gep = new AstGte{binp->fileline(), exprClonep,
-                                                 minExprp->cloneTree(false)};
+                                // For unsigned, skip >= 0 check as it's always true
+                                AstConst* minConstp = VN_CAST(minExprp, Const);
+                                bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
+                                
                                 lep = new AstLte{binp->fileline(), exprClone2p,
                                                  maxExprp->cloneTree(false)};
+                                if (skipLowerCheck) {
+                                    // Only check upper bound for [0:max]
+                                    rangeCondp = lep;
+                                } else {
+                                    gep = new AstGte{binp->fileline(), exprClonep,
+                                                     minExprp->cloneTree(false)};
+                                    rangeCondp = new AstAnd{binp->fileline(), gep, lep};
+                                }
                             }
-                            rangeCondp = new AstAnd{binp->fileline(), gep, lep};
                         }
                     }
                 }
