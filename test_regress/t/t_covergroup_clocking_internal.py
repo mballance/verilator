@@ -21,7 +21,6 @@ test.scenarios('vlt')
 # Workaround: Use module input clocks (see t_covergroup_auto_sample.v)
 test.compile(verilator_flags2=["--timing"])
 
-test.execute(fails=True,
-             expect=r'%Error: .*Timeout')
+test.execute(fails=True, expect=r'%Error: .*Timeout')
 
 test.passes()
