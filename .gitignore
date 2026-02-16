@@ -46,6 +46,8 @@ verilator_coverage_bin*
 /.idea/
 /cmake-build-*/
 /obj_coverage/
+/obj_dir_cov/
+/obj_test_*/
 /test_regress/snapshot/
 xmverilog.*
 xrun.history
