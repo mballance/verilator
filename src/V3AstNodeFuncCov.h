@@ -14,7 +14,8 @@
 //
 //*************************************************************************
 //
-// This file contains AST nodes for SystemVerilog functional coverage (IEEE 1800-2023 Section 19)
+// This file contains AST nodes for SystemVerilog functional coverage
+// (IEEE 1800-2023 Section 19)
 //
 //*************************************************************************
 
