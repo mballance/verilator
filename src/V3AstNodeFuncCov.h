@@ -65,6 +65,10 @@ public:
 // Must be in order: CoverBin, CoverCrossBins, CoverOption, CoverSelectExpr, 
 //                   CoverTransItem, CoverTransSet, Covergroup, CoverpointRef, CoverCross, Coverpoint
 
+// Forward declarations for types used in constructors
+class AstCoverTransSet;
+class AstCoverSelectExpr;
+
 class AstCoverBin final : public AstNode {
     // @astgen op1 := rangesp : List[AstNode]
     // @astgen op2 := iffp : Optional[AstNodeExpr]
