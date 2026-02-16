@@ -90,14 +90,13 @@ class AstCoverBin final : public AstNode {
     bool m_isArray = false;
 
 public:
-    AstCoverBin(FileLine* fl, const string& name, AstNode* rangesp, bool ignore, bool illegal,
-                bool wildcard = false)
+    AstCoverBin(FileLine* fl, const string& name, AstNode* rangesp, bool isIgnore, bool isIllegal,
+                bool isWildcard = false)
         : ASTGEN_SUPER_CoverBin(fl)
         , m_name{name}
-        , m_type{wildcard
-                     ? VCoverBinsType::BINS_WILDCARD
-                     : (illegal ? VCoverBinsType::BINS_ILLEGAL
-                                : (ignore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::USER))} {
+        , m_type{isWildcard ? VCoverBinsType::BINS_WILDCARD
+                          : (isIllegal ? VCoverBinsType::BINS_ILLEGAL
+                                     : (isIgnore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::USER))} {
         if (rangesp) addRangesp(rangesp);
     }
     // Constructor for automatic bins
@@ -116,12 +115,12 @@ public:
         // DEFAULT bins have no ranges - they catch everything not in other bins
     }
     // Constructor for transition bins
-    AstCoverBin(FileLine* fl, const string& name, AstCoverTransSet* transp, bool ignore,
-                bool illegal, bool isArray = false)
+    AstCoverBin(FileLine* fl, const string& name, AstCoverTransSet* transp, bool isIgnore,
+                bool isIllegal, bool isArray = false)
         : ASTGEN_SUPER_CoverBin(fl)
         , m_name{name}
-        , m_type{illegal ? VCoverBinsType::BINS_ILLEGAL
-                         : (ignore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::TRANSITION)}
+        , m_type{isIllegal ? VCoverBinsType::BINS_ILLEGAL
+                         : (isIgnore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::TRANSITION)}
         , m_isArray{isArray} {
         if (transp) addTransp(transp);
     }
