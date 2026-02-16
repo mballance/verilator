@@ -1,5 +1,4 @@
-#!/usr/bin/env perl
-if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); die; }
+#!/usr/bin/env python3
 # DESCRIPTION: Verilator: Verilog Test driver/expect definition
 #
 # Copyright 2024 by Wilson Snyder. This program is free software; you
@@ -8,15 +7,12 @@ if (!$::Driver) { use FindBin; exec("$FindBin::Bin/bootstrap.pl", @ARGV, $0); di
 # Version 2.0.
 # SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0
 
-scenarios(simulator => 1);
+import vltest_bootstrap
 
-compile(
-    verilator_flags2 => ["--coverage-user", "--exe", "t/t_covergroup_cross_large_main.cpp"],
-    );
+test.scenarios('simulator')
+test.compile(
+    verilator_flags2=["--coverage-user", "--exe", "t/t_covergroup_cross_large_main.cpp"]
+)
+test.execute(check_finished=True)
 
-execute(
-    check_finished => 1,
-    );
-
-ok(1);
-1;
+test.passes()
