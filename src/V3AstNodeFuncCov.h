@@ -95,8 +95,9 @@ public:
         : ASTGEN_SUPER_CoverBin(fl)
         , m_name{name}
         , m_type{isWildcard ? VCoverBinsType::BINS_WILDCARD
-                          : (isIllegal ? VCoverBinsType::BINS_ILLEGAL
-                                     : (isIgnore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::USER))} {
+                            : (isIllegal ? VCoverBinsType::BINS_ILLEGAL
+                                         : (isIgnore ? VCoverBinsType::BINS_IGNORE
+                                                     : VCoverBinsType::USER))} {
         if (rangesp) addRangesp(rangesp);
     }
     // Constructor for automatic bins
@@ -120,7 +121,7 @@ public:
         : ASTGEN_SUPER_CoverBin(fl)
         , m_name{name}
         , m_type{isIllegal ? VCoverBinsType::BINS_ILLEGAL
-                         : (isIgnore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::TRANSITION)}
+                           : (isIgnore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::TRANSITION)}
         , m_isArray{isArray} {
         if (transp) addTransp(transp);
     }
