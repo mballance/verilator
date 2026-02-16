@@ -396,6 +396,7 @@ add_custom_command(
     ARGS
         ${ASTGEN} -I "${srcdir}" --astdef V3AstNodeDType.h --astdef
         V3AstNodeExpr.h --astdef V3AstNodeOther.h --astdef V3AstNodeStmt.h
+        --astdef V3AstNodeFuncCov.h
         --dfgdef V3DfgVertices.h --classes
 )
 list(
@@ -508,6 +509,7 @@ foreach(astgen_name ${ASTGENERATED_NAMES})
         ARGS
             ${ASTGEN} -I "${srcdir}" --astdef V3AstNodeDType.h --astdef
             V3AstNodeExpr.h --astdef V3AstNodeOther.h --astdef V3AstNodeStmt.h
+            --astdef V3AstNodeFuncCov.h
             --dfgdef V3DfgVertices.h ${astgen_name}.cpp
     )
     list(APPEND GENERATED_FILES ${astgen_name}__gen.cpp)
