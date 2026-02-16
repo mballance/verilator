@@ -117,12 +117,12 @@ public:
     }
     // Constructor for transition bins
     AstCoverBin(FileLine* fl, const string& name, AstCoverTransSet* transp, bool isIgnore,
-                bool isIllegal, bool isArray = false)
+                bool isIllegal, bool isArrayBin = false)
         : ASTGEN_SUPER_CoverBin(fl)
         , m_name{name}
         , m_type{isIllegal ? VCoverBinsType::BINS_ILLEGAL
                            : (isIgnore ? VCoverBinsType::BINS_IGNORE : VCoverBinsType::TRANSITION)}
-        , m_isArray{isArray} {
+        , m_isArray{isArrayBin} {
         if (transp) addTransp(transp);
     }
     ASTGEN_MEMBERS_AstCoverBin;
