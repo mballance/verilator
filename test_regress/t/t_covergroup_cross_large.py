@@ -10,9 +10,7 @@
 import vltest_bootstrap
 
 test.scenarios('simulator')
-test.compile(
-    verilator_flags2=["--coverage-user", "--exe", "t/t_covergroup_cross_large_main.cpp"]
-)
+test.compile(verilator_flags2=["--coverage-user", "--exe", "t/t_covergroup_cross_large_main.cpp"])
 test.execute(check_finished=True)
 
 test.passes()
