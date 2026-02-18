@@ -1296,8 +1296,10 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 }
 
                 if (!foundCpp) {
-                    refp->v3warn(E_UNSUPPORTED,
-                                 "Cross references unknown coverpoint: " + refp->name());
+                    refp->v3warn(COVERIGN,
+                                 "Ignoring unsupported: cross references unknown coverpoint: " + refp->name());
+                    // Delete the entire cross since we can't generate it
+                    VL_DO_DANGLING(crossp->unlinkFrBack()->deleteTree(), crossp);
                     return;
                 }
 
