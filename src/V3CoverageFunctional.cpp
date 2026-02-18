@@ -1489,14 +1489,13 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         if (getInstCoveragep) { generateCoverageMethodBody(getInstCoveragep); }
 
         // Generate code for get_coverage() (type-level)
-        // NOTE: Full type-level coverage requires instance tracking infrastructure
-        // For now, return 0.0 as a placeholder
+        // Type-level coverage with static get_coverage() is not yet supported  
         if (getCoveragep) {
+            getCoveragep->v3warn(COVERIGN,
+                                "Ignoring unsupported: Type-level static covergroup method get_coverage() is not yet fully implemented");
+            // Generate placeholder that returns 0.0
             AstVar* returnVarp = VN_AS(getCoveragep->fvarp(), Var);
             if (returnVarp) {
-                // TODO: Implement proper type-level coverage aggregation
-                // This requires tracking all instances and averaging their coverage
-                // For now, return 0.0
                 getCoveragep->addStmtsp(new AstAssign{
                     getCoveragep->fileline(),
                     new AstVarRef{getCoveragep->fileline(), returnVarp, VAccess::WRITE},
