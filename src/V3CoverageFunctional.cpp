@@ -1729,16 +1729,36 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
             // Extract and store the clocking event from AstCovergroup node
             // The parser creates this node to preserve the event information
+            bool hasUnsupportedEvent = false;
             for (AstNode* itemp = nodep->membersp(); itemp;) {
                 AstNode* nextp = itemp->nextp();
                 if (AstCovergroup* const cgp = VN_CAST(itemp, Covergroup)) {
                     // Store the event in the global map for V3Active to retrieve later
                     if (cgp->eventp()) {
-                        // Access the global map defined in V3Active.cpp
-                        extern std::unordered_map<const AstClass*, AstSenTree*> s_covergroupEvents;
-                        s_covergroupEvents[nodep] = cgp->eventp();
-                        cgp->eventp()->unlinkFrBack();  // Unlink to prevent deletion
-                        UINFO(4, "Stored clocking event for covergroup " << nodep->name() << endl);
+                        // Check if the clocking event references a member variable (unsupported)
+                        // Clocking events should be on signals/nets, not class members
+                        bool eventUnsupported = false;
+                        for (AstNode* senp = cgp->eventp()->sensesp(); senp; senp = senp->nextp()) {
+                            if (AstSenItem* const senItemp = VN_CAST(senp, SenItem)) {
+                                if (AstVarRef* const varrefp = VN_CAST(senItemp->sensp(), VarRef)) {
+                                    if (varrefp->varp() && varrefp->varp()->isClassMember()) {
+                                        cgp->v3warn(COVERIGN,
+                                                   "Ignoring unsupported: covergroup clocking event on member variable");
+                                        eventUnsupported = true;
+                                        hasUnsupportedEvent = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (!eventUnsupported) {
+                            // Access the global map defined in V3Active.cpp
+                            extern std::unordered_map<const AstClass*, AstSenTree*> s_covergroupEvents;
+                            s_covergroupEvents[nodep] = cgp->eventp();
+                            cgp->eventp()->unlinkFrBack();  // Unlink to prevent deletion
+                            UINFO(4, "Stored clocking event for covergroup " << nodep->name() << endl);
+                        }
                     }
                     // Remove the AstCovergroup node - it's just a holder for the event
                     cgp->unlinkFrBack();
@@ -1746,6 +1766,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 }
                 itemp = nextp;
             }
+            
+            // If covergroup has unsupported clocking event, skip processing it
+            if (hasUnsupportedEvent) return;
 
             // Find the sample() method and constructor
             int findCount = 0;
