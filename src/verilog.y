@@ -7272,8 +7272,9 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                                       // Don't delete them here - V3Width will process them later
                                       // Just skip them in the cross body
                                   } else if (VN_IS(itemp, Func)) {
-                                      // Function declarations in cross bodies are unsupported but
-                                      // shouldn't cause internal errors. Just skip them.
+                                      // Function declarations in cross bodies are unsupported
+                                      // Skip them - they will be deleted when bins expressions referencing
+                                      // them are deleted via DEL() in the cross_body_item rules
                                   } else {
                                       // Delete other unsupported items
                                       itemp->unlinkFrBack();
@@ -7305,8 +7306,9 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                                       // Don't delete them here - V3Width will process them later
                                       // Just skip them in the cross body
                                   } else if (VN_IS(itemp, Func)) {
-                                      // Function declarations in cross bodies are unsupported but
-                                      // shouldn't cause internal errors. Just skip them.
+                                      // Function declarations in cross bodies are unsupported
+                                      // Skip them - they will be deleted when bins expressions referencing
+                                      // them are deleted via DEL() in the cross_body_item rules
                                   } else {
                                       // Delete other unsupported items
                                       itemp->unlinkFrBack();
@@ -7354,7 +7356,7 @@ cross_body_itemList<nodep>:  // IEEE: part of cross_body
 
 cross_body_item<nodep>:  // ==IEEE: cross_body_item
                 function_declaration
-                        { $$ = $1; BBCOVERIGN($1->fileline(), "Ignoring unsupported: coverage cross 'function' declaration"); }
+                        { $$ = nullptr; BBCOVERIGN($1->fileline(), "Ignoring unsupported: coverage cross 'function' declaration"); DEL($1); }
         //                      // IEEE: bins_selection_or_option
         |       coverage_option ';'                     { $$ = $1; }
         //                      // IEEE: bins_selection - for now, we ignore explicit cross bins
