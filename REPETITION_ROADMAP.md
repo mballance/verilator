@@ -2,7 +2,7 @@
 
 ## Current Status (2026-02-09)
 
-✅ **Multi-value sequences COMPLETE**
+ **Multi-value sequences COMPLETE**
 - N-value transitions: `bins t = (1 => 2 => 3 => ...);`
 - State machine with restart/reset logic
 - Tests passing with 100% coverage
@@ -14,12 +14,12 @@ Three repetition operators remain from IEEE 1800-2023 Section 19.5.2:
 
 ### 1. Consecutive `[*]` - "Repeat N times in a row"
 **Examples:**
-- `bins t = (1 => 2 [* 3] => 3);` → matches: 1, 2, 2, 2, 3
-- `bins t = (5 [* 2:4]);` → matches: 5,5 or 5,5,5 or 5,5,5,5
+- `bins t = (1 => 2 [* 3] => 3);`  matches: 1, 2, 2, 2, 3
+- `bins t = (5 [* 2:4]);`  matches: 5,5 or 5,5,5 or 5,5,5,5
 
-**Effort:** 3-4 days  
-**Complexity:** Medium  
-**Risk:** Low  
+**Effort:** 3-4 days
+**Complexity:** Medium
+**Risk:** Low
 **Value:** **HIGH** (80% of remaining use cases)
 
 **Why prioritize:**
@@ -30,13 +30,13 @@ Three repetition operators remain from IEEE 1800-2023 Section 19.5.2:
 
 ### 2. Goto `[->]` - "See value N times, any gaps"
 **Examples:**
-- `bins t = (1 => 2 [-> 3] => 3);` → matches: 1, 2, X, 2, Y, 2, 3
+- `bins t = (1 => 2 [-> 3] => 3);`  matches: 1, 2, X, 2, Y, 2, 3
 - Gaps allowed between occurrences
 - Next value MUST immediately follow last occurrence
 
-**Effort:** 4-5 days  
-**Complexity:** Medium-High  
-**Risk:** Medium  
+**Effort:** 4-5 days
+**Complexity:** Medium-High
+**Risk:** Medium
 **Value:** Medium
 
 **Why defer:**
@@ -46,13 +46,13 @@ Three repetition operators remain from IEEE 1800-2023 Section 19.5.2:
 
 ### 3. Nonconsecutive `[=]` - "See value N times, gaps everywhere"
 **Examples:**
-- `bins t = (1 => 2 [= 3] => 3);` → matches: 1, 2, X, 2, Y, 2, Z, 3
+- `bins t = (1 => 2 [= 3] => 3);`  matches: 1, 2, X, 2, Y, 2, Z, 3
 - Most permissive operator
 - Gaps allowed even after final occurrence
 
-**Effort:** 4-5 days  
-**Complexity:** Medium-High  
-**Risk:** Medium  
+**Effort:** 4-5 days
+**Complexity:** Medium-High
+**Risk:** Medium
 **Value:** Medium
 
 **Why defer:**
@@ -62,17 +62,17 @@ Three repetition operators remain from IEEE 1800-2023 Section 19.5.2:
 
 ## Infrastructure Already In Place
 
-✅ **Parser support complete**
+ **Parser support complete**
 - Grammar recognizes all repetition syntax
 - AST nodes created with VTransRepType enum
 - repMinp/repMaxp fields for counts/ranges
 
-✅ **State machine framework working**
+ **State machine framework working**
 - Multi-value sequences use case/switch structure
 - State variables and counters architecture proven
 - Restart/reset logic patterns established
 
-❌ **Code generation missing**
+ **Code generation missing**
 - Need counter variables for repetitions
 - Need state machine extensions for counting
 - Need range checking logic (min/max)
@@ -82,14 +82,14 @@ Three repetition operators remain from IEEE 1800-2023 Section 19.5.2:
 ### Recommended: Implement Consecutive `[*]` Only
 
 **Rationale:**
-1. Highest value-to-effort ratio (3-4 days → 80% of use cases)
+1. Highest value-to-effort ratio (3-4 days  80% of use cases)
 2. Lowest risk (clean semantics, straightforward implementation)
 3. Natural next step after multi-value sequences
 4. Users can provide feedback on whether others are needed
 
 **Alternative: Full Implementation (All Three)**
 
-**Effort:** 11-14 days (2-3 weeks)  
+**Effort:** 11-14 days (2-3 weeks)
 **Value:** Complete IEEE 1800 compliance for transition bins
 
 **When to do this:**
@@ -101,9 +101,9 @@ Three repetition operators remain from IEEE 1800-2023 Section 19.5.2:
 
 ### 1. Add Counter Variables
 ```cpp
-AstVar* createRepetitionCounter(AstCoverpoint* coverpointp, 
+AstVar* createRepetitionCounter(AstCoverpoint* coverpointp,
                                 AstCoverBin* binp, size_t itemIndex) {
-    string varName = "__Vrepcnt_" + coverpointp->name() + "_" + 
+    string varName = "__Vrepcnt_" + coverpointp->name() + "_" +
                      binp->name() + "_" + std::to_string(itemIndex);
     // 8-bit counter (max 255 repetitions)
     return new AstVar{..., VFlagLogicPacked{}, 8};
@@ -151,21 +151,21 @@ case STATE_N:
 ## Risk Assessment
 
 **Shipping without repetitions:**
-- ✅ Risk: LOW
-- ✅ Workaround: Users can split into multiple bins
-- ✅ Coverage: 90%+ of real-world use cases met
+-  Risk: LOW
+-  Workaround: Users can split into multiple bins
+-  Coverage: 90%+ of real-world use cases met
 
 **Implementing consecutive only:**
-- ✅ Risk: LOW
-- ✅ Reward: HIGH
-- ✅ Time: 3-4 days
-- ⚠️ May create expectation for others
+-  Risk: LOW
+-  Reward: HIGH
+-  Time: 3-4 days
+-  May create expectation for others
 
 **Implementing all three:**
-- ⚠️ Risk: MEDIUM (more complexity, more edge cases)
-- ✅ Reward: HIGH (full compliance)
-- ⚠️ Time: 2-3 weeks
-- ✅ Complete solution
+-  Risk: MEDIUM (more complexity, more edge cases)
+-  Reward: HIGH (full compliance)
+-  Time: 2-3 weeks
+-  Complete solution
 
 ## Recommendation
 

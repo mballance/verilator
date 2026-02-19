@@ -33,13 +33,13 @@ FAILED_TESTS=()
 
 for test in "${TESTS[@]}"; do
     echo -n "Testing $test... "
-    
+
     # Run just this one test
     if cd test_regress && python3 driver.py --vlt --quiet --stop t/${test}.v >/dev/null 2>&1; then
-        echo "✅ PASS"
+        echo " PASS"
         ((PASSED++))
     else
-        echo "❌ FAIL"
+        echo " FAIL"
         ((FAILED++))
         FAILED_TESTS+=("$test")
     fi

@@ -9,9 +9,9 @@ module t (/*AUTOARG*/
    clk
    );
    input clk;
-   
+
    logic [1:0] data;
-   
+
    // Covergroup with 4 bins
    covergroup cg @(posedge clk);
       cp: coverpoint data {
@@ -21,16 +21,16 @@ module t (/*AUTOARG*/
          bins high = {2'b11};
       }
    endgroup
-   
+
    cg cg_inst = new;
-   
+
    initial begin
       // Initially no bins covered - should be 0%
       real cov;
       cov = cg_inst.get_inst_coverage();
       $display("Coverage after 0 samples: %f", cov);
       if (cov != 0.0) $stop;
-      
+
       // Cover 1 bin (low) - should be 25%
       @(posedge clk);
       data = 2'b00;
@@ -41,7 +41,7 @@ module t (/*AUTOARG*/
          $display("%%Error: Expected 25%%, got %f", cov);
          $stop;
       end
-      
+
       // Cover 2nd bin (mid1) - should be 50%
       @(posedge clk);
       data = 2'b01;
@@ -52,7 +52,7 @@ module t (/*AUTOARG*/
          $display("%%Error: Expected 50%%, got %f", cov);
          $stop;
       end
-      
+
       // Cover 3rd bin (mid2) - should be 75%
       @(posedge clk);
       data = 2'b10;
@@ -63,7 +63,7 @@ module t (/*AUTOARG*/
          $display("%%Error: Expected 75%%, got %f", cov);
          $stop;
       end
-      
+
       // Cover 4th bin (high) - should be 100%
       @(posedge clk);
       data = 2'b11;
@@ -74,9 +74,9 @@ module t (/*AUTOARG*/
          $display("%%Error: Expected 100%%, got %f", cov);
          $stop;
       end
-      
+
       $write("*-* All Finished *-*\n");
       $finish;
    end
-   
+
 endmodule

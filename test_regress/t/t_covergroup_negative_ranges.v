@@ -12,7 +12,7 @@ module t (/*AUTOARG*/
    input clk;
 
    int signed value;
-   
+
    /* verilator lint_off CMPCONST */
    covergroup cg;
       cp_neg: coverpoint value {
@@ -30,10 +30,10 @@ module t (/*AUTOARG*/
 
    always @(posedge clk) begin
       cyc <= cyc + 1;
-      
+
       case (cyc)
         0: value <= -50;    // Hit negative bin
-        1: value <= 0;      // Hit zero bin  
+        1: value <= 0;      // Hit zero bin
         2: value <= 50;     // Hit positive bin
         3: value <= -5;     // Hit mixed bin (also negative)
         4: value <= 5;      // Hit mixed bin (also positive)
@@ -42,7 +42,7 @@ module t (/*AUTOARG*/
               real cov;
               cov = cg_inst.get_inst_coverage();
               $display("Coverage with negative ranges: %f%%", cov);
-              
+
               // All 4 bins should be hit = 100%
               if (cov >= 99.0) begin
                  $write("*-* All Finished *-*\n");
@@ -54,9 +54,9 @@ module t (/*AUTOARG*/
            end
         end
       endcase
-      
+
       cg_inst.sample();
-      
+
       if (cyc > 10) begin
          $display("ERROR: Test timed out");
          $stop;

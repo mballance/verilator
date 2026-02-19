@@ -7,7 +7,7 @@ module t (/*AUTOARG*/
    clk
    );
    input clk;
-   
+
    logic [2:0] state;
 
    covergroup cg;
@@ -18,12 +18,12 @@ module t (/*AUTOARG*/
    endgroup
 
    cg cg_inst = new;
-   
+
    int cyc = 0;
-   
+
    always @(posedge clk) begin
       cyc <= cyc + 1;
-      
+
       case (cyc)
         0: state <= 0;
         1: state <= 1;  // 0 => 1 (hits trans_array[0=>1])
@@ -42,9 +42,9 @@ module t (/*AUTOARG*/
            end
         end
       endcase
-      
+
       cg_inst.sample();
-      
+
       if (cyc > 10) begin
          $display("ERROR: Test timed out");
          $stop;

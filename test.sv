@@ -9,10 +9,9 @@ module top;
   cg cg_i;
 
   initial begin
-	  cg_i = new();
-	  cg_i.sample(1, 2);
-	  cg_i.sample(100, 20);
+      cg_i = new();
+      cg_i.sample(1, 2);
+      cg_i.sample(100, 20);
   end
 
 endmodule
-

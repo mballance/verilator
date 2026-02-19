@@ -4,12 +4,12 @@
 
 **40/56 tests PASSING (71.4%)**
 - 9 tests are `_bad` tests (expected to fail) - excluded from count
-- All `t_funccov_*` tests: **18/18 PASSING (100%)** ✅
+- All `t_funccov_*` tests: **18/18 PASSING (100%)**
 - `t_covergroup_*` tests: **22/38 PASSING (57.9%)**
 
 ## Test Breakdown
 
-### ✅ PASSING Tests (40)
+###  PASSING Tests (40)
 
 #### All funccov tests (18/18):
 - t_funccov_array_bins
@@ -34,7 +34,7 @@
 
 #### covergroup tests (22/38):
 - t_covergroup_args (compile-only)
-- t_covergroup_auto_sample ⭐ (fixed with harness)
+- t_covergroup_auto_sample  (fixed with harness)
 - t_covergroup_bins_advanced
 - t_covergroup_bins_default_illegal
 - t_covergroup_cross_3way
@@ -43,7 +43,7 @@
 - t_covergroup_cross_simple
 - t_covergroup_cross_small
 - t_covergroup_dynamic
-- t_covergroup_empty ⭐ (fixed with harness)
+- t_covergroup_empty  (fixed with harness)
 - t_covergroup_get_coverage (compile-only)
 - t_covergroup_iff (compile-only)
 - t_covergroup_in_class (compile-only)
@@ -55,7 +55,7 @@
 - t_covergroup_trans_simple
 - t_covergroup_with_sample_zeroargs (compile-only)
 
-### ❌ FAILING Tests (16)
+###  FAILING Tests (16)
 
 #### Verilator Failures (14) - Missing Language Features:
 1. **t_covergroup_coverage_pct** - coverage percentage features
@@ -79,7 +79,7 @@
 
 ## Feature Coverage Assessment
 
-### ✅ Fully Working Features:
+###  Fully Working Features:
 - Basic coverpoints and bins
 - Cross coverage (2-way, 3-way, 4-way)
 - Bin types: default, ignore, illegal, wildcard
@@ -92,11 +92,11 @@
 - Basic transitions
 - Covergroups in classes
 
-### ⚠️ Partially Working:
+###  Partially Working:
 - Automatic bins (works in funccov, issues in covergroup)
 - Sample arguments (zero args works, others fail)
 
-### ❌ Not Yet Implemented:
+###  Not Yet Implemented:
 - Covergroup inheritance/extends
 - Sample with arguments (non-zero)
 - Advanced transition features (3-value, ranges, restart)
@@ -108,7 +108,7 @@
 **Before merge:** 6/56 passing (10.7%)
 **After merge + fixes:** 40/56 passing (71.4%)
 
-**Improvement: +34 tests, +60.7 percentage points** 🎉
+**Improvement: +34 tests, +60.7 percentage points**
 
 The merge from origin/mballance/funccov brought significant improvements, particularly:
 - All funccov tests now pass

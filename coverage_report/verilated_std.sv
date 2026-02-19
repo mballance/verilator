@@ -26,7 +26,7 @@
         //
         // The following keywords from this file are hardcoded for detection in the parser:
         // "mailbox", "process", "randomize", "semaphore", "std"
-        
+
         // verilator lint_off DECLFILENAME
         // verilator lint_off TIMESCALEMOD
         // verilator lint_off UNUSEDSIGNAL
@@ -37,15 +37,15 @@
           );
             protected int m_bound;
             protected T m_queue[$];
-        
+
             function new(int bound = 0);
               m_bound = bound;
             endfunction
-        
+
             function int num();
               return m_queue.size();
             endfunction
-        
+
             task put(T message);
         `ifdef VERILATOR_TIMING
               while (m_bound != 0 && m_queue.size() >= m_bound)  //
@@ -53,7 +53,7 @@
               m_queue.push_back(message);
         `endif
             endtask
-        
+
             function int try_put(T message);
               if (m_bound == 0 || num() < m_bound) begin
                 m_queue.push_back(message);
@@ -61,7 +61,7 @@
               end
               return 0;
             endfunction
-        
+
             task get(ref T message);
         `ifdef VERILATOR_TIMING
               while (m_queue.size() == 0) begin
@@ -70,7 +70,7 @@
               message = m_queue.pop_front();
         `endif
             endtask
-        
+
             function int try_get(ref T message);
               if (num() > 0) begin
                 message = m_queue.pop_front();
@@ -78,7 +78,7 @@
               end
               return 0;
             endfunction
-        
+
             task peek(ref T message);
         `ifdef VERILATOR_TIMING
               while (m_queue.size() == 0) begin
@@ -87,7 +87,7 @@
               message = m_queue[0];
         `endif
             endtask
-        
+
             function int try_peek(ref T message);
               if (num() > 0) begin
                 message = m_queue[0];
@@ -96,19 +96,19 @@
               return 0;
             endfunction
           endclass
-        
+
           // IEEE 1800-specified standard "semaphore"
           class semaphore;
             protected int m_keyCount;
-        
+
 %000000     function new(int keyCount = 0);
 %000000       m_keyCount = keyCount;
             endfunction
-        
+
 %000000     function void put(int keyCount = 1);
 %000000       m_keyCount += keyCount;
             endfunction
-        
+
 %000000     task get(int keyCount = 1);
         `ifdef VERILATOR_TIMING
 %000000       while (m_keyCount < keyCount) begin
@@ -117,7 +117,7 @@
 %000000       m_keyCount -= keyCount;
         `endif
             endtask
-        
+
 %000000     function int try_get(int keyCount = 1);
 %000000       if (m_keyCount >= keyCount) begin
 %000000         m_keyCount -= keyCount;
@@ -126,7 +126,7 @@
 %000000       return 0;
             endfunction
           endclass
-        
+
           // IEEE 1800-specified standard "process"
 %000000   class process;
             typedef enum {
@@ -136,10 +136,10 @@
               SUSPENDED = 3,
               KILLED = 4
             } state;
-        
+
             // Width visitor changes it to VlProcessRef
             protected chandle m_process;
-        
+
 %000000     static function process self();
 %000000       process p = new;
         `ifdef VERILATOR_TIMING
@@ -147,13 +147,13 @@
         `endif
 %000000       return p;
             endfunction
-        
+
 %000000     protected function void set_status(state s);
         `ifdef VERILATOR_TIMING
 %000000       $c(m_process, "->state(", s, ");");
         `endif
             endfunction
-        
+
 %000000     function state status();
         `ifdef VERILATOR_TIMING
 %000000       return state'($cpure(m_process, "->state()"));
@@ -161,25 +161,25 @@
               return RUNNING;
         `endif
             endfunction
-        
+
 %000000     function void kill();
 %000000       set_status(KILLED);
             endfunction
-        
+
             function void suspend();
               $error("std::process::suspend() not supported");
             endfunction
-        
+
 %000000     function void resume();
 %000000       set_status(RUNNING);
             endfunction
-        
+
 %000000     task await();
         `ifdef VERILATOR_TIMING
 %000000       wait (status() == FINISHED || status() == KILLED);
         `endif
             endtask
-        
+
 %000000     static task killQueue(ref process processQueue[$]);
         `ifdef VERILATOR_TIMING
 %000000       while (processQueue.size() > 0) begin
@@ -187,7 +187,7 @@
               end
         `endif
             endtask
-        
+
             // Two process references are equal if the different classes' containing
             // m_process are equal. Can't yet use <=> as the base class template
             // comparisons doesn't define <=> as they don't yet require --timing and C++20.
@@ -215,14 +215,14 @@
         `verilog
         `endif
             // verilog_format: on
-        
+
             // When really implemented, srandom must operate on the process, but for
             // now rely on the srandom() that is automatically generated for all
             // classes.
             //
             // function void srandom(int seed);
             // endfunction
-        
+
             // The methods below access the common RNG, full support
             // of get_randstate/set_randstate requires accessing the RNG state
             // of the specified process (see IEEE 1800-2023, 18.14.), but as for
@@ -230,21 +230,21 @@
 %000000     function string get_randstate();
               // Initialize with $c to ensure it won't be constified
 %000000       string s = string'($c("0"));
-        
+
 %000000       $c(s, " = ", m_process, "->randstate();");
 %000000       return s;
             endfunction
-        
+
 %000000     function void set_randstate(string s);
 %000000       $c(m_process, "->randstate(", s, ");");
             endfunction
           endclass
-        
+
           // IEEE 1800-specified standard "std::randomize"
 %000000   function int randomize();
 %000000     randomize = 0;
           endfunction
-        
+
           // IEEE 1800-2023 19.10 coverage option and type_options
           // IEEE does not define these as std:: structures but Verilator uses
           // them as such currently, so named with a unique prefix
@@ -261,7 +261,7 @@
             bit per_instance;
             bit get_inst_coverage;
           } vl_covergroup_options_t;
-        
+
           typedef struct {
             int weight;
             int goal;
@@ -270,7 +270,7 @@
             int auto_bin_max;
             bit detect_overlap;
           } vl_coverpoint_options_t;
-        
+
           typedef struct {
             int weight;
             int goal;
@@ -279,7 +279,7 @@
             int cross_num_print_missing;
             bit cross_retain_auto_bins;
           } vl_cross_options_t;
-        
+
           typedef struct {
             int weight;
             int goal;
@@ -289,19 +289,18 @@
             bit distribute_first;
             real real_interval;
           } vl_covergroup_type_options_t;
-        
+
           typedef struct {
             int weight;
             int goal;
             string comment;
             real real_interval;
           } vl_coverpoint_type_options_t;
-        
+
           typedef struct {
             int weight;
             int goal;
             string comment;
           } vl_cross_type_options_t;
-        
+
         endpackage
-        

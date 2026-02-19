@@ -7,7 +7,7 @@
 
 Covergroup clocking events (`covergroup cg @(posedge clk)`) specify when a covergroup should automatically sample. Verilator has **partial support** for this feature.
 
-## What Works ✅
+## What Works
 
 **Clocking events with MODULE INPUT clocks:**
 
@@ -17,7 +17,7 @@ module t(input clk);
       // ...
    endgroup
    cg cg_inst = new;
-   
+
    always @(posedge clk) begin
       // Verilator automatically inserts: cg_inst.sample();
       // at the top of this block
@@ -25,7 +25,7 @@ module t(input clk);
 endmodule
 ```
 
-**Test:** `t_covergroup_clocking_module_input.v` - ✅ PASSES
+**Test:** `t_covergroup_clocking_module_input.v` -  PASSES
 
 **Implementation:** When Verilator sees a clocking event referencing a module input, it automatically inserts a `.sample()` call at the beginning of any `always @(posedge clk)` blocks in the same module.
 
@@ -39,7 +39,7 @@ endmodule
 - `t_covergroup_multi_instance.v`
 - `t_covergroup_negative_ranges.v`
 
-## What Doesn't Work ❌
+## What Doesn't Work
 
 **Clocking events with INTERNALLY GENERATED clocks:**
 
@@ -47,12 +47,12 @@ endmodule
 module t;
    logic clk = 0;
    always #5 clk = ~clk;  // Internal clock generation
-   
+
    covergroup cg @(posedge clk);
       // ...
    endgroup
    cg cg_inst = new;
-   
+
    initial begin
       @(posedge clk);
       // Verilator does NOT automatically sample here
@@ -61,7 +61,7 @@ module t;
 endmodule
 ```
 
-**Test:** `t_covergroup_clocking_internal.v` - ❌ FAILS (timeout)
+**Test:** `t_covergroup_clocking_internal.v` -  FAILS (timeout)
 
 **Issue:** Verilator doesn't insert automatic `.sample()` calls when the clock is an internal signal rather than a module port.
 
@@ -77,12 +77,12 @@ For internal clocks, explicitly call `.sample()`:
 module t;
    logic clk = 0;
    always #5 clk = ~clk;
-   
+
    covergroup cg;  // No clocking event
       // ...
    endgroup
    cg cg_inst = new;
-   
+
    always @(posedge clk) begin
       cg_inst.sample();  // Explicit call
       // ... rest of code
@@ -120,9 +120,9 @@ Section 19.4.1: "Specifying triggering events"
 > A covergroup can be triggered automatically by an event, or the sampling can be explicitly controlled by calling the built-in sample() method or through an argument to the covergroup constructor.
 
 The standard requires both automatic (clocking event) and explicit (sample()) modes. Verilator currently supports:
-- ✅ Explicit sampling (`.sample()` calls)
-- ✅ Automatic sampling for module input clocks
-- ❌ Automatic sampling for internal signals
+-  Explicit sampling (`.sample()` calls)
+-  Automatic sampling for module input clocks
+-  Automatic sampling for internal signals
 
 ## Recommendation
 

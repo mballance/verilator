@@ -17,7 +17,7 @@ The current implementation generates the Cartesian product of all bins at compil
 ```cpp
 // For: cross cp_a, cp_b, cp_c, cp_d where:
 // cp_a has 2 bins, cp_b has 2 bins, cp_c has 2 bins, cp_d has 2 bins
-// Total: 2 × 2 × 2 × 2 = 16 cross bins
+// Total: 2  2  2  2 = 16 cross bins
 
 // Generated member variables (one per cross bin):
 IData __PVT____Vcov_cross_a0_b0_c0_d0;
@@ -37,33 +37,33 @@ if (((a == 0) && (b == 0) && (c == 0) && (d == 1))) {
 
 ### Memory and Code Size Implications
 
-**Example: 4-way cross (2×2×2×2 = 16 bins)**
-- Member variables: 16 × 4 bytes = 64 bytes
-- Sample code: ~60 lines × 16 bins = ~960 lines of C++
-- Compiled binary: ~300 bytes per bin × 16 = ~4.8 KB
+**Example: 4-way cross (2222 = 16 bins)**
+- Member variables: 16  4 bytes = 64 bytes
+- Sample code: ~60 lines  16 bins = ~960 lines of C++
+- Compiled binary: ~300 bytes per bin  16 = ~4.8 KB
 
-**Example: 5-way cross (4×4×4×4×4 = 1024 bins)**
-- Member variables: 1024 × 4 bytes = 4 KB
-- Sample code: ~60 lines × 1024 bins = ~61,440 lines of C++
+**Example: 5-way cross (44444 = 1024 bins)**
+- Member variables: 1024  4 bytes = 4 KB
+- Sample code: ~60 lines  1024 bins = ~61,440 lines of C++
 - Compiled binary: ~300 KB instruction cache footprint
 - **Problem:** Excessive code bloat, compilation slowdown
 
 **Example: 8-way cross with 10 bins each (10^8 = 100M bins)**
-- Member variables: 100M × 4 bytes = 400 MB
+- Member variables: 100M  4 bytes = 400 MB
 - Sample code: Would generate billions of lines
 - **Problem:** Completely infeasible
 
 ### When Current Approach Breaks Down
 
 The inline approach works well for:
-- ✅ Small crosses (2-3 way, <50 bins)
-- ✅ Fast inner loops where every cycle counts
-- ✅ When most cross bins are likely to be hit
+-  Small crosses (2-3 way, <50 bins)
+-  Fast inner loops where every cycle counts
+-  When most cross bins are likely to be hit
 
 But becomes problematic for:
-- ❌ Large N-way crosses (4+ way, >100 bins)
-- ❌ Sparse coverage patterns (only a few bins hit)
-- ❌ Compilation time and binary size constraints
+-  Large N-way crosses (4+ way, >100 bins)
+-  Sparse coverage patterns (only a few bins hit)
+-  Compilation time and binary size constraints
 
 ## Proposed Hybrid Solution
 
@@ -105,7 +105,7 @@ if (totalBins <= CROSS_INLINE_THRESHOLD) {
 - Below 64: Code size is manageable (< 4KB), compilation is fast
 - Above 64: Code bloat starts causing noticeable compilation slowdown
 - 64 is a power of 2 (6-bit indexing, natural boundary)
-- Covers common use cases: 4-way × 2^4 = 16, 3-way × 4^3 = 64
+- Covers common use cases: 4-way  2^4 = 16, 3-way  4^3 = 64
 
 ### Sparse Map Implementation
 
@@ -130,23 +130,23 @@ std::map<std::string, uint32_t> __PVT____Vcov_cross_map;
 void __VnoInFunc_sample(Vmodule__Syms* vlSymsp) {
     // Determine which bin in each coverpoint matched
     int bin_a = -1, bin_b = -1, bin_c = -1, bin_d = -1;
-    
+
     // Check cp_a bins
     if (vlSymsp->TOP.a == 0) bin_a = 0;
     else if (vlSymsp->TOP.a == 1) bin_a = 1;
     else if (vlSymsp->TOP.a == 2) bin_a = 2;
     // ... more bins ...
-    
+
     // Check cp_b bins
     if (vlSymsp->TOP.b == 0) bin_b = 0;
     else if (vlSymsp->TOP.b == 1) bin_b = 1;
     // ... more bins ...
-    
+
     // Similar for cp_c and cp_d
-    
+
     // If all coverpoints matched a bin, increment the cross bin
     if (bin_a >= 0 && bin_b >= 0 && bin_c >= 0 && bin_d >= 0) {
-        std::string key = std::to_string(bin_a) + "," + 
+        std::string key = std::to_string(bin_a) + "," +
                          std::to_string(bin_b) + "," +
                          std::to_string(bin_c) + "," +
                          std::to_string(bin_d);
@@ -158,7 +158,7 @@ void __VnoInFunc_sample(Vmodule__Syms* vlSymsp) {
 **Alternative (faster):** Use integer key for small bin counts:
 
 ```cpp
-// If each coverpoint has ≤ 16 bins, pack into single uint64_t:
+// If each coverpoint has  16 bins, pack into single uint64_t:
 // bits [0:3] = bin_a, bits [4:7] = bin_b, bits [8:11] = bin_c, bits [12:15] = bin_d
 uint64_t key = (bin_a) | (bin_b << 4) | (bin_c << 8) | (bin_d << 12);
 std::map<uint64_t, uint32_t> __PVT____Vcov_cross_map;
@@ -172,7 +172,7 @@ void __VnoInFunc_get_inst_coverage(...) {
     // Count how many cross bins were hit
     size_t covered = __PVT____Vcov_cross_map.size();  // Only hit bins exist
     size_t total = totalPossibleCrossBins;            // Computed at compile time
-    
+
     get_inst_coverage__Vfuncrtn = (100.0 * covered) / total;
 }
 ```
@@ -211,7 +211,7 @@ for (int a = 0; a < num_bins_a; ++a) {
 | Sample (hit) | O(1) ~5 cycles | O(log N) ~50 cycles | O(log N) ~30 cycles |
 | Sample (miss) | O(1) ~5 cycles | O(1) no increment | O(1) no increment |
 | Memory per hit bin | 4 bytes | ~40 bytes (map overhead) | ~20 bytes (map overhead) |
-| Memory total (all bins) | bins × 4 | hits × 40 | hits × 20 |
+| Memory total (all bins) | bins  4 | hits  40 | hits  20 |
 
 **Analysis:**
 - Inline is ~10x faster for sampling
@@ -255,16 +255,16 @@ size_t computeTotalCrossBins(const std::vector<AstCoverpoint*>& coverpoints) {
 ```cpp
 void generateCrossCode(AstCoverCross* crossp) {
     // ... existing code to resolve coverpoints ...
-    
+
     size_t totalBins = computeTotalCrossBins(coverpointRefs);
-    
+
     UINFO(4, "    Cross has " << totalBins << " total bins" << endl);
-    
+
     if (totalBins <= CROSS_INLINE_THRESHOLD) {
         UINFO(4, "    Using inline implementation" << endl);
         generateInlineCrossBins(crossp, coverpointRefs, allCpBins);
     } else {
-        UINFO(4, "    Using sparse map implementation (threshold=" 
+        UINFO(4, "    Using sparse map implementation (threshold="
               << CROSS_INLINE_THRESHOLD << ")" << endl);
         generateSparseCrossBins(crossp, coverpointRefs, allCpBins);
     }
@@ -290,29 +290,29 @@ void generateSparseCrossBins(AstCoverCross* crossp,
                              const std::vector<AstCoverpoint*>& coverpointRefs,
                              const std::vector<std::vector<AstCoverBin*>>& allCpBins) {
     FileLine* fl = crossp->fileline();
-    
+
     // 1. Create std::map member variable
     std::string mapName = "__Vcov_" + crossp->name() + "_map";
-    
+
     // Build map type: std::map<uint64_t, uint32_t>
     // For now, use AstCStmt to declare it (EmitC will handle std::map)
     std::string mapDecl = "std::map<uint64_t, uint32_t> " + mapName + ";";
-    
+
     // Add map as member (will need to extend AstVar to support map types,
     // or use AstCStmt in class declaration)
     // TODO: This requires EmitC changes to properly emit std::map members
-    
+
     // 2. Generate bin index lookup tables (one per coverpoint)
     for (size_t cpIdx = 0; cpIdx < coverpointRefs.size(); ++cpIdx) {
         generateBinIndexLookup(coverpointRefs[cpIdx], allCpBins[cpIdx], cpIdx);
     }
-    
+
     // 3. Generate sample code that builds key and increments map
     generateSparseMapSampleCode(crossp, coverpointRefs, allCpBins, mapName);
-    
+
     // 4. Generate coverage computation that iterates map
     generateSparseMapCoverageCode(crossp, coverpointRefs, mapName);
-    
+
     // 5. Generate VL_COVER_INSERT calls (eager registration in constructor)
     generateSparseMapRegistration(crossp, coverpointRefs, allCpBins, mapName);
 }
@@ -321,44 +321,44 @@ void generateSparseCrossBins(AstCoverCross* crossp,
 **Helper functions:**
 
 ```cpp
-void generateBinIndexLookup(AstCoverpoint* cpp, 
+void generateBinIndexLookup(AstCoverpoint* cpp,
                            const std::vector<AstCoverBin*>& bins,
                            size_t cpIdx) {
     // Generate if-else chain that determines which bin matched
     // Returns bin index in variable: __Vbin_cp{cpIdx}
-    
+
     std::string varName = "__Vbin_cp" + std::to_string(cpIdx);
-    
+
     // Create local variable: int __Vbin_cp{N} = -1;
     AstVar* binIdxVar = new AstVar{cpp->fileline(), VVarType::BLOCKTEMP, varName,
                                    cpp->findSigned32DType()};
     m_sampleFuncp->addStmtsp(new AstVarStmt{cpp->fileline(), binIdxVar});
-    
+
     // Initialize to -1 (no match)
     AstNodeStmt* initStmt = new AstAssign{
         cpp->fileline(),
         new AstVarRef{cpp->fileline(), binIdxVar, VAccess::WRITE},
         new AstConst{cpp->fileline(), AstConst::Signed32{}, -1}};
     m_sampleFuncp->addStmtsp(initStmt);
-    
+
     // Build if-else chain for each bin
     AstNodeStmt* lastIfp = nullptr;
     for (size_t binIdx = 0; binIdx < bins.size(); ++binIdx) {
         AstCoverBin* binp = bins[binIdx];
         AstNodeExpr* exprp = cpp->exprp();
-        
+
         // Build condition: if (expr matches bin)
         AstNodeExpr* condp = buildBinCondition(binp, exprp);
         if (!condp) continue;
-        
+
         // Build action: __Vbin_cp{N} = binIdx;
         AstNodeStmt* actionp = new AstAssign{
             binp->fileline(),
             new AstVarRef{binp->fileline(), binIdxVar, VAccess::WRITE},
             new AstConst{binp->fileline(), AstConst::Signed32{}, binIdx}};
-        
+
         AstIf* ifp = new AstIf{binp->fileline(), condp, actionp, nullptr};
-        
+
         if (!lastIfp) {
             m_sampleFuncp->addStmtsp(ifp);
         } else {
@@ -374,9 +374,9 @@ void generateSparseMapSampleCode(AstCoverCross* crossp,
                                  const std::vector<std::vector<AstCoverBin*>>& allCpBins,
                                  const std::string& mapName) {
     // Generate code to check if all bins matched and increment map
-    
+
     FileLine* fl = crossp->fileline();
-    
+
     // Build condition: if (__Vbin_cp0 >= 0 && __Vbin_cp1 >= 0 && ...)
     AstNodeExpr* allMatchedCond = nullptr;
     for (size_t i = 0; i < coverpointRefs.size(); ++i) {
@@ -384,18 +384,18 @@ void generateSparseMapSampleCode(AstCoverCross* crossp,
         // Find the variable (requires keeping track of it)
         // For now, use AstCStmt to avoid complexity
     }
-    
+
     // Build key: uint64_t key = (__Vbin_cp0) | (__Vbin_cp1 << 4) | ...
     std::string keyBuildCode = "uint64_t __Vcross_key = 0; ";
     for (size_t i = 0; i < coverpointRefs.size(); ++i) {
-        keyBuildCode += "__Vcross_key |= (static_cast<uint64_t>(__Vbin_cp" + 
-                       std::to_string(i) + ") << " + 
+        keyBuildCode += "__Vcross_key |= (static_cast<uint64_t>(__Vbin_cp" +
+                       std::to_string(i) + ") << " +
                        std::to_string(i * 4) + "); ";  // 4 bits per dimension
     }
-    
+
     // Increment map: this->{mapName}[key]++;
     keyBuildCode += "if (allBinsMatched) { this->" + mapName + "[__Vcross_key]++; }";
-    
+
     AstCStmt* cstmt = new AstCStmt{fl, keyBuildCode};
     m_sampleFuncp->addStmtsp(cstmt);
 }
@@ -408,7 +408,7 @@ void generateSparseMapSampleCode(AstCoverCross* crossp,
 1. **t_covergroup_cross_threshold.v** - Test exactly at threshold (64 bins)
 2. **t_covergroup_cross_large.v** - Test above threshold (128+ bins)
 3. **t_covergroup_cross_sparse.v** - Test sparse coverage (hit <10% of bins)
-4. **t_covergroup_cross_5way.v** - Test 5-way cross (4×4×4×4×4 = 1024 bins)
+4. **t_covergroup_cross_5way.v** - Test 5-way cross (44444 = 1024 bins)
 
 **Verification:**
 - Coverage percentage matches between inline and sparse implementations
@@ -446,7 +446,7 @@ int coverageCrossThreshold() const { return m_coverageCrossThreshold; }
 
 ## Alternative: Integer Packing for Key
 
-For crosses where each coverpoint has ≤16 bins (4 bits), use bitpacking:
+For crosses where each coverpoint has 16 bins (4 bits), use bitpacking:
 
 ```cpp
 // Supports up to 16-way cross with 16 bins each (64-bit key)
@@ -464,7 +464,7 @@ key |= (static_cast<uint64_t>(bin_d) << 12);
 - Natural ordering for iteration
 
 **Limitation:**
-- Only works if each dimension has ≤16 bins
+- Only works if each dimension has 16 bins
 - Fallback to string keys for larger bin counts
 
 ## Risk Assessment

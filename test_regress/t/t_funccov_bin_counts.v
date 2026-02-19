@@ -23,7 +23,7 @@ module t (/*AUTOARG*/);
 
     initial begin
         cg_inst = new;
-        
+
         // Sample various values with different frequencies
         data = 0;  cg_inst.sample();  // zero: 1
         data = 1;  cg_inst.sample();  // low: 1
@@ -31,14 +31,14 @@ module t (/*AUTOARG*/);
         data = 2;  cg_inst.sample();  // low: 3
         data = 5;  cg_inst.sample();  // mid: 1
         data = 10; cg_inst.sample();  // high: 1
-        
+
         // Verify coverage is 100% (all 4 bins hit)
         check_coverage(100.0, "final");
-        
+
         $write("*-* All Finished *-*\n");
         $finish;
     end
-    
+
     task check_coverage(real expected, string label);
         real cov;
         cov = cg_inst.get_inst_coverage();

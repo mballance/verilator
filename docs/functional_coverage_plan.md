@@ -7,16 +7,16 @@ This document outlines a comprehensive plan for implementing SystemVerilog funct
 **Current Status (2026-02-09):** Core functional coverage is **PRODUCTION-READY** with documented limitations. Users can define covergroups, sample coverage, compute coverage percentages, and generate coverage reports integrated with Verilator's existing coverage database.
 
 **Key Achievements:**
-- ✅ Covergroups, coverpoints, and bins fully supported
-- ✅ Multiple bin types: regular, default, ignore, illegal, wildcard, array
-- ✅ Cross coverage (N-way) working
-- ✅ Coverage computation and reporting integrated
-- ✅ Coverage database output via existing infrastructure
-- ✅ **Dynamic covergroup creation with `new` operator**
-- ✅ **Basic transition bins** (2-value transitions)
-- ✅ **Multi-value transition bins** (N-value sequences with restart logic) - **NEW 2026-02-09**
-- ✅ **Empty covergroup bug FIXED** - now correctly returns 100%
-- ✅ **43 comprehensive tests, 100% pass rate**
+-  Covergroups, coverpoints, and bins fully supported
+-  Multiple bin types: regular, default, ignore, illegal, wildcard, array
+-  Cross coverage (N-way) working
+-  Coverage computation and reporting integrated
+-  Coverage database output via existing infrastructure
+-  **Dynamic covergroup creation with `new` operator**
+-  **Basic transition bins** (2-value transitions)
+-  **Multi-value transition bins** (N-value sequences with restart logic) - **NEW 2026-02-09**
+-  **Empty covergroup bug FIXED** - now correctly returns 100%
+-  **43 comprehensive tests, 100% pass rate**
 
 **Known Limitations:**
 - Static get_coverage() method (requires architecture changes)
@@ -27,7 +27,7 @@ This document outlines a comprehensive plan for implementing SystemVerilog funct
 
 ### Issue #1: Static get_coverage() Implementation
 
-**Status:** 🔴 **BLOCKED** - Requires architecture research
+**Status:**  **BLOCKED** - Requires architecture research
 
 **Problem:** Static `get_coverage()` method needs to aggregate coverage across all instances of a covergroup type, but Verilator's AST/code generation doesn't have straightforward support for C++ static class members with instance tracking.
 
@@ -37,9 +37,9 @@ This document outlines a comprehensive plan for implementing SystemVerilog funct
 - Using `AstCStmt` for complex implementations bypasses type checking
 
 **Attempted Solutions:**
-- ❌ Direct AST generation with static members - compilation errors
-- ❌ AstCStmt for implementation - internal analysis errors
-- ❌ AstCFunc with isStatic() - doesn't properly emit declarations
+-  Direct AST generation with static members - compilation errors
+-  AstCStmt for implementation - internal analysis errors
+-  AstCFunc with isStatic() - doesn't properly emit declarations
 
 **Potential Approaches:**
 1. **Global Registry** - Use global map outside class (simpler, less elegant)
@@ -61,7 +61,7 @@ This document outlines a comprehensive plan for implementing SystemVerilog funct
 
 ### Issue #2: Empty Covergroup Coverage Bug
 
-**Status:** ✅ **FIXED** (2026-02-09)
+**Status:**  **FIXED** (2026-02-09)
 
 **Test Case:** `test_regress/t/t_covergroup_empty.v` - Now **PASSES**
 
@@ -79,7 +79,7 @@ This prevented `generateCoverageComputationCode()` from being called, so the cov
 2. **Modified return value handling** - Instead of adding a new assignment statement, we now find and replace the existing return value assignment from 0.0 to 100.0
 
 **Code Changes:**
-- `src/V3CoverageFunctional.cpp` line 58: Removed empty check from `processCovergroup()` 
+- `src/V3CoverageFunctional.cpp` line 58: Removed empty check from `processCovergroup()`
 - `src/V3CoverageFunctional.cpp` lines 1062-1084: Modified `generateCoverageMethodBody()` to replace existing assignment RHS instead of adding new statement
 
 **Why the Original Approach Failed:**
@@ -118,18 +118,18 @@ This section documents all known limitations, unsupported features, and issues i
 - Some edge cases with X/Z handling
 
 **IEEE 1800-2023 Compliance:**
-- Section 19.5: Coverpoints - ✅ Mostly complete
-- Section 19.6: Bins - ✅ Complete (basic, default, ignore, illegal, wildcard, array)
-- Section 19.7: Transition bins - ⚠️ Partial (2-value only, no repetitions)
-- Section 19.8: Cross coverage - ✅ Complete (N-way cross)
-- Section 19.9: Coverage options - ⚠️ Partial (parsed but not all implemented)
-- Section 19.10: Predefined coverage methods - ⚠️ Partial (get_inst_coverage only)
+- Section 19.5: Coverpoints -  Mostly complete
+- Section 19.6: Bins -  Complete (basic, default, ignore, illegal, wildcard, array)
+- Section 19.7: Transition bins -  Partial (2-value only, no repetitions)
+- Section 19.8: Cross coverage -  Complete (N-way cross)
+- Section 19.9: Coverage options -  Partial (parsed but not all implemented)
+- Section 19.10: Predefined coverage methods -  Partial (get_inst_coverage only)
 
 ---
 
 ### Issue #1: Static get_coverage() Method Not Implemented
 
-**Status:** 🔴 **BLOCKED** - Requires architecture research
+**Status:**  **BLOCKED** - Requires architecture research
 
 **Problem:** Static `get_coverage()` method needs to aggregate coverage across all instances of a covergroup type, but Verilator's AST/code generation doesn't have straightforward support for C++ static class members with instance tracking.
 
@@ -139,9 +139,9 @@ This section documents all known limitations, unsupported features, and issues i
 - Using `AstCStmt` for complex implementations bypasses type checking
 
 **Attempted Solutions:**
-- ❌ Direct AST generation with static members - compilation errors
-- ❌ AstCStmt for implementation - internal analysis errors
-- ❌ AstCFunc with isStatic() - doesn't properly emit declarations
+-  Direct AST generation with static members - compilation errors
+-  AstCStmt for implementation - internal analysis errors
+-  AstCFunc with isStatic() - doesn't properly emit declarations
 
 **Potential Approaches:**
 1. **Global Registry** - Use global map outside class (simpler, less elegant)
@@ -159,7 +159,7 @@ This section documents all known limitations, unsupported features, and issues i
 
 ### Issue #2: Empty Covergroup Returns 0% Coverage Instead of 100%
 
-**Status:** ✅ **FIXED** (2026-02-09)
+**Status:**  **FIXED** (2026-02-09)
 
 **Discovery Date:** 2026-02-08 (Production hardening phase)
 
@@ -174,7 +174,7 @@ covergroup cg_empty;
 endgroup
 
 cg_empty inst = new;
-real cov = inst.get_inst_coverage();  // Now returns 100.0 ✅
+real cov = inst.get_inst_coverage();  // Now returns 100.0
 ```
 
 **Root Cause:**
@@ -203,23 +203,23 @@ vlt/t_covergroup_empty: Self PASSED
 
 ### Issue #3: Transition Bins - Multi-Value Sequences Not Supported
 
-**Status:** ⏳ **DEFERRED** - Future work
+**Status:**  **DEFERRED** - Future work
 
 **Problem:** Transition bins with more than 2 values (e.g., `bins t = (1 => 2 => 3);`) are not implemented.
 
 **What Works:**
-- ✅ Simple 2-value transitions: `bins t = (1 => 2);`
-- ✅ State tracking (previous value variables)
-- ✅ Coverage database integration
+-  Simple 2-value transitions: `bins t = (1 => 2);`
+-  State tracking (previous value variables)
+-  Coverage database integration
 
 **What Doesn't Work:**
-- ❌ Multi-value sequences: `bins t = (1 => 2 => 3);` → E_UNSUPPORTED
-- ❌ All repetition operators: `[*]`, `[->]`, `[=]` → E_UNSUPPORTED
-- ❌ Array transition bins: `bins t[] = (1 => 2), (3 => 4);` → E_UNSUPPORTED
+-  Multi-value sequences: `bins t = (1 => 2 => 3);`  E_UNSUPPORTED
+-  All repetition operators: `[*]`, `[->]`, `[=]`  E_UNSUPPORTED
+-  Array transition bins: `bins t[] = (1 => 2), (3 => 4);`  E_UNSUPPORTED
 
 **Technical Reason:** Multi-value transitions require state machine implementation to track position in sequence. Current implementation only tracks previous value.
 
-**Code Location:** 
+**Code Location:**
 - `src/V3CoverageFunctional.cpp` line 559-560 (multi-value warning)
 - `src/V3CoverageFunctional.cpp` line 501 (repetition warning)
 - `src/V3CoverageFunctional.cpp` line 473 (array bins warning)
@@ -238,7 +238,7 @@ bins seq2 = (2 => 3);
 
 ### Issue #4: Transition Bins - Repetition Operators Not Supported
 
-**Status:** ⏳ **DEFERRED** - Future work
+**Status:**  **DEFERRED** - Future work
 
 **Problem:** Transition repetition operators `[*]` (consecutive), `[->]` (goto), and `[=]` (nonconsecutive) are not implemented.
 
@@ -256,16 +256,16 @@ bins t4 = (3 [=5]);           // Nonconsecutive: 3 appears 5 times with gaps all
 
 **Workaround:** Manually create separate bins for each count or use basic transitions.
 
-**Future Work:** 
+**Future Work:**
 - Phase 15.2: Consecutive `[*]` - 1 week effort
-- Phase 15.3: Goto `[->]` - 1 week effort  
+- Phase 15.3: Goto `[->]` - 1 week effort
 - Phase 15.4: Nonconsecutive `[=]` - 1-2 weeks effort
 
 ---
 
 ### Issue #5: Array Bins for Transition Bins Not Supported
 
-**Status:** ⏳ **DEFERRED** - Future work
+**Status:**  **DEFERRED** - Future work
 
 **Problem:** Array syntax for transition bins is not supported.
 
@@ -290,7 +290,7 @@ bins t2 = (3 => 4);
 
 ### Issue #6: Coverpoint Per-Bin Coverage API Not Implemented
 
-**Status:** ⏳ **NOT STARTED** - Future work
+**Status:**  **NOT STARTED** - Future work
 
 **Problem:** SystemVerilog allows querying coverage on individual coverpoints: `my_cg.cp_name.get_inst_coverage()`. This is mentioned in test case but not implemented.
 
@@ -318,7 +318,7 @@ real cov_b = the_cg.b.get_inst_coverage();  // Not implemented
 
 ### Issue #7: Automatic Sampling with Clocking Events
 
-**Status:** ✅ **SUPPORTED** (as of 2026-02)
+**Status:**  **SUPPORTED** (as of 2026-02)
 
 **Known Limitation:** Automatic sampling is currently incompatible with `--timing` mode. When `--timing` is enabled, automatic sampling is disabled and you must use manual `.sample()` calls. This is a temporary limitation that will be resolved in a future update.
 
@@ -379,7 +379,7 @@ Automatic sampling leverages Verilator's existing cycle-based scheduling infrast
 
 ### Issue #8: Range Expansion in Value Sets Not Supported
 
-**Status:** 🔴 **PARSER LIMITATION** - Affects all bins
+**Status:**  **PARSER LIMITATION** - Affects all bins
 
 **Problem:** Parser doesn't expand ranges in transition value sets or complex expressions.
 
@@ -406,19 +406,19 @@ bins t4 = (1 => 3);
 
 ### Issue #9: Cross Bin Select Expressions Limited
 
-**Status:** 🟡 **PARTIAL** - Basic cross coverage works, advanced select expressions may have limitations
+**Status:**  **PARTIAL** - Basic cross coverage works, advanced select expressions may have limitations
 
 **Problem:** Complex `binsof()` expressions in cross coverage may not be fully tracked or may have coverage computation issues.
 
 **What Works:**
-- ✅ Basic N-way cross coverage
-- ✅ Cross bins created automatically
-- ✅ Coverage computation for cross products
+-  Basic N-way cross coverage
+-  Cross bins created automatically
+-  Coverage computation for cross products
 
 **Potential Issues:**
-- ⚠️ Complex `binsof()` with `intersect`
-- ⚠️ Cross bin filtering with `with` expressions
-- ⚠️ Cross bin select with boolean operators (`&&`, `||`)
+-  Complex `binsof()` with `intersect`
+-  Cross bin filtering with `with` expressions
+-  Cross bin select with boolean operators (`&&`, `||`)
 
 **Test Coverage:** Limited testing of advanced cross bin selection features
 
@@ -430,14 +430,14 @@ bins t4 = (1 => 3);
 
 ### Issue #10: Coverage Options Not Fully Implemented
 
-**Status:** 🟡 **PARTIAL** - Options parsed but not all behavioral changes implemented
+**Status:**  **PARTIAL** - Options parsed but not all behavioral changes implemented
 
 **Problem:** Coverage options like `option.at_least`, `option.weight`, `option.goal`, etc. are parsed and accepted but may not affect coverage computation or behavior.
 
 **Options Status:**
-- ✅ Parsed: `option.name`, `option.weight`, `option.goal`, `option.comment`, `option.at_least`, `option.auto_bin_max`, etc.
-- ⚠️ Implementation: Basic coverage computation works, but advanced options may be ignored
-- ❌ Type options: `type_option.*` parsed but not implemented
+-  Parsed: `option.name`, `option.weight`, `option.goal`, `option.comment`, `option.at_least`, `option.auto_bin_max`, etc.
+-  Implementation: Basic coverage computation works, but advanced options may be ignored
+-  Type options: `type_option.*` parsed but not implemented
 
 **Test File:** `test_regress/t/t_covergroup_unsup.v` line 42-59 (options grammar test)
 
@@ -475,10 +475,10 @@ bins t4 = (1 => 3);
 - Some complex value set expressions
 - Block event expressions `@@(...)`
 
-#### Code Generation Limitations  
+#### Code Generation Limitations
 - Static class members (Issue #1)
 - Multi-value transition state machines (Issue #3)
-- ~~Automatic event-driven sampling (Issue #7)~~ ✅ **NOW SUPPORTED**
+- ~~Automatic event-driven sampling (Issue #7)~~  **NOW SUPPORTED**
 - Coverpoint object methods (Issue #6)
 
 #### Coverage Computation Limitations
@@ -487,7 +487,7 @@ bins t4 = (1 => 3);
 - Some cross bin select expressions (Issue #9)
 
 #### Architectural Limitations (By Design)
-- ~~Automatic sampling `@(posedge clk)` - Verilator is cycle-based~~ ✅ **NOW SUPPORTED**
+- ~~Automatic sampling `@(posedge clk)` - Verilator is cycle-based~~  **NOW SUPPORTED**
 - Event-driven features - No event scheduler (for timing constructs)
 - Covergroups in interfaces - Complex, low priority
 - Virtual interface coverage - Complex, deferred
@@ -504,7 +504,7 @@ bins t4 = (1 => 3);
 | Transition repetitions | Medium | Manual bins | Phase 15.2-15.5 |
 | Array transition bins | Low | Manual declaration | Future |
 | Coverpoint API | Medium | Use covergroup API | Future |
-| ~~Automatic sampling~~ | ~~High~~ | ~~Explicit .sample()~~ | ✅ **COMPLETE** |
+| ~~Automatic sampling~~ | ~~High~~ | ~~Explicit .sample()~~ |  **COMPLETE** |
 | Range expansion | Medium | Enumerate values | Parser upgrade |
 | Cross bin select | Low | Use basic cross | Future testing |
 | Coverage options | Low | Basic coverage works | Future |
@@ -517,7 +517,7 @@ bins t4 = (1 => 3);
 
 ### Implementation Status (as of 2026-02-08 16:05 UTC)
 
-**Phase 1: Foundation - COMPLETE** ✅
+**Phase 1: Foundation - COMPLETE**
 - Parser and AST enhancement fully implemented
 - **Architectural Decision**: Skipped separate runtime classes (verilated_funccov.h/cpp)
   - Integrated directly with existing VerilatedCovContext infrastructure
@@ -526,7 +526,7 @@ bins t4 = (1 => 3);
 - Code generation working: C++ classes, constructors, sample() methods
 - All Phase 1 objectives achieved through unified coverage architecture
 
-**Phase 2: Parser & Code Generation - COMPLETE** ✅
+**Phase 2: Parser & Code Generation - COMPLETE**
 - Parser successfully creates AstCovergroup, AstCoverpoint, AstCoverBin nodes
 - **CRITICAL BUG FIXED:** Circular reference in bin lists causing infinite loops
   - Root cause: Bins were being moved to coverpoint while still linked in parser list
@@ -538,47 +538,47 @@ bins t4 = (1 => 3);
   - Generates get_inst_coverage() method with coverage computation
   - Successfully compiles and runs test cases
 
-**Phase 5: Coverage Computation - COMPLETE** ✅
+**Phase 5: Coverage Computation - COMPLETE**
 - Basic coverage computation implemented and working
 - get_inst_coverage() calculates percentage correctly (0-100%)
 - Multi-value bins supported (OR logic)
 - iff conditions working correctly
 - 7 comprehensive tests passing
 
-**Phase 6: Special Bin Types - COMPLETE** ✅
-- ignore_bins: Parser ✅, AST ✅, Code generation ✅, Coverage filtering ✅
-- illegal_bins: Parser ✅, AST ✅, Error generation ✅, Coverage filtering ✅
+**Phase 6: Special Bin Types - COMPLETE**
+- ignore_bins: Parser , AST , Code generation , Coverage filtering
+- illegal_bins: Parser , AST , Error generation , Coverage filtering
 - **BUG FIXED:** Parser was not setting bin types correctly
   - Root cause: bins_keyword grammar rule couldn't distinguish ignore/illegal from regular bins
   - Fix: Expanded grammar to use explicit yBINS/yIGNORE_BINS/yILLEGAL_BINS tokens
   - Result: Bins now correctly typed, filtered from coverage computation, error on illegal hit
 - 10 comprehensive tests passing
 
-**Phase 7: Cross Coverage - COMPLETE** ✅
+**Phase 7: Cross Coverage - COMPLETE**
 - Cross coverage (2-way, 3-way, N-way) fully implemented and working
-- Parser: ✅ Already had full cross support with coverpoint references
-- Code generation: ✅ Cartesian product bin generation working
-- Coverage computation: ✅ Cross bins counted correctly in get_inst_coverage()
+- Parser:  Already had full cross support with coverpoint references
+- Code generation:  Cartesian product bin generation working
+- Coverage computation:  Cross bins counted correctly in get_inst_coverage()
 - Verified with comprehensive tests:
-  - 2-way cross (2×2 = 4 bins)
-  - 3-way cross (2×2×2 = 8 bins)
+  - 2-way cross (22 = 4 bins)
+  - 3-way cross (222 = 8 bins)
 - N-way cross supported via recursive Cartesian product algorithm
 
-**Phase 8: Wildcard Bins - COMPLETE** ✅
+**Phase 8: Wildcard Bins - COMPLETE**
 - Wildcard bins with don't-care matching fully implemented
-- Parser: ✅ Already recognized `wildcard bins` keyword
-- AST: ✅ Added VCoverBinsType::WILDCARD enum value
-- Code generation: ✅ Bit-mask matching implemented
+- Parser:  Already recognized `wildcard bins` keyword
+- AST:  Added VCoverBinsType::WILDCARD enum value
+- Code generation:  Bit-mask matching implemented
   - Generates `(expr & mask) == (value & mask)` conditions
   - Properly handles X/Z bits as don't-cares
 - Test verified: 8-bit patterns with ? wildcards work correctly
 - Examples: `8'b0000_????`, `8'b1111_????`, `8'b10?0_11??`
 
-**Phase 9: Bin Options - COMPLETE** ✅
+**Phase 9: Bin Options - COMPLETE**
 - Bin options parsing and enforcement implemented
-- Parser: ✅ Converts `AstCgOptionAssign` to `AstCoverOption` nodes
+- Parser:  Converts `AstCgOptionAssign` to `AstCoverOption` nodes
 - Options supported:
-  - `option.at_least = N` ✅ - Enforced in coverage computation
+  - `option.at_least = N`  - Enforced in coverage computation
   - `option.weight = N` - Parsed (not yet used)
   - `option.goal = N` - Parsed (not yet used)
   - `option.comment = "string"` - Parsed
@@ -587,7 +587,7 @@ bins t4 = (1 => 3);
 - Coverage computation updated to check `bin_count >= at_least`
 - Test verified: at_least=2 requires 2+ hits for coverage
 
-**Phase 10: get_coverage() Method - PARTIAL** ⚠️
+**Phase 10: get_coverage() Method - PARTIAL**
 - Static/type-level get_coverage() method implemented
 - Currently returns 0.0 (placeholder for full implementation)
 - Full implementation requires instance tracking infrastructure:
@@ -597,10 +597,10 @@ bins t4 = (1 => 3);
 - Test verified: Method exists and is callable
 - Future: Implement proper instance aggregation
 
-**Phase 11: Default Bins - COMPLETE** ✅
+**Phase 11: Default Bins - COMPLETE**
 - Default bins implementation fully working
-- Parser: ✅ Creates AstCoverBin with VCoverBinsType::DEFAULT
-- Code generation: ✅ Two-pass approach:
+- Parser:  Creates AstCoverBin with VCoverBinsType::DEFAULT
+- Code generation:  Two-pass approach:
   1. First pass: Generate code for all explicit bins
   2. Second pass: Generate default bins with NOT(all_explicit_bins) condition
 - Default bins match values not covered by any other explicit bin
@@ -608,10 +608,10 @@ bins t4 = (1 => 3);
 - Test verified: Default bin catches uncovered values correctly
 - Coverage computation treats default bins as regular bins
 
-**Phase 12: Array Bins - COMPLETE** ✅
+**Phase 12: Array Bins - COMPLETE**
 - Array bins implementation fully working
-- Parser: ✅ Modified `bins_orBraE` rule to return FileLine* marker for array bins
-- Code generation: ✅ Expands array bins into individual bins at generation time:
+- Parser:  Modified `bins_orBraE` rule to return FileLine* marker for array bins
+- Code generation:  Expands array bins into individual bins at generation time:
   - `bins values[] = {1, 5, 9}` creates 3 separate bins: values[0], values[1], values[2]
   - Each array element gets its own counter variable and matching code
   - Supports value ranges: `bins arr[] = {[0:3]}` creates 4 bins
@@ -619,7 +619,7 @@ bins t4 = (1 => 3);
 - Test verified: Array bins properly expand and track coverage independently
 - Works with ignore_bins and illegal_bins array variants
 
-**Phase 13: Coverage Database Integration - COMPLETE** ✅
+**Phase 13: Coverage Database Integration - COMPLETE**
 - Modified V3CoverageFunctional.cpp to use proper "page" field format
 - Coverage database entries now use "v_funccov/<covergroup>" format
 - Type correctly extracted as "funccov" by verilator_coverage tool
@@ -642,23 +642,23 @@ bins t4 = (1 => 3);
 
 | Phase | Description | Status | Notes |
 |-------|-------------|--------|-------|
-| Phase 1 | Foundation | ✅ COMPLETE | Parser, AST, basic code generation |
-| Phase 2 | Coverage Points | ✅ COMPLETE | Sampling, bin matching, code generation |
-| Phase 3 | Cross Coverage | ✅ COMPLETE | N-way cross product bins (2-way, 3-way, 4-way tested) |
-| Phase 4 | Advanced Bins | ✅ COMPLETE | ignore_bins, wildcard, array bins (ranges fixed!) |
-| Phase 5 | Coverage Computation | ✅ COMPLETE | get_inst_coverage() working |
-| Phase 6 | Output & Reporting | ✅ COMPLETE | Database integration, coverage reports |
-| Phase 7 | Advanced Features | ⏸️ FUTURE | Class integration, optimization |
-| Phase 13 | Coverage Database | ✅ COMPLETE | verilator_coverage integration |
-| Phase 14 | Dynamic Covergroups | ✅ COMPLETE | Dynamic creation with `new` works! |
-| Phase 14b | Static get_coverage() | 🔴 DEFERRED | See Open Issues #1 |
+| Phase 1 | Foundation |  COMPLETE | Parser, AST, basic code generation |
+| Phase 2 | Coverage Points |  COMPLETE | Sampling, bin matching, code generation |
+| Phase 3 | Cross Coverage |  COMPLETE | N-way cross product bins (2-way, 3-way, 4-way tested) |
+| Phase 4 | Advanced Bins |  COMPLETE | ignore_bins, wildcard, array bins (ranges fixed!) |
+| Phase 5 | Coverage Computation |  COMPLETE | get_inst_coverage() working |
+| Phase 6 | Output & Reporting |  COMPLETE | Database integration, coverage reports |
+| Phase 7 | Advanced Features |  FUTURE | Class integration, optimization |
+| Phase 13 | Coverage Database |  COMPLETE | verilator_coverage integration |
+| Phase 14 | Dynamic Covergroups |  COMPLETE | Dynamic creation with `new` works! |
+| Phase 14b | Static get_coverage() |  DEFERRED | See Open Issues #1 |
 
 **Production Ready Features:**
 - Covergroup declaration and instantiation (static and dynamic)
-- **Dynamic covergroup creation with `new` operator** ✅
+- **Dynamic covergroup creation with `new` operator**
 - Coverpoint with automatic and user-defined bins
-- Cross coverage (2-way, 3-way, N-way) ✅
-- **ALL bin types fully working:** ✅
+- Cross coverage (2-way, 3-way, N-way)
+- **ALL bin types fully working:**
   - ignore_bins - exclude from coverage
   - illegal_bins - runtime error on hit
   - wildcard bins - don't-care matching
@@ -678,54 +678,54 @@ bins t4 = (1 => 3);
 
 ### Phase 3 & 4: Detailed Status (2026-02-08)
 
-**Phase 3: Cross Coverage** ✅ **FULLY COMPLETE**
+**Phase 3: Cross Coverage**  **FULLY COMPLETE**
 
 Supported and tested:
-- ✅ 2-way cross coverage: `cross cp1, cp2` creates M×N bins
-- ✅ 3-way cross coverage: `cross cp1, cp2, cp3` creates M×N×P bins
-- ✅ 4-way and N-way cross: recursive Cartesian product
-- ✅ Automatic cross bin naming: `<bin1,bin2,bin3>`
-- ✅ Independent coverage tracking for cross bins
-- ✅ Cross bins included in get_inst_coverage() calculation
+-  2-way cross coverage: `cross cp1, cp2` creates MN bins
+-  3-way cross coverage: `cross cp1, cp2, cp3` creates MNP bins
+-  4-way and N-way cross: recursive Cartesian product
+-  Automatic cross bin naming: `<bin1,bin2,bin3>`
+-  Independent coverage tracking for cross bins
+-  Cross bins included in get_inst_coverage() calculation
 
 Tests:
-- t_covergroup_cross_simple.v - 2-way cross (8 bins: 4×2)
-- t_covergroup_cross_3way.v - 3-way cross (8 bins: 2×2×2)
+- t_covergroup_cross_simple.v - 2-way cross (8 bins: 42)
+- t_covergroup_cross_3way.v - 3-way cross (8 bins: 222)
 - t_covergroup_cross_4way.v - 4-way cross
 
 Not yet supported (future):
-- ❌ `binsof()` operator for filtering cross bins
-- ❌ `intersect` keyword for bin selection
-- ❌ Custom cross bin definitions
-- ❌ `cross_retain_auto_bins` option
+-  `binsof()` operator for filtering cross bins
+-  `intersect` keyword for bin selection
+-  Custom cross bin definitions
+-  `cross_retain_auto_bins` option
 
-**Phase 4: Advanced Bin Types** ✅ **COMPLETE** (All bin types verified working!)
+**Phase 4: Advanced Bin Types**  **COMPLETE** (All bin types verified working!)
 
 All bin types fully working:
 
-1. ✅ **ignore_bins** - Values excluded from coverage calculation
+1.  **ignore_bins** - Values excluded from coverage calculation
    - Test: t_covergroup_bins_advanced.v (100% coverage with ignored values)
    - Example: `ignore_bins reserved = {[12:15]};`
    - Properly excluded from coverage computation
-  
-2. ✅ **wildcard bins** - Don't-care bit matching (?, x, z)
+
+2.  **wildcard bins** - Don't-care bit matching (?, x, z)
    - Test: t_covergroup_bins_advanced.v (75% coverage test)
    - Example: `wildcard bins pat = {4'b00??};` matches 0,1,2,3
    - Bit-mask matching implemented
-  
-3. ✅ **array bins (with ranges - FIXED!)** - Separate bin per value
+
+3.  **array bins (with ranges - FIXED!)** - Separate bin per value
    - Test: t_covergroup_bins_advanced.v (75% coverage test)
    - Example: `bins values[] = {[0:3]};` creates values[0], values[1], values[2], values[3]
    - **Fix applied 2026-02-08:** Added AstInsideRange support in generateArrayBins()
    - Works with explicit values, ranges, and mixed
-   
-4. ✅ **default bins** - Catch-all for unspecified values
+
+4.  **default bins** - Catch-all for unspecified values
    - Test: t_covergroup_bins_default_illegal.v (100% coverage test)
    - Example: `bins others = default;` catches all values not in other bins
    - **Parser already supported** - Syntax: `bins name = default;`
    - Works correctly alongside explicit bins
-   
-5. ✅ **illegal_bins** - Runtime error on value match
+
+5.  **illegal_bins** - Runtime error on value match
    - Test: t_covergroup_bins_default_illegal.v (100% coverage test)
    - Example: `illegal_bins reserved = {[11:15]};`
    - **Runtime enforcement working** - Generates assertion error on illegal hit
@@ -736,8 +736,8 @@ All bin types fully working:
 
 
 **Next Steps (Priority Order):**
-1. ~~Implement coverage database integration~~ ✅ **COMPLETED**
-2. ~~Test dynamic covergroup creation~~ ✅ **COMPLETED - Works out of the box!**
+1. ~~Implement coverage database integration~~  **COMPLETED**
+2. ~~Test dynamic covergroup creation~~  **COMPLETED - Works out of the box!**
 3. Implement cross coverage bin filtering (binsof, intersect)
 4. Weight-based coverage aggregation
 5. Transition bins support
@@ -745,27 +745,27 @@ All bin types fully working:
 7. Static get_coverage() (deferred - see Open Issues #1)
 
 **Current Test Status:**
-- ✅ 31+ tests passing including functional coverage tests
-- ✅ Coverage database integration test (t_funccov_database)
-- ✅ Dynamic covergroup creation test (t_covergroup_dynamic)
+-  31+ tests passing including functional coverage tests
+-  Coverage database integration test (t_funccov_database)
+-  Dynamic covergroup creation test (t_covergroup_dynamic)
 - All core functional coverage features working
 - Coverage computation correct and integrated with coverage database
 
 ---
 
-## Phase 14: Dynamic Covergroup Creation ✅ **COMPLETE**
+## Phase 14: Dynamic Covergroup Creation  **COMPLETE**
 
 ### Overview
 
 **Goal:** Support dynamic covergroup creation with `new` operator and verify instance lifecycle management.
 
-**Result:** ✅ **WORKS OUT OF THE BOX!** No code changes needed.
+**Result:**  **WORKS OUT OF THE BOX!** No code changes needed.
 
 ### Testing Results
 
 Created comprehensive test (`t_covergroup_dynamic.v`) with three scenarios:
 
-1. **Single Dynamic Instance** ✅
+1. **Single Dynamic Instance**
    ```systemverilog
    cg cg_inst;
    cg_inst = new;  // Dynamic creation
@@ -773,9 +773,9 @@ Created comprehensive test (`t_covergroup_dynamic.v`) with three scenarios:
    ```
    - Creation works correctly
    - Sampling functional
-   - Coverage computation accurate (0% → 50% → 100%)
+   - Coverage computation accurate (0%  50%  100%)
 
-2. **Multiple Independent Instances** ✅
+2. **Multiple Independent Instances**
    ```systemverilog
    cg cg1, cg2, cg3;
    cg1 = new;
@@ -786,7 +786,7 @@ Created comprehensive test (`t_covergroup_dynamic.v`) with three scenarios:
    - Coverage tracked separately per instance
    - All worked correctly (50% each as expected)
 
-3. **Instance Reassignment and Cleanup** ✅
+3. **Instance Reassignment and Cleanup**
    ```systemverilog
    cg_inst = new;  // First instance
    cg_inst = new;  // Reassign - old instance auto-cleaned
@@ -824,7 +824,7 @@ cg_inst = VlNew<Vt__cg>(vlSymsp);
 
 ---
 
-## Phase 14b: Static get_coverage() 🔴 **DEFERRED** (See Open Issues #1)
+## Phase 14b: Static get_coverage()  **DEFERRED** (See Open Issues #1)
 
 **Status:** Deferred to future work due to technical complexity
 
@@ -838,8 +838,8 @@ cg2 = new;
 cg3 = new;
 
 // Manually aggregate
-real total_cov = (cg1.get_inst_coverage() + 
-                  cg2.get_inst_coverage() + 
+real total_cov = (cg1.get_inst_coverage() +
+                  cg2.get_inst_coverage() +
                   cg3.get_inst_coverage()) / 3.0;
 ```
 
@@ -855,7 +855,7 @@ real total_cov = (cg1.get_inst_coverage() +
 
 ---
 
-## Phase 15: Transition Bins ⚠️ **PARTIAL**
+## Phase 15: Transition Bins  **PARTIAL**
 
 **Status:** Phase 15.1 COMPLETE (2026-02-08), but with limitations
 
@@ -882,25 +882,25 @@ real total_cov = (cg1.get_inst_coverage() +
 
 **Detailed technical plan:** See `/session-state/files/transition_bins_plan.md`
 
-#### Phase 15.1: Basic Transitions ✅ **COMPLETE** (with limitations)
+#### Phase 15.1: Basic Transitions  **COMPLETE** (with limitations)
 
 **Working Features:**
-- ✅ Simple two-value: `bins t = (1 => 2);` - **FULLY WORKING**
-- ✅ **Multi-value sequences: `bins t = (1 => 2 => 3 => ...);` - FULLY WORKING** (2026-02-09)
-- ✅ State tracking (state machine for N-value sequences)
-- ✅ Code generation for 2-value and N-value transitions
-- ✅ **Restart logic** (seeing first value again restarts sequence)
-- ✅ Illegal_bins support with error messages
-- ✅ Coverage database integration
-- ✅ Tests passing with 100% coverage
+-  Simple two-value: `bins t = (1 => 2);` - **FULLY WORKING**
+-  **Multi-value sequences: `bins t = (1 => 2 => 3 => ...);` - FULLY WORKING** (2026-02-09)
+-  State tracking (state machine for N-value sequences)
+-  Code generation for 2-value and N-value transitions
+-  **Restart logic** (seeing first value again restarts sequence)
+-  Illegal_bins support with error messages
+-  Coverage database integration
+-  Tests passing with 100% coverage
 
 **Unsupported (Known Limitations):**
-- ❌ Range expansion: `bins t = ([0:1] => [2:3]);` - Parser limitation (affects all bins)
-- ❌ Array bins: `bins t[] = (1 => 2), (3 => 4);` - E_UNSUPPORTED (needs constructor changes)
-- ❌ Consecutive repetition: `value [* count]` - E_UNSUPPORTED (Phase 15.2)
-- ❌ Goto repetition: `value [-> count]` - E_UNSUPPORTED (Phase 15.3)
-- ❌ Nonconsecutive repetition: `value [= count]` - E_UNSUPPORTED (Phase 15.4)
-- ❌ Default sequence: `bins t = default sequence;` - E_UNSUPPORTED (Phase 15.5)
+-  Range expansion: `bins t = ([0:1] => [2:3]);` - Parser limitation (affects all bins)
+-  Array bins: `bins t[] = (1 => 2), (3 => 4);` - E_UNSUPPORTED (needs constructor changes)
+-  Consecutive repetition: `value [* count]` - E_UNSUPPORTED (Phase 15.2)
+-  Goto repetition: `value [-> count]` - E_UNSUPPORTED (Phase 15.3)
+-  Nonconsecutive repetition: `value [= count]` - E_UNSUPPORTED (Phase 15.4)
+-  Default sequence: `bins t = default sequence;` - E_UNSUPPORTED (Phase 15.5)
 
 **Implementation Details:**
 
@@ -929,21 +929,21 @@ Code generation:
 - [x] Integration with coverage database (VL_COVER_INSERT)
 
 **Test Results:**
-- ✅ `t_covergroup_trans_simple.v` - **PASSING** with 100% coverage
+-  `t_covergroup_trans_simple.v` - **PASSING** with 100% coverage
   - Tests: (0=>1), (1=>2), (2=>3) [2-value transitions]
   - All transitions detected correctly
-- ✅ `t_covergroup_trans_3value.v` - **PASSING** with 100% coverage (2026-02-09)
+-  `t_covergroup_trans_3value.v` - **PASSING** with 100% coverage (2026-02-09)
   - Tests: (0=>1=>2), (2=>3=>4) [3-value sequences]
   - Verifies multi-value state machine works correctly
-- ✅ `t_covergroup_trans_restart.v` - **PASSING** with 100% coverage (2026-02-09)
+-  `t_covergroup_trans_restart.v` - **PASSING** with 100% coverage (2026-02-09)
   - Tests: (1=>2=>3) with sequence 1,2,1,2,3
   - Verifies restart logic when seeing first value again
 
 **Key Discovery:**
-- ⚠️ Verilator doesn't support `@(posedge clk)` automatic sampling
+-  Verilator doesn't support `@(posedge clk)` automatic sampling
 - Must use explicit `covergroup_inst.sample()` calls
 
-#### Phase 15.2: Multi-Value Sequences - ✅ **COMPLETE** (2026-02-09)
+#### Phase 15.2: Multi-Value Sequences -  **COMPLETE** (2026-02-09)
 
 **Status:** Implemented and tested!
 
@@ -956,7 +956,7 @@ Code generation:
 
 **Effort:** ~24 hours implementation + testing
 
-#### Phase 15.3: Consecutive Repetition `[*]` - ⏳ **NOT STARTED**
+#### Phase 15.3: Consecutive Repetition `[*]` -  **NOT STARTED**
 
 **Status:** Deferred but fully analyzed. Ready to implement when prioritized.
 
@@ -974,10 +974,10 @@ Code generation:
 - Handle min/max ranges
 
 **Infrastructure:**
-- ✅ AST support already exists (VTransRepType::CONSEC)
-- ✅ Parser recognizes and creates nodes
-- ✅ repMinp/repMaxp fields available for counts
-- ❌ Code generation not implemented
+-  AST support already exists (VTransRepType::CONSEC)
+-  Parser recognizes and creates nodes
+-  repMinp/repMaxp fields available for counts
+-  Code generation not implemented
 
 **Complexity:** Medium (straightforward state machine extension)
 **Risk:** Low (clean semantics, well-defined behavior)
@@ -985,7 +985,7 @@ Code generation:
 
 **Recommendation:** Implement this next if user demand indicates priority.
 
-#### Phase 15.4: Goto Repetition `[->]` - ⏳ **FUTURE**
+#### Phase 15.4: Goto Repetition `[->]` -  **FUTURE**
 
 **Status:** Deferred to future work. Design complete, awaiting prioritization.
 
@@ -1003,15 +1003,15 @@ Code generation:
 - Handle restart cases during counting
 
 **Infrastructure:**
-- ✅ AST support exists (VTransRepType::GOTO)
-- ✅ Parser support complete
-- ❌ Code generation not implemented
+-  AST support exists (VTransRepType::GOTO)
+-  Parser support complete
+-  Code generation not implemented
 
 **Complexity:** Medium-High (more edge cases)
 **Risk:** Medium (immediate-next rule requires careful implementation)
 **Value:** Medium (less commonly needed than consecutive)
 
-#### Phase 15.5: Nonconsecutive Repetition `[=]` - ⏳ **FUTURE**
+#### Phase 15.5: Nonconsecutive Repetition `[=]` -  **FUTURE**
 
 **Status:** Deferred to future work. Design complete, awaiting prioritization.
 
@@ -1029,9 +1029,9 @@ Code generation:
 - More flexible transition logic
 
 **Infrastructure:**
-- ✅ AST support exists (VTransRepType::NONCONS)
-- ✅ Parser support complete
-- ❌ Code generation not implemented
+-  AST support exists (VTransRepType::NONCONS)
+-  Parser support complete
+-  Code generation not implemented
 
 **Complexity:** Medium-High (most edge cases)
 **Risk:** Medium (overlapping detection tricky)
@@ -1042,11 +1042,11 @@ Code generation:
 **Total Effort for All Repetitions:** 11-14 days (2-3 weeks)
 
 **Current Status:**
-- Phase 15.1 (2-value): ✅ **COMPLETE**
-- Phase 15.2 (Multi-value): ✅ **COMPLETE**
-- Phase 15.3 (Consecutive): ⏳ Ready to implement (3-4 days)
-- Phase 15.4 (Goto): ⏳ Design complete (4-5 days)
-- Phase 15.5 (Nonconsecutive): ⏳ Design complete (4-5 days)
+- Phase 15.1 (2-value):  **COMPLETE**
+- Phase 15.2 (Multi-value):  **COMPLETE**
+- Phase 15.3 (Consecutive):  Ready to implement (3-4 days)
+- Phase 15.4 (Goto):  Design complete (4-5 days)
+- Phase 15.5 (Nonconsecutive):  Design complete (4-5 days)
 
 **Recommendation:**
 - Current implementation is **production-ready** for most use cases
@@ -1092,10 +1092,10 @@ Code generation:
 **Goal:** Implement static `get_coverage()` method that aggregates coverage across all instances of a covergroup type, and support dynamic covergroup creation with `new`.
 
 **Current Status:**
-- ✅ Covergroups already extend `VlClass` (reference-counted base class)
-- ✅ Instance method `get_inst_coverage()` works correctly
-- ❌ Static method `get_coverage()` returns 0.0 (placeholder)
-- ❌ Dynamic allocation with `new` not yet supported/tested
+-  Covergroups already extend `VlClass` (reference-counted base class)
+-  Instance method `get_inst_coverage()` works correctly
+-  Static method `get_coverage()` returns 0.0 (placeholder)
+-  Dynamic allocation with `new` not yet supported/tested
 
 **Key Finding:** Much infrastructure already exists! Covergroups are proper classes with reference counting.
 
@@ -1112,10 +1112,10 @@ private:
     static VL_THREAD_LOCAL std::vector<Vt__cg*>* t_instances VL_GUARDED_BY(s_mutex);
     static std::mutex s_mutex;
     bool m_registered = false;
-    
+
     // Cached metrics
     int m_totalBins;  // Set at generation time
-    
+
 public:
     void registerInstance() VL_MT_SAFE {
         const std::lock_guard<std::mutex> lock(s_mutex);
@@ -1125,7 +1125,7 @@ public:
             m_registered = true;
         }
     }
-    
+
     void unregisterInstance() VL_MT_SAFE {
         const std::lock_guard<std::mutex> lock(s_mutex);
         if (m_registered && t_instances) {
@@ -1134,18 +1134,18 @@ public:
             m_registered = false;
         }
     }
-    
+
     int getCoveredBinCount() const {
         int covered = 0;
         if (__PVT____Vcov_bin1 > 0) covered++;
         // ... check all bins ...
         return covered;
     }
-    
+
     static double get_coverage() VL_MT_SAFE {
         const std::lock_guard<std::mutex> lock(s_mutex);
         if (!t_instances || t_instances->empty()) return 0.0;
-        
+
         int total_bins = 0, covered_bins = 0;
         for (const auto* inst : *t_instances) {
             total_bins += inst->getTotalBinCount();
@@ -1228,7 +1228,7 @@ public:
    module t;
        cg cg1 = new;
        cg cg2 = new;
-       
+
        initial begin
            // Sample different bins in each instance
            // Verify aggregated coverage is correct
@@ -1266,7 +1266,7 @@ If not, investigate what's needed.
 // In generateCovergroupClass():
 // Add static members to class definition
 classp->addMembersp(
-    new AstVar{fl, VVarType::VAR, "t_instances", 
+    new AstVar{fl, VVarType::VAR, "t_instances",
                new AstBasicDType{fl, VBasicDTypeKwd::VOID}});
 // Mark as static, thread-local
 ```
@@ -1327,7 +1327,7 @@ void generateStaticGetCoverage() {
 ### Timeline
 
 - **Week 1:** Instance registry infrastructure
-- **Week 2:** Static get_coverage() implementation  
+- **Week 2:** Static get_coverage() implementation
 - **Week 3:** Testing and refinement
 - **Week 4:** Dynamic allocation (if needed)
 
@@ -1364,15 +1364,15 @@ void generateStaticGetCoverage() {
    - Limited documentation on how to properly emit static members
 
 **What Worked:**
-- ✅ Instance (non-static) member variables via `AstVar`
-- ✅ Constructor modifications
-- ✅ Instance methods via `AstCFunc` (getTotalBinCount, getCoveredBinCount)
-- ✅ Basic C++ code compilation
+-  Instance (non-static) member variables via `AstVar`
+-  Constructor modifications
+-  Instance methods via `AstCFunc` (getTotalBinCount, getCoveredBinCount)
+-  Basic C++ code compilation
 
 **What Didn't Work:**
-- ❌ Static member variable declarations
-- ❌ Complex `get_coverage()` implementation via `AstCStmt`
-- ❌ Destructor auto-generation (had to check name manually)
+-  Static member variable declarations
+-  Complex `get_coverage()` implementation via `AstCStmt`
+-  Destructor auto-generation (had to check name manually)
 
 **Alternative Approaches to Consider:**
 
@@ -1408,15 +1408,15 @@ void generateStaticGetCoverage() {
 ---
 
 **Next Steps (Priority Order):**
-1. ~~Implement coverage database integration~~ ✅ **COMPLETED**
-2. **Implement instance tracking and static get_coverage()** 🚧 **IN PROGRESS** (Phase 14)
+1. ~~Implement coverage database integration~~  **COMPLETED**
+2. **Implement instance tracking and static get_coverage()**  **IN PROGRESS** (Phase 14)
 3. Implement cross coverage bin filtering (binsof, intersect)
 5. Transition bins support
 6. Enhanced coverage reporting features (bin-level detail reports)
 
 **Current Test Status:**
-- ✅ 30+ tests passing including functional coverage tests
-- ✅ Coverage database integration test (t_funccov_database)
+-  30+ tests passing including functional coverage tests
+-  Coverage database integration test (t_funccov_database)
 - All core functional coverage features working
 - Coverage computation correct and integrated with coverage database
 
@@ -1670,15 +1670,15 @@ COVERGROUP cg1 top.dut weight=10 goal=100
 - Support ranges: `bins b = {[0:10]}`
 - Support multiple ranges: `bins b = {[0:5], [10:15]}`
 
-**2.3 Sampling Logic** ✅ **COMPLETED**
-- ✅ Generate sampling code in `sample()` method (pre-existing)
-- ✅ Evaluate coverpoint expressions (pre-existing)
-- ✅ Match values to bins and increment counters (pre-existing)
-- ✅ Support `iff` conditions for selective sampling **[NEWLY IMPLEMENTED]**
+**2.3 Sampling Logic**  **COMPLETED**
+-  Generate sampling code in `sample()` method (pre-existing)
+-  Evaluate coverpoint expressions (pre-existing)
+-  Match values to bins and increment counters (pre-existing)
+-  Support `iff` conditions for selective sampling **[NEWLY IMPLEMENTED]**
   - Coverpoint `iff` expressions are now evaluated and ANDed with bin match conditions
   - Sample only occurs when iff condition evaluates to true
   - Test: `test_regress/t/t_covergroup_iff.v`
-- ⏸️ Handle clocking event triggers (deferred - requires event infrastructure)
+-  Handle clocking event triggers (deferred - requires event infrastructure)
 
 **Implementation Notes:**
 - Modified `V3CoverageFunctional.cpp::generateBinMatchCode()` to incorporate `iffp` expression
@@ -1716,25 +1716,25 @@ COVERGROUP cg1 top.dut weight=10 goal=100
 - Implement `default bins` (catch-all)
 - Implement `wildcard bins` (don't care matching)
 
-#### Phase 5: Coverage Computation (Milestone: Get_Coverage Works) 🚧 **IN PROGRESS**
+#### Phase 5: Coverage Computation (Milestone: Get_Coverage Works)  **IN PROGRESS**
 
-**5.1 Coverage Metrics** 🚧 **IN PROGRESS**
-- ⚠️ Implementing coverage computation algorithms
+**5.1 Coverage Metrics**  **IN PROGRESS**
+-  Implementing coverage computation algorithms
   - Basic algorithm implemented: count covered bins (count > 0) / total bins * 100
   - Generated code computes coverage in get_coverage() and get_inst_coverage()
   - **Issues to resolve:**
     - Need to use correct Verilated runtime function for double division
     - get_coverage() is static but needs access to instance data - need to aggregate across instances
     - get_inst_coverage() works for single instance
-- ⏸️ Cross coverage formula per IEEE spec (deferred)
-- ⏸️ Weight-based aggregation (deferred)
-- ⏸️ Support `at_least` threshold (deferred)
+-  Cross coverage formula per IEEE spec (deferred)
+-  Weight-based aggregation (deferred)
+-  Support `at_least` threshold (deferred)
 
-**5.2 Predefined Methods** 🚧 **IN PROGRESS** 
-- ⚠️ Implement `get_coverage()` (type coverage) - basic implementation done, needs fixes
-- ⚠️ Implement `get_inst_coverage()` (instance coverage) - basic implementation done, needs fixes
-- ⏸️ Implement `start()` and `stop()` (stubs exist, no functionality yet)
-- ⏸️ Implement `set_inst_name()` (stub exists, no functionality yet)
+**5.2 Predefined Methods**  **IN PROGRESS**
+-  Implement `get_coverage()` (type coverage) - basic implementation done, needs fixes
+-  Implement `get_inst_coverage()` (instance coverage) - basic implementation done, needs fixes
+-  Implement `start()` and `stop()` (stubs exist, no functionality yet)
+-  Implement `set_inst_name()` (stub exists, no functionality yet)
 
 **Implementation Notes:**
 - Added `generateCoverageComputationCode()` method to V3CoverageFunctional.cpp
@@ -1743,43 +1743,43 @@ COVERGROUP cg1 top.dut weight=10 goal=100
 - Increments covered count for each bin with count > 0
 - Computes percentage: (covered / total) * 100
 - **Current blockers:**
-  - C++ compilation fails due to VL_DIV_DDD not existing  
+  - C++ compilation fails due to VL_DIV_DDD not existing
   - Static get_coverage() cannot access instance member variables
-  
+
 **Files modified:**
 - `src/V3CoverageFunctional.cpp` - Added coverage computation code generation
 
-**5.3 System Functions** ⏸️ **DEFERRED**
-- ⏸️ Implement `$get_coverage()`
-- ⏸️ Implement `$set_coverage_db_name()`
-- ⏸️ Implement `$load_coverage_db()`
+**5.3 System Functions**  **DEFERRED**
+-  Implement `$get_coverage()`
+-  Implement `$set_coverage_db_name()`
+-  Implement `$load_coverage_db()`
 
 #### Phase 6: Output and Reporting (Milestone: Coverage Reports Generated)
 
-**6.1 Coverage Database Format** ✅ **COMPLETE**
-- ✅ Uses existing SystemC::Coverage-3 format (no version change needed)
-- ✅ Output covergroup metadata via "page" field (v_funccov/<covergroup>)
-- ✅ Output bin-level coverage data with hit counts
-- ✅ Support hierarchical naming (e.g., cg.cp.low)
-- ✅ Bin names tracked via "bin" key
-- ⏸️ `per_instance` handling (deferred - requires instance tracking)
+**6.1 Coverage Database Format**  **COMPLETE**
+-  Uses existing SystemC::Coverage-3 format (no version change needed)
+-  Output covergroup metadata via "page" field (v_funccov/<covergroup>)
+-  Output bin-level coverage data with hit counts
+-  Support hierarchical naming (e.g., cg.cp.low)
+-  Bin names tracked via "bin" key
+-  `per_instance` handling (deferred - requires instance tracking)
 
-**6.2 Tool Support** ✅ **COMPLETE**
-- ✅ verilator_coverage tool recognizes "funccov" type
-- ✅ Support functional coverage filtering via --filter-type funccov
-- ✅ Generate functional coverage reports via --annotate
-- ✅ Compute coverage percentages (with --annotate-min 1)
-- ✅ Show bin hit counts in annotated source
-- ✅ Detailed reporting with --annotate-points (hierarchy info)
-- ⏸️ Functional coverage merging across multiple runs (not yet tested)
+**6.2 Tool Support**  **COMPLETE**
+-  verilator_coverage tool recognizes "funccov" type
+-  Support functional coverage filtering via --filter-type funccov
+-  Generate functional coverage reports via --annotate
+-  Compute coverage percentages (with --annotate-min 1)
+-  Show bin hit counts in annotated source
+-  Detailed reporting with --annotate-points (hierarchy info)
+-  Functional coverage merging across multiple runs (not yet tested)
 
-**6.3 Report Formats** ✅ **PARTIAL**
-- ✅ Text report with coverage percentages
-- ✅ Bin-level detail reports with hit counts
-- ✅ Annotated source files showing bin coverage
-- ⏸️ Cross coverage matrices (not yet implemented)
-- ⏸️ UCIS export (optional, future work)
-- ⏸️ Filtering by specific covergroup/coverpoint (uses global filter only)
+**6.3 Report Formats**  **PARTIAL**
+-  Text report with coverage percentages
+-  Bin-level detail reports with hit counts
+-  Annotated source files showing bin coverage
+-  Cross coverage matrices (not yet implemented)
+-  UCIS export (optional, future work)
+-  Filtering by specific covergroup/coverpoint (uses global filter only)
 
 #### Phase 7: Advanced Features (Future Enhancements)
 
@@ -1836,11 +1836,11 @@ COVERGROUP cg1 top.dut weight=10 goal=100
 1. **Linear search** (Phase 1)
    - Simple if-else chain
    - Acceptable for small number of bins
-   
+
 2. **Binary search tree**
    - Sort bins by range at compile time
    - O(log n) lookup
-   
+
 3. **Hash table**
    - Direct value-to-bin mapping
    - O(1) for exact matches
@@ -1854,7 +1854,7 @@ COVERGROUP cg1 top.dut weight=10 goal=100
 
 ### Challenge 3: Cross Coverage Explosion
 
-**Issue:** Cross coverage of N coverpoints with M bins each creates M^N cross products. This can explode quickly (10 coverpoints × 10 bins = 10 billion combinations).
+**Issue:** Cross coverage of N coverpoints with M bins each creates M^N cross products. This can explode quickly (10 coverpoints  10 bins = 10 billion combinations).
 
 **Impact:** HIGH - Memory and runtime concern
 
@@ -2135,17 +2135,17 @@ The proposed architecture extends the existing coverage system rather than repla
 
 ### Overall Test Results (2026-02-09)
 
-**Test Suite:** 43 functional coverage tests  
-**Pass Rate:** 100% (43 passing, 0 failing) ✅  
+**Test Suite:** 43 functional coverage tests
+**Pass Rate:** 100% (43 passing, 0 failing)
 **Status:** Production-ready with documented limitations
 
 **Latest additions:**
-- t_covergroup_trans_3value.v - Multi-value transition sequences ✅
-- t_covergroup_trans_restart.v - Restart logic verification ✅
+- t_covergroup_trans_3value.v - Multi-value transition sequences
+- t_covergroup_trans_restart.v - Restart logic verification
 
 ### Test Categories
 
-#### ✅ All Tests Passing (41 tests)
+####  All Tests Passing (41 tests)
 
 **Basic Functionality (5 tests):**
 - `t_covergroup_minimal.v` - Basic covergroup syntax
@@ -2162,7 +2162,7 @@ The proposed architecture extends the existing coverage system rather than repla
 
 **Cross Coverage (3 tests):**
 - `t_covergroup_cross_simple.v` - 2-way cross
-- `t_covergroup_cross_3way.v` - 3-way cross  
+- `t_covergroup_cross_3way.v` - 3-way cross
 - `t_covergroup_cross_4way.v` - 4-way cross
 
 **Advanced Features (5+ tests):**
@@ -2172,13 +2172,13 @@ The proposed architecture extends the existing coverage system rather than repla
 - `t_covergroup_with_sample_args.v` - Parameterized sampling
 
 **Transition Bins (2 tests):**
-- `t_covergroup_trans_simple.v` - Basic 2-value transitions (✅ 100% coverage)
+- `t_covergroup_trans_simple.v` - Basic 2-value transitions ( 100% coverage)
 - `t_covergroup_trans_ranges.v` - Transitions with ranges
 
 **Edge Cases:**
 - `t_covergroup_empty.v` - Empty covergroup (**Issue #2 - FIXED** 2026-02-09)
   - Expected: 100% coverage (nothing to miss)
-  - Actual: 100% coverage ✅
+  - Actual: 100% coverage
   - Status: Bug fixed, test now passes
 
 **Error Handling (15+ negative tests):**
@@ -2189,36 +2189,36 @@ The proposed architecture extends the existing coverage system rather than repla
 
 | Feature | Tests | Status | Notes |
 |---------|-------|--------|-------|
-| Basic bins | 5+ | ✅ | Fully tested |
-| Range bins | 3+ | ✅ | Fully tested |
-| Array bins | 3+ | ✅ | Fully tested |
-| Wildcard bins | 2+ | ✅ | Fully tested |
-| Default bins | 2+ | ✅ | Fully tested |
-| Ignore bins | 2+ | ✅ | Fully tested |
-| Illegal bins | 2+ | ✅ | Fully tested |
-| Cross coverage (2-way) | 1 | ✅ | Fully tested |
-| Cross coverage (3-way) | 1 | ✅ | Fully tested |
-| Cross coverage (4-way) | 1 | ✅ | Fully tested |
-| iff conditions | 1 | ✅ | Fully tested |
-| Covergroup options | 2+ | ✅ | Fully tested |
-| Bin options | 2+ | ✅ | Fully tested |
-| Dynamic creation | 1 | ✅ | Fully tested |
-| Inheritance | 2 | ✅ | Fully tested |
-| In-class covergroups | 3 | ✅ | Fully tested |
-| Parameterized sampling | 4 | ✅ | Fully tested |
-| get_inst_coverage() | 1 | ✅ | Fully tested |
-| get_coverage() static | 1 | ⚠️ | Known limitation |
-| Transition bins (basic) | 2 | ✅ | 2-value transitions only |
-| Transition bins (arrays) | 0 | ❌ | Not supported |
-| Transition bins (multi-value) | 0 | ❌ | Not supported |
-| Transition bins (repetition) | 0 | ❌ | Not supported |
-| Empty covergroups | 1 | ✅ | Bug fixed 2026-02-09 |
+| Basic bins | 5+ |  | Fully tested |
+| Range bins | 3+ |  | Fully tested |
+| Array bins | 3+ |  | Fully tested |
+| Wildcard bins | 2+ |  | Fully tested |
+| Default bins | 2+ |  | Fully tested |
+| Ignore bins | 2+ |  | Fully tested |
+| Illegal bins | 2+ |  | Fully tested |
+| Cross coverage (2-way) | 1 |  | Fully tested |
+| Cross coverage (3-way) | 1 |  | Fully tested |
+| Cross coverage (4-way) | 1 |  | Fully tested |
+| iff conditions | 1 |  | Fully tested |
+| Covergroup options | 2+ |  | Fully tested |
+| Bin options | 2+ |  | Fully tested |
+| Dynamic creation | 1 |  | Fully tested |
+| Inheritance | 2 |  | Fully tested |
+| In-class covergroups | 3 |  | Fully tested |
+| Parameterized sampling | 4 |  | Fully tested |
+| get_inst_coverage() | 1 |  | Fully tested |
+| get_coverage() static | 1 |  | Known limitation |
+| Transition bins (basic) | 2 |  | 2-value transitions only |
+| Transition bins (arrays) | 0 |  | Not supported |
+| Transition bins (multi-value) | 0 |  | Not supported |
+| Transition bins (repetition) | 0 |  | Not supported |
+| Empty covergroups | 1 |  | Bug fixed 2026-02-09 |
 
 ### Test Gaps Identified
 
 **Missing Test Coverage:**
 - Very large ranges ([0:1000000])
-- Overflow scenarios (bin hits > UINT32_MAX)  
+- Overflow scenarios (bin hits > UINT32_MAX)
 - Zero-width expressions
 - Stress tests (100+ bins, 50+ coverpoints)
 - Performance benchmarks
@@ -2253,11 +2253,11 @@ The proposed architecture extends the existing coverage system rather than repla
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
-| Test pass rate | >95% | 97% | ✅ |
-| Feature coverage | >90% | ~95% | ✅ |
-| Known bugs | <5 | 2 | ✅ |
-| Critical bugs | 0 | 0 | ✅ |
-| Documentation | Complete | Complete | ✅ |
+| Test pass rate | >95% | 97% |  |
+| Feature coverage | >90% | ~95% |  |
+| Known bugs | <5 | 2 |  |
+| Critical bugs | 0 | 0 |  |
+| Documentation | Complete | Complete |  |
 
 **Conclusion:** Implementation is production-ready for most use cases with clear documentation of limitations.
 
@@ -2267,7 +2267,7 @@ The proposed architecture extends the existing coverage system rather than repla
 
 This section documents the systematic production hardening effort undertaken to ensure robustness and quality.
 
-### Phase 1: Test Baseline & Gap Analysis ✅ **COMPLETE**
+### Phase 1: Test Baseline & Gap Analysis  **COMPLETE**
 
 **Objective:** Establish comprehensive understanding of existing test coverage and identify gaps.
 
@@ -2292,17 +2292,17 @@ This section documents the systematic production hardening effort undertaken to 
 - No integration tests for complex hierarchical designs
 
 **Test Categories Verified:**
-- ✅ Basic bins (values, ranges) - 5+ tests
-- ✅ Special bins (default, ignore, illegal, wildcard) - 8+ tests
-- ✅ Array bins - 3+ tests
-- ✅ Cross coverage (2-way, 3-way, N-way) - 3+ tests
-- ✅ Transition bins (basic 2-value) - 1 test
-- ✅ Coverage computation - 2+ tests
-- ✅ Database integration - verified
-- ✅ Dynamic covergroup creation - 1+ tests
-- ✅ Error detection - 13 negative tests
+-  Basic bins (values, ranges) - 5+ tests
+-  Special bins (default, ignore, illegal, wildcard) - 8+ tests
+-  Array bins - 3+ tests
+-  Cross coverage (2-way, 3-way, N-way) - 3+ tests
+-  Transition bins (basic 2-value) - 1 test
+-  Coverage computation - 2+ tests
+-  Database integration - verified
+-  Dynamic covergroup creation - 1+ tests
+-  Error detection - 13 negative tests
 
-### Phase 2: Edge Case Testing ⚠️ **IN PROGRESS**
+### Phase 2: Edge Case Testing  **IN PROGRESS**
 
 **Objective:** Create and run tests for edge cases and boundary conditions.
 
@@ -2345,7 +2345,7 @@ This section documents the systematic production hardening effort undertaken to 
 - [ ] Very large number of coverpoints (100+)
 - [ ] Deep cross coverage stress test (5-way, 6-way)
 
-### Phase 3: Performance Analysis ⏳ **NOT STARTED**
+### Phase 3: Performance Analysis  **NOT STARTED**
 
 **Objective:** Measure and optimize performance characteristics.
 
@@ -2367,7 +2367,7 @@ This section documents the systematic production hardening effort undertaken to 
 - Compile time increase < 20% vs no coverage
 - Memory overhead < 1KB per coverpoint
 
-### Phase 4: Code Quality Review ⏳ **NOT STARTED**
+### Phase 4: Code Quality Review  **NOT STARTED**
 
 **Objective:** Ensure code quality, clarity, and maintainability.
 
@@ -2391,7 +2391,7 @@ This section documents the systematic production hardening effort undertaken to 
 - [ ] Consolidate duplicate code
 - [ ] Improve naming consistency
 
-### Phase 5: Documentation ⏳ **NOT STARTED**
+### Phase 5: Documentation  **NOT STARTED**
 
 **Objective:** Create comprehensive user and developer documentation.
 
@@ -2417,7 +2417,7 @@ This section documents the systematic production hardening effort undertaken to 
 - [ ] Coverage report interpretation guide
 - [ ] verilator_coverage tool usage
 
-### Phase 6: Memory Safety Testing with AddressSanitizer ✅ **COMPLETE**
+### Phase 6: Memory Safety Testing with AddressSanitizer  **COMPLETE**
 
 **Objective:** Verify no memory corruption, leaks, or undefined behavior using AddressSanitizer (ASAN).
 
@@ -2430,11 +2430,11 @@ This section documents the systematic production hardening effort undertaken to 
 - [x] Document ASAN findings
 
 **Results:**
-- ✅ **NO memory errors in functional coverage runtime**
-- ✅ **Zero heap-use-after-free errors**
-- ✅ **Zero buffer-overflow errors**
-- ✅ **Zero runtime memory leaks**
-- ✅ **Baseline validation confirms compiler leaks are expected Verilator behavior**
+-  **NO memory errors in functional coverage runtime**
+-  **Zero heap-use-after-free errors**
+-  **Zero buffer-overflow errors**
+-  **Zero runtime memory leaks**
+-  **Baseline validation confirms compiler leaks are expected Verilator behavior**
 
 **Compilation Phase Observations:**
 - Small leaks detected (~103KB in 1,601 allocations)
@@ -2474,7 +2474,7 @@ This section documents the systematic production hardening effort undertaken to 
 - See session files/asan_baseline_validation.md for full report
 - Final Grade: **A+** (Memory Safety)
 
-### Phase 7: Integration Testing ⏳ **NOT STARTED**
+### Phase 7: Integration Testing  **NOT STARTED**
 
 **Objective:** Validate functionality in realistic end-to-end scenarios.
 
@@ -2495,59 +2495,59 @@ This section documents the systematic production hardening effort undertaken to 
 ### Success Criteria
 
 **Quality Metrics:**
-- ✅ All existing tests pass (36/37 = 97%)
-- ✅ 95%+ coverage of implemented features tested
-- ✅ No known crashes or hangs
-- ✅ Clear error messages for all failure modes
-- ✅ Known limitations documented with workarounds
-- ✅ Performance targets met (Grade A+)
-- ✅ User documentation complete (Score 9.4/10)
-- ✅ Developer documentation complete
-- ✅ Memory safety validated (AddressSanitizer)
+-  All existing tests pass (36/37 = 97%)
+-  95%+ coverage of implemented features tested
+-  No known crashes or hangs
+-  Clear error messages for all failure modes
+-  Known limitations documented with workarounds
+-  Performance targets met (Grade A+)
+-  User documentation complete (Score 9.4/10)
+-  Developer documentation complete
+-  Memory safety validated (AddressSanitizer)
 
 **Deliverables:**
-- ✅ Comprehensive test suite (36+ tests)
-- ✅ Known issues document (2 issues documented)
-- ✅ Test coverage matrix
-- ✅ Performance report (Grade A+)
-- ✅ Storage analysis (Grade A+)
-- ✅ Code quality review (Score 8.6/10)
-- ✅ User guide (300+ lines in simulating.rst)
-- ✅ ASAN validation report (Grade A+)
+-  Comprehensive test suite (36+ tests)
+-  Known issues document (2 issues documented)
+-  Test coverage matrix
+-  Performance report (Grade A+)
+-  Storage analysis (Grade A+)
+-  Code quality review (Score 8.6/10)
+-  User guide (300+ lines in simulating.rst)
+-  ASAN validation report (Grade A+)
 
 **Timeline & Effort**
 
 **Completed Phases:**
-- Phase 1 (Baseline): 1 hour ✅
-- Phase 2 (Edge cases): 3 hours ✅
-- Phase 3 (Performance): 2 hours ✅
-- Phase 4 (Code quality): 2 hours ✅
-- Phase 5 (Documentation): 4 hours ✅
-- Phase 6 (Memory safety/ASAN): 2 hours ✅
+- Phase 1 (Baseline): 1 hour
+- Phase 2 (Edge cases): 3 hours
+- Phase 3 (Performance): 2 hours
+- Phase 4 (Code quality): 2 hours
+- Phase 5 (Documentation): 4 hours
+- Phase 6 (Memory safety/ASAN): 2 hours
 
 **Remaining Effort:**
 - Phase 7 (Integration): 2 hours (optional)
 
-**Total Completed:** 14 hours  
+**Total Completed:** 14 hours
 **Total Remaining:** 2 hours (optional)
 
 ### Status Summary (2026-02-08 19:00 UTC)
 
-**Current Phase:** Production hardening **ESSENTIALLY COMPLETE** ✅
+**Current Phase:** Production hardening **ESSENTIALLY COMPLETE**
 
 **Accomplishments:**
-- ✅ Established comprehensive test baseline (36 tests)
-- ✅ Created test coverage matrix
-- ✅ Discovered and documented 2 known issues with workarounds
-- ✅ Applied partial fix to empty covergroup bug
-- ✅ Created 3 new edge case tests
-- ✅ Performance analysis: Grade A+ (exceeds all targets)
-- ✅ Storage analysis: Grade A+ (optimal design)
-- ✅ Code quality review: Score 8.6/10 (production-ready)
-- ✅ User documentation: Score 9.4/10 (comprehensive)
-- ✅ Developer documentation: Complete
-- ✅ **Memory safety validated: Grade A+ (zero ASAN errors)**
-- ✅ **Baseline validation: Confirms no coverage-specific leaks**
+-  Established comprehensive test baseline (36 tests)
+-  Created test coverage matrix
+-  Discovered and documented 2 known issues with workarounds
+-  Applied partial fix to empty covergroup bug
+-  Created 3 new edge case tests
+-  Performance analysis: Grade A+ (exceeds all targets)
+-  Storage analysis: Grade A+ (optimal design)
+-  Code quality review: Score 8.6/10 (production-ready)
+-  User documentation: Score 9.4/10 (comprehensive)
+-  Developer documentation: Complete
+-  **Memory safety validated: Grade A+ (zero ASAN errors)**
+-  **Baseline validation: Confirms no coverage-specific leaks**
 
 **Next Steps:**
 1. Complete Phase 2: Run remaining edge case tests
@@ -2607,33 +2607,33 @@ class Vcg_cg {
     uint32_t m_cp_cmd_read = 0;
     uint32_t m_cp_cmd_write = 0;
     std::unordered_map<std::string, uint32_t> m_cross_cmd_addr;
-    
+
   public:
     Vcg_cg() {
         // Register bins with VerilatedCovContext
-        VL_COVER_INSERT(&m_cp_addr_low, "t", "coverpoint", "n", "cg.cp_addr", 
+        VL_COVER_INSERT(&m_cp_addr_low, "t", "coverpoint", "n", "cg.cp_addr",
                         "b", "low", "r", "0:127", ...);
         VL_COVER_INSERT(&m_cp_addr_high, "t", "coverpoint", "n", "cg.cp_addr",
                         "b", "high", "r", "128:255", ...);
         // ... etc
     }
-    
+
     void sample() {
         // Evaluate coverpoint expressions
         uint8_t addr_val = /* evaluate addr expression */;
         uint8_t cmd_val = /* evaluate cmd expression */;
-        
+
         // Match bins and increment
         if (addr_val >= 0 && addr_val <= 127) m_cp_addr_low++;
         if (addr_val >= 128 && addr_val <= 255) m_cp_addr_high++;
         if (cmd_val == 0) m_cp_cmd_read++;
         if (cmd_val == 1) m_cp_cmd_write++;
-        
+
         // Cross coverage
         std::string cross_key = /* format cross bin */;
         m_cross_cmd_addr[cross_key]++;
     }
-    
+
     double get_coverage() { /* compute coverage % */ }
     double get_inst_coverage() { /* compute coverage % */ }
     void start() { /* enable sampling */ }
@@ -2659,13 +2659,13 @@ class AstCovergroup final : public AstNode {
     string m_name;         // Covergroup name
     bool m_hasEvent;       // Has clocking event
     AstSenTree* m_eventp;  // Clocking event (if any)
-    
+
 public:
-    AstCovergroup(FileLine* fl, const string& name, 
+    AstCovergroup(FileLine* fl, const string& name,
                   AstNode* itemsp, AstSenTree* eventp)
         : AstNode{fl}, m_name{name}, m_eventp{eventp},
           m_hasEvent{eventp != nullptr} {}
-    
+
     string name() const { return m_name; }
     bool hasEvent() const { return m_hasEvent; }
     // ... methods
@@ -2677,9 +2677,9 @@ class AstCoverpoint final : public AstCoverItem {
     // @astgen op2 := binsp : List[AstCoverBins] // Bin specifications
     // @astgen op3 := iffp : Optional[AstNodeExpr] // iff condition
     string m_name;         // Coverpoint name (optional)
-    
+
 public:
-    AstCoverpoint(FileLine* fl, const string& name, 
+    AstCoverpoint(FileLine* fl, const string& name,
                   AstNodeExpr* exprp, AstNode* binsp)
         : AstCoverItem{fl}, m_name{name} {}
 };
@@ -2690,7 +2690,7 @@ class AstCoverBins final : public AstNode {
     string m_name;         // Bin name
     VCoverBinsType m_type; // USER, AUTO, IGNORE, ILLEGAL, DEFAULT
     bool m_isArray;        // bins name[] vs bins name
-    
+
 public:
     AstCoverBins(FileLine* fl, VCoverBinsType type,
                  const string& name, AstNode* rangesp)
@@ -2702,7 +2702,7 @@ class AstCoverCross final : public AstCoverItem {
     // @astgen op1 := refsp : List[AstCoverpointRef]  // Coverpoints to cross
     // @astgen op2 := binsp : Optional[List[AstCoverCrossBins]]
     string m_name;
-    
+
 public:
     AstCoverCross(FileLine* fl, const string& name, AstNode* refsp)
         : AstCoverItem{fl}, m_name{name} {}
@@ -2730,27 +2730,27 @@ class V{module}_covergroup_{cgname} {
 private:
     // Coverage infrastructure
     VerilatedCovergroup m_cg;
-    
+
     // Coverage points
     {for each coverpoint}
     VerilatedCoverpoint m_cp_{cpname};
     {end}
-    
+
     // Cross coverage
     {for each cross}
     VerilatedCoverCross m_cross_{crossname};
     {end}
-    
+
     // Module context for expression evaluation
     V{module}* m_modp;
-    
+
     // Enable/disable flag
     bool m_enabled = true;
-    
+
 public:
     V{module}_covergroup_{cgname}(V{module}* modp);
     ~V{module}_covergroup_{cgname}() = default;
-    
+
     void sample();
     double get_coverage();
     double get_inst_coverage();
@@ -2770,19 +2770,19 @@ V{module}_covergroup_{cgname}::V{module}_covergroup_{cgname}(V{module}* modp)
     // Create coverpoints
     {for each coverpoint cp}
     m_cp_{cpname}.init("{cpname}", "{hierarchy}.{cgname}.{cpname}");
-    
+
     // Create bins for this coverpoint
     {for each bin in cp}
-    m_cp_{cpname}.addBin("{binname}", {at_least}, 
+    m_cp_{cpname}.addBin("{binname}", {at_least},
                          {range_start}, {range_end});
     {end}
-    
+
     m_cg.addCoverpoint(&m_cp_{cpname});
     {end}
-    
+
     // Create cross coverage
     {for each cross}
-    m_cross_{crossname}.init("{crossname}", 
+    m_cross_{crossname}.init("{crossname}",
                              "{hierarchy}.{cgname}.{crossname}");
     {for each coverpoint reference}
     m_cross_{crossname}.addCoverpoint(&m_cp_{cpref});
@@ -2797,7 +2797,7 @@ V{module}_covergroup_{cgname}::V{module}_covergroup_{cgname}(V{module}* modp)
 ```cpp
 void V{module}_covergroup_{cgname}::sample() {
     if (!m_enabled) return;
-    
+
     // Sample each coverpoint
     {for each coverpoint cp}
     {
@@ -2805,17 +2805,17 @@ void V{module}_covergroup_{cgname}::sample() {
         {if has_iff}
         if (!({iff_expression})) goto skip_{cpname};
         {endif}
-        
+
         // Evaluate coverpoint expression
         {eval_type} {cpname}_val = {expression};
-        
+
         // Sample the coverpoint
         m_cp_{cpname}.sample({cpname}_val);
-        
+
         skip_{cpname}: ;
     }
     {end}
-    
+
     // Sample cross coverage (automatically handled by crosses)
     {for each cross}
     m_cross_{crossname}.sample();
@@ -2841,7 +2841,7 @@ module mem_coverage(input clk, input [7:0] addr, input [1:0] cmd);
     }
     cross addr, cmd;
   endgroup
-  
+
   cg_mem cg_inst = new;
 endmodule
 ```
@@ -2857,7 +2857,7 @@ private:
     VerilatedCoverCross m_cross_addr_cmd;
     Vmem_coverage* m_modp;
     bool m_enabled = true;
-    
+
 public:
     Vmem_coverage_covergroup_cg_mem(Vmem_coverage* modp);
     void sample();
@@ -2877,14 +2877,14 @@ Vmem_coverage_covergroup_cg_mem::Vmem_coverage_covergroup_cg_mem(
     m_cp_addr.addBin("mid", 1, 64, 191);
     m_cp_addr.addBin("high", 1, 192, 255);
     m_cg.addCoverpoint(&m_cp_addr);
-    
+
     // Setup cmd coverpoint
     m_cp_cmd.init("cmd", "mem_coverage.cg_inst.cmd");
     m_cp_cmd.addBin("read", 1, 0, 0);
     m_cp_cmd.addBin("write", 1, 1, 1);
     m_cp_cmd.addBin("idle", 1, 2, 3);  // Multiple values
     m_cg.addCoverpoint(&m_cp_cmd);
-    
+
     // Setup cross
     m_cross_addr_cmd.init("addr_cmd", "mem_coverage.cg_inst.addr_cmd");
     m_cross_addr_cmd.addCoverpoint(&m_cp_addr);
@@ -2894,15 +2894,15 @@ Vmem_coverage_covergroup_cg_mem::Vmem_coverage_covergroup_cg_mem(
 
 void Vmem_coverage_covergroup_cg_mem::sample() {
     if (!m_enabled) return;
-    
+
     // Sample addr
     uint8_t addr_val = m_modp->addr;
     m_cp_addr.sample(addr_val);
-    
+
     // Sample cmd
     uint8_t cmd_val = m_modp->cmd;
     m_cp_cmd.sample(cmd_val);
-    
+
     // Cross sampling happens automatically
     m_cross_addr_cmd.sample();
 }
@@ -2913,11 +2913,11 @@ void Vmem_coverage_covergroup_cg_mem::sample() {
 class Vmem_coverage {
     // ... other members
     Vmem_coverage_covergroup_cg_mem* m_cg_inst;
-    
+
     Vmem_coverage() {
         m_cg_inst = new Vmem_coverage_covergroup_cg_mem(this);
     }
-    
+
     void _eval_settle() {
         // ... existing code
         // Call sample on clocking event
@@ -3003,14 +3003,14 @@ From IEEE 1800-2023:
 
 **Formula for cross coverage (from IEEE spec):**
 
-Cross coverage = (# of covered cross bins) / (# of valid cross bins) × 100%
+Cross coverage = (# of covered cross bins) / (# of valid cross bins)  100%
 
 **Example:**
 ```systemverilog
 cross cp_addr, cp_cmd;  // All combinations
 ```
 
-If `cp_addr` has 3 bins and `cp_cmd` has 3 bins, the cross has 3×3 = 9 bins.
+If `cp_addr` has 3 bins and `cp_cmd` has 3 bins, the cross has 33 = 9 bins.
 
 ### Section 19.11: Coverage computation
 
@@ -3018,19 +3018,19 @@ From IEEE 1800-2023:
 
 **Coverpoint coverage formula:**
 ```
-coverpoint_coverage = (# bins hit >= at_least) / (total # bins) × 100%
+coverpoint_coverage = (# bins hit >= at_least) / (total # bins)  100%
 ```
 
 **Covergroup instance coverage:**
 ```
-instance_coverage = Σ(weight_i × coveritem_coverage_i) / Σ(weight_i)
+instance_coverage = (weight_i  coveritem_coverage_i) / (weight_i)
 ```
 
 Where coveritem includes both coverpoints and crosses.
 
 **Covergroup type coverage:**
 ```
-type_coverage = Σ(instance_weight_j × instance_coverage_j) / Σ(instance_weight_j)
+type_coverage = (instance_weight_j  instance_coverage_j) / (instance_weight_j)
 ```
 
 ## Appendix E: References
@@ -3163,7 +3163,7 @@ verilator --debug-check --dump-tree --coverage test.v
 
 | Test Name | Description | Expected Result | Status |
 |-----------|-------------|-----------------|--------|
-| t_funccov_basic | Simple covergroup, auto bins | PASS, coverage output | ✅ |
+| t_funccov_basic | Simple covergroup, auto bins | PASS, coverage output |  |
 | t_funccov_user_bins | User-defined bins | PASS, correct bin hits | TODO |
 | t_funccov_ranges | Bins with ranges [0:255] | PASS, range matching | TODO |
 | t_funccov_iff | iff condition filtering | PASS, conditional sampling | TODO |
@@ -3190,6 +3190,6 @@ verilator --debug-check --dump-tree --coverage test.v
 
 ---
 
-**Document Version:** 1.2  
-**Last Updated:** 2026-02-08  
+**Document Version:** 1.2
+**Last Updated:** 2026-02-08
 **Status:** LIVING DOCUMENT - Updated with test status, known issues, and production hardening results

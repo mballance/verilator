@@ -12,23 +12,23 @@ Implemented support for respecting `ignore_bins` and `illegal_bins` declarations
 ```cpp
 std::set<uint64_t> getExcludedValues(AstCoverpoint* coverpointp) {
     std::set<uint64_t> excluded;
-    
+
     // Scan existing bins for ignore/illegal types
     for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
         AstCoverBin* cbinp = VN_CAST(binp, CoverBin);
         if (!cbinp) continue;
-        
+
         VCoverBinsType btype = cbinp->binsType();
         if (btype != VCoverBinsType::IGNORE && btype != VCoverBinsType::ILLEGAL) {
             continue;
         }
-        
+
         // Extract values from the bin's range expression
         if (AstNode* rangep = cbinp->rangesp()) {
             extractValuesFromRange(rangep, excluded);
         }
     }
-    
+
     return excluded;
 }
 ```
@@ -46,12 +46,12 @@ Modified `createImplicitAutoBins()` to:
 2. **Calculate valid value count** (total values - excluded values)
 3. **Create bins only for valid values** (two strategies):
 
-**Strategy A: One bin per value** (when numValidValues ≤ autoBinMax)
+**Strategy A: One bin per value** (when numValidValues  autoBinMax)
 ```cpp
 for (uint64_t v = 0; v <= maxVal && binCount < numBins; v++) {
     // Skip excluded values
     if (excluded.find(v) != excluded.end()) continue;
-    
+
     // Create single-value bin for this value
     create bin auto_N covering value v
     binCount++;
@@ -64,7 +64,7 @@ for (uint64_t v = 0; v <= maxVal && binCount < numBins; v++) {
 // Skip bins where all values are excluded
 for (int i = 0; i < numBins; i++) {
     calculate range [lo:hi]
-    
+
     if (all values in range are excluded) {
         skip this bin
     } else {
@@ -102,13 +102,13 @@ endgroup
 
 **Before Implementation:**
 - Created 8 bins (0-7, including ignored value)
-- Sampled values 0, 1, 7 → 3 bins hit
-- Coverage: 3/8 = **37.5%** ❌ WRONG
+- Sampled values 0, 1, 7  3 bins hit
+- Coverage: 3/8 = **37.5%**  WRONG
 
 **After Implementation:**
 - Creates 7 bins (0-6, excluding ignored value 7)
 - Sampled values 0, 1, 7 (7 tracked but ignored)
-- Coverage: 2/7 = **28.6%** ✅ CORRECT
+- Coverage: 2/7 = **28.6%**  CORRECT
 
 ### Generated Code Verification
 
@@ -129,7 +129,7 @@ IData/*31:0*/ __PVT____Vcov_cp_data3_auto_6;    // Bin for value 6
 void sample() {
     // Track ignored value (for debugging/reporting)
     if (data3 == 7) __Vcov_cp_data3_reserved++;
-    
+
     // Only cover valid values
     if (data3 == 0) __Vcov_cp_data3_auto_0++;
     if (data3 == 1) __Vcov_cp_data3_auto_1++;
@@ -146,34 +146,34 @@ double get_inst_coverage() {
     if (__Vcov_cp_data3_auto_1 >= 1) covered++;
     ...
     if (__Vcov_cp_data3_auto_6 >= 1) covered++;
-    
+
     return 100.0 * (covered / 7.0);  // Divides by 7, not 8!
 }
 ```
 
 ## Features Implemented
 
-✅ **Ignore Bins Respected**
+ **Ignore Bins Respected**
 - Values in `ignore_bins` excluded from automatic bin creation
 - Ignored values still tracked (for reporting) but not counted in coverage
 - Accurate coverage percentage calculation
 
-✅ **Illegal Bins Respected**  
+ **Illegal Bins Respected**
 - Values in `illegal_bins` excluded from automatic bin creation
 - Same logic as ignore_bins (both excluded from auto-creation)
 
-✅ **Single Values**
-- `ignore_bins reserved = {7};` ✅
-- `illegal_bins invalid = {15};` ✅
+ **Single Values**
+- `ignore_bins reserved = {7};`
+- `illegal_bins invalid = {15};`
 
-✅ **Value Ranges**
-- `ignore_bins high = {[240:255]};` ✅
-- `illegal_bins neg = {[0:10]};` ✅
+ **Value Ranges**
+- `ignore_bins high = {[240:255]};`
+- `illegal_bins neg = {[0:10]};`
 
-✅ **Value Lists**
-- `ignore_bins special = {0, 7, 15, 31};` ✅
+ **Value Lists**
+- `ignore_bins special = {0, 7, 15, 31};`
 
-✅ **Complex Expressions**
+ **Complex Expressions**
 - Recursive traversal handles nested expressions
 - Supports all SystemVerilog range syntaxes
 
@@ -194,7 +194,7 @@ double get_inst_coverage() {
 
 ### Performance
 
-**Extraction:** O(B × V) where B = number of ignore/illegal bins, V = values per bin
+**Extraction:** O(B  V) where B = number of ignore/illegal bins, V = values per bin
 - Typically B=1-5, V=1-100
 - Uses std::set for O(log N) lookups
 
@@ -212,15 +212,15 @@ double get_inst_coverage() {
 
 | Test | Config | Expected | Actual | Status |
 |------|--------|----------|--------|--------|
-| CG1 | 3-bit, no excludes | 37.5% (3/8) | 37.5% | ✅ |
-| CG2 | 3-bit, auto_bin_max=4 | 50% (2/4) | 50% | ✅ |
-| CG3 | 3-bit, ignore={7} | **28.6% (2/7)** | **28.6%** | ✅ |
-| CG4 | 2-bit, no excludes | 100% (4/4) | 100% | ✅ |
-| CG5 | 2-bit, auto_bin_max=2 | 100% (2/2) | 100% | ✅ |
+| CG1 | 3-bit, no excludes | 37.5% (3/8) | 37.5% |  |
+| CG2 | 3-bit, auto_bin_max=4 | 50% (2/4) | 50% |  |
+| CG3 | 3-bit, ignore={7} | **28.6% (2/7)** | **28.6%** |  |
+| CG4 | 2-bit, no excludes | 100% (4/4) | 100% |  |
+| CG5 | 2-bit, auto_bin_max=2 | 100% (2/2) | 100% |  |
 
 ### Overall Results
 
-- **t_covergroup_autobins**: Still PASSING ✅ (improved internally)
+- **t_covergroup_autobins**: Still PASSING  (improved internally)
 - **Overall**: **41/56 tests passing (73.2%)** (maintained)
 
 ## Known Limitations
@@ -269,10 +269,10 @@ Support wildcard patterns in ignore/illegal bins:
 
 Successfully implemented ignore/illegal bin support during automatic bin creation. This completes the automatic bins feature, providing:
 
-- ✅ Implicit automatic bin creation
-- ✅ Covergroup-level auto_bin_max option  
-- ✅ Respect for ignore_bins and illegal_bins
-- ✅ Accurate coverage calculations
+-  Implicit automatic bin creation
+-  Covergroup-level auto_bin_max option
+-  Respect for ignore_bins and illegal_bins
+-  Accurate coverage calculations
 
 The implementation is efficient, handles all common cases, and brings Verilator's functional coverage closer to full IEEE 1800 compliance.
 

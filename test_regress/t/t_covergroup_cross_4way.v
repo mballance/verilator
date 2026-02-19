@@ -40,16 +40,16 @@ module t;
       // Hit different 4-way cross bins
       addr = 0; cmd = 0; mode = 0; parity = 0; cg_inst.sample();
       $display("Sample 1: addr=%0d, cmd=%0d, mode=%0d, parity=%0d", addr, cmd, mode, parity);
-      
+
       addr = 1; cmd = 1; mode = 0; parity = 1; cg_inst.sample();
       $display("Sample 2: addr=%0d, cmd=%0d, mode=%0d, parity=%0d", addr, cmd, mode, parity);
-      
+
       addr = 0; cmd = 1; mode = 1; parity = 0; cg_inst.sample();
       $display("Sample 3: addr=%0d, cmd=%0d, mode=%0d, parity=%0d", addr, cmd, mode, parity);
-      
+
       addr = 1; cmd = 0; mode = 1; parity = 1; cg_inst.sample();
       $display("Sample 4: addr=%0d, cmd=%0d, mode=%0d, parity=%0d", addr, cmd, mode, parity);
-      
+
       // Check coverage
       // Total bins:
       // - 2 bins in cp_addr
@@ -60,13 +60,13 @@ module t;
       // Total = 24 bins
       // Hit: 2+2+2+2+4 = 12 out of 24 = 50%
       $display("Coverage: %0.1f%%", cg_inst.get_inst_coverage());
-      
+
       if (cg_inst.get_inst_coverage() < 49.0 || cg_inst.get_inst_coverage() > 51.0) begin
-         $display("%%Error: Expected coverage around 50%%, got %0.1f%%", 
+         $display("%%Error: Expected coverage around 50%%, got %0.1f%%",
                   cg_inst.get_inst_coverage());
          $stop;
       end
-      
+
       $write("*-* All Finished *-*\n");
       $finish;
    end

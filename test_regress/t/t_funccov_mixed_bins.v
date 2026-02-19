@@ -24,29 +24,29 @@ module t (/*AUTOARG*/);
 
     initial begin
         cg_inst = new;
-        
+
         // Test single value bins
         opcode = 8'h00; cg_inst.sample();  // nop
         check_coverage(20.0, "after nop");
-        
+
         // Test multi-value list bin
         opcode = 8'h02; cg_inst.sample();  // load
         check_coverage(40.0, "after load");
-        
+
         opcode = 8'h05; cg_inst.sample();  // store
         check_coverage(60.0, "after store");
-        
+
         // Test range bin
         opcode = 8'h15; cg_inst.sample();  // arith
         check_coverage(80.0, "after arith");
-        
+
         opcode = 8'h80; cg_inst.sample();  // others
         check_coverage(100.0, "after others");
-        
+
         $write("*-* All Finished *-*\n");
         $finish;
     end
-    
+
     task check_coverage(real expected, string label);
         real cov;
         cov = cg_inst.get_inst_coverage();

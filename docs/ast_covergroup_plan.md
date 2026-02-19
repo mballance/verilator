@@ -1,22 +1,22 @@
 # Implementation Plan: AstCovergroup Node Type
 
-**Author**: Implementation plan for Verilator functional coverage enhancement  
-**Date**: February 2026  
-**Status**: Planning phase  
+**Author**: Implementation plan for Verilator functional coverage enhancement
+**Date**: February 2026
+**Status**: Planning phase
 
 ## Executive Summary
 
 **Objective**: Create dedicated `AstCovergroup` AST node type to replace `AstClass` with `isCovergroup()` flag
 
-**Motivation**: 
+**Motivation**:
 - Addresses TODO comment in codebase: "TODO perhaps make a new Ast node type for CG?"
 - Better type safety (compiler enforces correct usage)
 - Cleaner architecture (no covergroup-specific fields in AstClass)
 - Easier maintenance (separate concerns)
 - Matches SystemVerilog semantics (covergroups are not classes)
 
-**Effort Estimate**: 20 hours (2-3 days)  
-**Risk Level**: Low-Medium (phased approach with rollback points)  
+**Effort Estimate**: 20 hours (2-3 days)
+**Risk Level**: Low-Medium (phased approach with rollback points)
 **Breaking Changes**: None user-facing (internal AST only)
 
 ## Background
@@ -34,14 +34,14 @@ Currently, covergroups are represented as `AstClass` nodes with a boolean flag:
 ## Implementation Phases
 
 ### Phase 1: Create Node Type (2 hours)
-**Status**: Not started  
-**Risk**: Low  
+**Status**: Not started
+**Risk**: Low
 **Can Abort?**: Yes
 
 **Goal**: Define the new node type without changing any behavior
 
 #### Step 1.1: Define AstCovergroup class
-**File**: `src/V3AstNodeOther.h`  
+**File**: `src/V3AstNodeOther.h`
 **Location**: After `AstClassPackage` definition (~line 2660)
 
 ```cpp
@@ -58,30 +58,30 @@ class AstCovergroup final : public AstNodeModule {
     // int m_weight = 1;       // option.weight
     // int m_goal = 100;       // option.goal
     // bool m_perInstance = false;  // option.per_instance
-    
+
 public:
     AstCovergroup(FileLine* fl, const string& name, const string& libname)
         : ASTGEN_SUPER_Covergroup(fl, name, libname)
         , m_declTokenNum{fl->tokenNum()} {}
     ASTGEN_MEMBERS_AstCovergroup;
-    
+
     // Overrides from AstNodeModule
     string verilogKwd() const override { return "covergroup"; }
     bool maybePointedTo() const override VL_MT_SAFE { return true; }
     void dump(std::ostream& str) const override;
     void dumpJson(std::ostream& str) const override;
     bool timescaleMatters() const override { return false; }
-    
+
     // Accessors matching AstClass interface (for compatibility during migration)
     AstClassPackage* classOrPackagep() const VL_MT_STABLE { return m_classOrPackagep; }
     void classOrPackagep(AstClassPackage* classpackagep) { m_classOrPackagep = classpackagep; }
     AstNode* membersp() const VL_MT_STABLE { return stmtsp(); }
     void addMembersp(AstNode* nodep) { addStmtsp(nodep); }
-    
+
     // Covergroup-specific accessors
     int autoBinMax() const { return m_autoBinMax; }
     void autoBinMax(int value) { m_autoBinMax = value; }
-    
+
     uint32_t declTokenNum() const override { return m_declTokenNum; }
     void declTokenNumSetMin(uint32_t tokenNum) override {
         m_declTokenNum = std::min(m_declTokenNum, tokenNum);
@@ -99,7 +99,7 @@ public:
 **Validation**: `make -j8` succeeds
 
 #### Step 1.2: Add dump implementations
-**File**: `src/V3AstNodes.cpp`  
+**File**: `src/V3AstNodes.cpp`
 **Location**: After AstClassPackage dump methods (~line 1850)
 
 ```cpp
@@ -121,21 +121,21 @@ void AstCovergroup::dumpJson(std::ostream& str) const {
 ---
 
 ### Phase 2: Parser Integration (3 hours)
-**Status**: Not started  
-**Risk**: Medium  
+**Status**: Not started
+**Risk**: Medium
 **Can Abort?**: Yes (revert parser change)
 
 **Goal**: Parse to AstCovergroup but convert to AstClass to keep existing flow working
 
 #### Step 2.1: Update parser
-**File**: `src/verilog.y`  
+**File**: `src/verilog.y`
 **Location**: Find `covergroup_declaration` rule (~line 6902)
 
 **Current pattern** (find and examine):
 ```yacc
 covergroup_declaration:
     yCOVERGROUP idAny/*covergroup_identifier*/ ...
-    { 
+    {
         // Currently creates AstClass
         AstClass* classp = new AstClass(...);
         classp->isCovergroup(true);
@@ -149,7 +149,7 @@ covergroup_declaration:
     yCOVERGROUP idAny/*covergroup_identifier*/ foptional_ports ';'
         { GRAMMARP->m_withinCovergroup = true; }
         coverage_event__ETC
-    { 
+    {
         GRAMMARP->m_withinCovergroup = false;
         // Create AstCovergroup instead of AstClass
         AstCovergroup* cgp = new AstCovergroup{$1, *$2, ""};
@@ -160,13 +160,13 @@ covergroup_declaration:
     }
 ```
 
-**Validation**: 
+**Validation**:
 - `make -j8` succeeds
 - `bin/verilator --debug-parse test_regress/t/t_covergroup_autobins.v 2>&1 | grep -i covergroup`
 - AST dump shows AstCovergroup nodes created
 
 #### Step 2.2: Add temporary conversion pass
-**File**: `src/V3LinkDot.cpp`  
+**File**: `src/V3LinkDot.cpp`
 **Location**: In `LinkDotFindVisitor` class (add new visitor method)
 
 **Purpose**: Maintain backwards compatibility while new visitors are being written
@@ -175,10 +175,10 @@ covergroup_declaration:
 void visit(AstCovergroup* nodep) override {
     // TEMPORARY: Convert AstCovergroup to AstClass to keep existing passes working
     // This will be removed in Phase 4 once all visitors are updated
-    
+
     AstClass* classp = new AstClass{nodep->fileline(), nodep->name(), nodep->libname()};
     classp->isCovergroup(true);
-    
+
     // Copy covergroup properties
     if (nodep->autoBinMax() >= 0) {
         classp->autoBinMax(nodep->autoBinMax());
@@ -187,16 +187,16 @@ void visit(AstCovergroup* nodep) override {
         classp->classOrPackagep(nodep->classOrPackagep());
     }
     classp->declTokenNumSetMin(nodep->declTokenNum());
-    
+
     // Move members
     if (nodep->membersp()) {
         classp->addMembersp(nodep->membersp()->unlinkFrBackWithNext());
     }
-    
+
     // Replace in tree
     nodep->replaceWith(classp);
     VL_DO_DANGLING(nodep->deleteTree(), nodep);
-    
+
     // Continue visiting the replacement
     iterateChildren(classp);
 }
@@ -215,8 +215,8 @@ void visit(AstCovergroup* nodep) override {
 ---
 
 ### Phase 3: Migrate Visitors (6 hours)
-**Status**: Not started  
-**Risk**: Medium  
+**Status**: Not started
+**Risk**: Medium
 **Can Abort?**: Yes (comment out new visitors)
 
 **Goal**: Add native AstCovergroup visitors so conversion is no longer needed
@@ -238,7 +238,7 @@ void visit(AstCovergroup* nodep) override {
     m_constructorp = nullptr;
     m_coverpoints.clear();
     m_coverCrosses.clear();
-    
+
     // Find sample() method and constructor
     for (AstNode* itemp = nodep->membersp(); itemp; itemp = itemp->nextp()) {
         if (AstFunc* const funcp = VN_CAST(itemp, Func)) {
@@ -249,7 +249,7 @@ void visit(AstCovergroup* nodep) override {
             }
         }
     }
-    
+
     // Process members
     iterateChildren(nodep);
 }
@@ -262,7 +262,7 @@ int getCovergroupAutoBinMax(AstNodeModule* covergroupp) {
     if (AstCovergroup* cgp = VN_CAST(covergroupp, Covergroup)) {
         const int autoBinMax = cgp->autoBinMax();
         if (autoBinMax >= 0) {
-            UINFO(4, "Using option.auto_bin_max=" << autoBinMax 
+            UINFO(4, "Using option.auto_bin_max=" << autoBinMax
                   << " for " << cgp->name() << endl);
             return autoBinMax;
         }
@@ -272,21 +272,21 @@ int getCovergroupAutoBinMax(AstNodeModule* covergroupp) {
         if (classp->isCovergroup()) {
             const int autoBinMax = classp->autoBinMax();
             if (autoBinMax >= 0) {
-                UINFO(4, "Using option.auto_bin_max=" << autoBinMax 
+                UINFO(4, "Using option.auto_bin_max=" << autoBinMax
                       << " for " << classp->name() << " (legacy)" << endl);
                 return autoBinMax;
             }
         }
     }
-    
+
     // Use global default
-    UINFO(4, "Using global --coverage-auto-bin-max=" 
+    UINFO(4, "Using global --coverage-auto-bin-max="
           << v3Global.opt.coverageAutoBinMax() << endl);
     return v3Global.opt.coverageAutoBinMax();
 }
 ```
 
-**Validation**: 
+**Validation**:
 - `make -j8` succeeds
 - `./test_funccov.sh t_covergroup_autobins` passes with both code paths
 
@@ -312,12 +312,12 @@ void visit(AstCgOptionAssign* nodep) override {
             }
             if (AstNodeFTask* const ftaskp = VN_CAST(parentp, NodeFTask)) {
                 AstNode* classMemberp = ftaskp;
-                while (classMemberp && 
+                while (classMemberp &&
                        !VN_IS(classMemberp->backp(), Covergroup) &&
                        !VN_IS(classMemberp->backp(), Class)) {
                     classMemberp = classMemberp->backp();
                 }
-                
+
                 // Prefer AstCovergroup
                 if (AstCovergroup* const cgp = VN_CAST(classMemberp->backp(), Covergroup)) {
                     cgp->autoBinMax(constp->toSInt());
@@ -335,7 +335,7 @@ void visit(AstCgOptionAssign* nodep) override {
 }
 ```
 
-**Validation**: 
+**Validation**:
 - `make -j8` succeeds
 - Options correctly extracted for both node types
 
@@ -357,7 +357,7 @@ void visit(AstCovergroup* nodep) override {
 }
 ```
 
-**Validation**: 
+**Validation**:
 - `make -j8` succeeds
 - Clocked covergroups work with both types
 
@@ -368,8 +368,8 @@ void visit(AstCovergroup* nodep) override {
 ---
 
 ### Phase 4: Remove Conversion (2 hours)
-**Status**: Not started  
-**Risk**: Low  
+**Status**: Not started
+**Risk**: Low
 **Can Abort?**: Yes (restore conversion pass)
 
 **Goal**: Make AstCovergroup the primary path, no conversion to AstClass
@@ -404,7 +404,7 @@ void visit(AstClass* nodep) override {
 }
 ```
 
-**Validation**: 
+**Validation**:
 - No assertions trigger
 - AST dumps show pure AstCovergroup flow
 
@@ -415,8 +415,8 @@ void visit(AstClass* nodep) override {
 ---
 
 ### Phase 5: Clean Up AstClass (3 hours)
-**Status**: Not started  
-**Risk**: Low  
+**Status**: Not started
+**Risk**: Low
 **Must Complete**: Once started, should finish
 
 **Goal**: Remove covergroup-specific code from AstClass
@@ -471,7 +471,7 @@ if (classp->isCovergroup()) { ... }
 if (VN_IS(nodep, Covergroup)) { ... }
 ```
 
-**Validation**: 
+**Validation**:
 - `make -j8` succeeds
 - No grep hits for `isCovergroup()`
 - All tests pass
@@ -481,7 +481,7 @@ if (VN_IS(nodep, Covergroup)) { ... }
 ---
 
 ### Phase 6: Final Testing & Documentation (4 hours)
-**Status**: Not started  
+**Status**: Not started
 **Risk**: Low
 
 **Goal**: Comprehensive validation and documentation
@@ -501,7 +501,7 @@ perl driver.pl --scenarios --coverage
 
 **Validate**:
 - Autobins with options
-- Clocked sampling  
+- Clocked sampling
 - Cross coverage
 - Ignore bins
 - Illegal bins

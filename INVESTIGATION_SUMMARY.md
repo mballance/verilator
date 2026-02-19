@@ -17,20 +17,20 @@ Test was timing out - appeared to be an auto-sampling failure with internal cloc
    - Examined generated C++ code - sample() call IS generated in NBA sequent function
 
 2. **Root Cause Identified**
-   - Auto-sampling code IS working correctly ✅
-   - Sample() call is generated in `_nba_sequent__TOP__t__0` function ✅  
-   - NBA function is never called because timing scheduler doesn't trigger NBA regions for internal clock edges ❌
+   - Auto-sampling code IS working correctly
+   - Sample() call is generated in `_nba_sequent__TOP__t__0` function
+   - NBA function is never called because timing scheduler doesn't trigger NBA regions for internal clock edges
 
 3. **Verification**
    - Added diagnostic UINFO output to track visitor execution
-   - Traced sample() call through compilation: AST → C++ emission → final code
+   - Traced sample() call through compilation: AST  C++ emission  final code
    - Tested with explicit `.sample()` calls - also failed (same root cause)
 
 ## Root Cause
 
 **Verilator Timing Scheduler Limitation:**
-- Module input clocks (`module t(input clk)`) → NBA regions trigger properly ✅
-- Internal clocks (`always #5 clk = ~clk`) → NBA regions never trigger ❌
+- Module input clocks (`module t(input clk)`)  NBA regions trigger properly
+- Internal clocks (`always #5 clk = ~clk`)  NBA regions never trigger
 
 This is NOT a functional coverage bug - it's a fundamental timing scheduler issue affecting all procedural blocks that depend on internal clock edges in `--timing` mode.
 
@@ -38,7 +38,7 @@ This is NOT a functional coverage bug - it's a fundamental timing scheduler issu
 
 Marked test as **expected-fail** with comprehensive documentation:
 - Clear explanation of the limitation
-- Root cause details  
+- Root cause details
 - Workaround (use module input clocks)
 - Reference to working examples (t_covergroup_auto_sample)
 

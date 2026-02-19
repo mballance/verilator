@@ -1,6 +1,6 @@
 # Functional Coverage Test Fixes Summary
 
-**Date:** 2026-02-13  
+**Date:** 2026-02-13
 **Session:** Test improvement and bug fixing
 
 ## Overview
@@ -24,7 +24,7 @@ Systematic fixing of failing functional coverage tests, improving pass rate from
 ### 1. Internal Node Error in Cross Body Processing
 
 **Affected tests:**
-- t_covergroup_option_bad ✅ NOW PASSES
+- t_covergroup_option_bad  NOW PASSES
 
 **Problem:**
 Cross bodies containing `option.weight` and `option.comment` assignments were causing "Node has no back, already unlinked?" internal errors. The parser was unlinking and deleting AstCgOptionAssign nodes that were also attached to the covergroup member list.
@@ -36,8 +36,8 @@ Cross bodies containing `option.weight` and `option.comment` assignments were ca
 ### 2. Unsigned Comparison Warnings
 
 **Affected tests:**
-- t_covergroup_minimal ✅ NOW PASSES
-- t_covergroup_multi_instance ✅ NOW PASSES (different issue found and fixed)
+- t_covergroup_minimal  NOW PASSES
+- t_covergroup_multi_instance  NOW PASSES (different issue found and fixed)
 
 **Problem:**
 Generated C++ code was creating comparisons like `(value >= 0)` for unsigned variables with bin ranges starting at 0. This always evaluates to true and triggers Verilator's UNSIGNED warning.
@@ -49,7 +49,7 @@ Generated C++ code was creating comparisons like `(value >= 0)` for unsigned var
 ### 3. Coverage Database Format Test
 
 **Affected tests:**
-- t_funccov_database ✅ NOW PASSES
+- t_funccov_database  NOW PASSES
 
 **Problem:**
 The coverage database format uses control characters (\x01 and \x02) as field delimiters. Test patterns were looking for literal strings like "binlow" but the actual format is "bin\x02low".
@@ -61,8 +61,8 @@ The coverage database format uses control characters (\x01 and \x02) as field de
 ### 4. Timing Support for Auto-Sampling
 
 **Affected tests:**
-- t_covergroup_simple ✅ NOW PASSES
-- t_covergroup_coverage_pct ✅ NOW PASSES
+- t_covergroup_simple  NOW PASSES
+- t_covergroup_coverage_pct  NOW PASSES
 
 **Problem:**
 Tests were failing with "NEEDTIMINGOPT" errors because they use delay statements and event controls (e.g., `always #5 clk = ~clk`, `@(posedge clk)`). Additionally, auto-sampling with internally generated clocks doesn't work - only module input clocks are supported.
@@ -80,7 +80,7 @@ Tests were failing with "NEEDTIMINGOPT" errors because they use delay statements
 ### 5. Function Declarations in Cross Bodies
 
 **Affected tests:**
-- t_covergroup_unsup ✅ NOW PASSES (expected-fail test)
+- t_covergroup_unsup  NOW PASSES (expected-fail test)
 
 **Problem:**
 Function declarations inside cross bodies (unsupported feature) were causing internal errors similar to the option assignment issue.
@@ -127,9 +127,9 @@ Note: Tests marked as V_FAIL that end with "expected 'True' exit code 1 fail" an
 
 ## Build Status
 
-✅ All changes compiled successfully  
-✅ No new warnings introduced  
-✅ Test infrastructure functioning properly
+ All changes compiled successfully
+ No new warnings introduced
+ Test infrastructure functioning properly
 
 ## Next Steps (Future Work)
 

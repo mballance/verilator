@@ -22,38 +22,38 @@ module t (/*AUTOARG*/);
 
     initial begin
         cg_inst = new;
-        
+
         // Initially no coverage
         check_coverage(0.0, "initial");
-        
+
         // Sample with enable=0 - should NOT count
         enable = 0;
         data = 1;
         cg_inst.sample();
         check_coverage(0.0, "after sample with enable=0");
-        
+
         // Sample with enable=1 - should count
         enable = 1;
         data = 1;
         cg_inst.sample();
         check_coverage(50.0, "after sample low with enable=1");
-        
+
         // Sample high with enable=1
         enable = 1;
         data = 10;
         cg_inst.sample();
         check_coverage(100.0, "after sample high with enable=1");
-        
+
         // Sample again with enable=0 - should not affect coverage
         enable = 0;
         data = 2;
         cg_inst.sample();
         check_coverage(100.0, "after sample with enable=0 again");
-        
+
         $write("*-* All Finished *-*\n");
         $finish;
     end
-    
+
     task check_coverage(real expected, string label);
         real cov;
         cov = cg_inst.get_inst_coverage();

@@ -7,7 +7,7 @@ module t (/*AUTOARG*/
    clk
    );
    input clk;
-   
+
    logic [1:0] data;
 
    // Covergroup with automatic sampling on posedge clk
@@ -21,12 +21,12 @@ module t (/*AUTOARG*/
    endgroup
 
    cg cg_inst = new;
-   
+
    int cyc = 0;
-   
+
    always @(posedge clk) begin
       cyc <= cyc + 1;
-      
+
       case (cyc)
         0: data <= 2'b00;  // Hit bin zero
         1: data <= 2'b01;  // Hit bin one
@@ -43,9 +43,9 @@ module t (/*AUTOARG*/
            end
         end
       endcase
-      
+
       // NOTE: NO manual .sample() call - relying on automatic sampling!
-      
+
       // Auto-stop after 10 cycles to prevent infinite loop
       if (cyc > 10) begin
          $display("ERROR: Test timed out");

@@ -4,7 +4,7 @@
 
 This document describes the implementation architecture, design decisions, and technical details of SystemVerilog functional coverage support in Verilator. It covers the AST transformation pipeline, code generation strategy, runtime infrastructure, and coverage database integration.
 
-**Last Updated:** 2026-02-10  
+**Last Updated:** 2026-02-10
 **Status:** Production-ready with documented limitations
 
 ## Table of Contents
@@ -35,38 +35,38 @@ Verilator's functional coverage implementation follows these principles:
 ### Component Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  SystemVerilog Source Code (covergroups, bins, etc.)       │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
+
+  SystemVerilog Source Code (covergroups, bins, etc.)
+
+
                       v
-┌─────────────────────────────────────────────────────────────┐
-│  V3Parse.y - Parser                                         │
-│  Creates: AstCovergroup, AstCoverpoint, AstCoverBin, etc.  │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
+
+  V3Parse.y - Parser
+  Creates: AstCovergroup, AstCoverpoint, AstCoverBin, etc.
+
+
                       v
-┌─────────────────────────────────────────────────────────────┐
-│  V3CoverageFunctional.cpp - AST Transformation              │
-│  - Generates bin counter variables                          │
-│  - Generates sample() method implementation                 │
-│  - Generates get_inst_coverage() method                     │
-│  - Generates VL_COVER_INSERT() calls                        │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
+
+  V3CoverageFunctional.cpp - AST Transformation
+  - Generates bin counter variables
+  - Generates sample() method implementation
+  - Generates get_inst_coverage() method
+  - Generates VL_COVER_INSERT() calls
+
+
                       v
-┌─────────────────────────────────────────────────────────────┐
-│  V3EmitC - Code Generator                                   │
-│  Emits: C++ classes for covergroups                         │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
+
+  V3EmitC - Code Generator
+  Emits: C++ classes for covergroups
+
+
                       v
-┌─────────────────────────────────────────────────────────────┐
-│  Runtime (verilated_cov.cpp, verilated_funccov.h)          │
-│  - VL_COVER_INSERT macro registers bins                    │
-│  - Coverage database accumulation                           │
-│  - Coverage reporting via verilator_coverage tool           │
-└─────────────────────────────────────────────────────────────┘
+
+  Runtime (verilated_cov.cpp, verilated_funccov.h)
+  - VL_COVER_INSERT macro registers bins
+  - Coverage database accumulation
+  - Coverage reporting via verilator_coverage tool
+
 ```
 
 ---
@@ -99,10 +99,10 @@ void visit(AstClass* nodep) override {
         m_coverpoints.clear();
         m_coverCrosses.clear();
         m_binInfos.clear();
-        
+
         // Process all members
         iterateChildren(nodep);
-        
+
         // Generate code
         processCovergroup();
     }
@@ -162,12 +162,12 @@ if (exprValue == binValue) {
 ```cpp
 void __VnoInFunc_sample(Vmodule__Syms* __restrict vlSymsp) {
     // Check if coverpoint value matches bin range
-    if ((vlSymsp->TOP__t.__PVT__state >= 0U) 
+    if ((vlSymsp->TOP__t.__PVT__state >= 0U)
         && (vlSymsp->TOP__t.__PVT__state <= 3U)) {
         // Increment bin counter
         this->__PVT____Vcov_cp_state_low = (1U + this->__PVT____Vcov_cp_state_low);
     }
-    if ((vlSymsp->TOP__t.__PVT__state >= 4U) 
+    if ((vlSymsp->TOP__t.__PVT__state >= 4U)
         && (vlSymsp->TOP__t.__PVT__state <= 7U)) {
         this->__PVT____Vcov_cp_state_high = (1U + this->__PVT____Vcov_cp_state_high);
     }
@@ -188,11 +188,11 @@ IData/*31:0*/ __PVT____Vcov_cp_state_trans1;  // Transition counter
 ```cpp
 void __VnoInFunc_sample(Vmodule__Syms* __restrict vlSymsp) {
     // Check for transition (prev_value => current_value)
-    if (((0U == (IData)(this->__PVT____Vprev_cp_state)) 
+    if (((0U == (IData)(this->__PVT____Vprev_cp_state))
          && (1U == (IData)(vlSymsp->TOP__t.__PVT__state)))) {
         this->__PVT____Vcov_cp_state_trans1 = (1U + this->__PVT____Vcov_cp_state_trans1);
     }
-    
+
     // Update previous value for next sample
     this->__PVT____Vprev_cp_state = vlSymsp->TOP__t.__PVT__state;
 }
@@ -242,7 +242,7 @@ The `get_inst_coverage()` method calculates coverage percentage:
 ```cpp
 void __VnoInFunc_get_inst_coverage(..., double &get_inst_coverage__Vfuncrtn) {
     IData/*31:0*/ __Vcovered_count = 0;
-    
+
     // Count bins that meet at_least threshold
     if (1U <= this->__PVT____Vcov_cp_state_low) {
         __Vcovered_count = (1U + __Vcovered_count);
@@ -250,7 +250,7 @@ void __VnoInFunc_get_inst_coverage(..., double &get_inst_coverage__Vfuncrtn) {
     if (1U <= this->__PVT____Vcov_cp_state_high) {
         __Vcovered_count = (1U + __Vcovered_count);
     }
-    
+
     // Calculate percentage: (covered / total) * 100
     get_inst_coverage__Vfuncrtn = (100.0 * (VL_ITOR_D_I(32, __Vcovered_count) / 2.0));
 }
@@ -273,9 +273,9 @@ VL_COVER_INSERT calls are generated in the constructor to register bins:
 // Generated constructor code:
 Vmodule_cg::Vmodule_cg(Vmodule__Syms* symsp) {
     // ... variable initialization ...
-    
+
     // Register each bin with coverage database
-    VL_COVER_INSERT(vlSymsp->_vm_contextp__->coveragep(), 
+    VL_COVER_INSERT(vlSymsp->_vm_contextp__->coveragep(),
                    "cg.cp_state.low",           // Hierarchical name
                    &(this->__PVT____Vcov_cp_state_low),  // Pointer to counter
                    "page", "v_funccov/cg",      // Page type for reporting
@@ -300,18 +300,18 @@ class Vmodule_t__03a__03acg : public virtual VlClass {
     // Member variables (bins, previous values, state vars)
     IData/*31:0*/ __PVT____Vcov_cp_state_bin1;
     CData/*2:0*/ __PVT____Vprev_cp_state;
-    
+
     // Option structures (IEEE 1800-2023 Section 19.6)
     Vmodule_vl_covergroup_options_t__struct__0 __PVT__option;
     Vmodule_vl_covergroup_type_options_t__struct__0 __PVT__type_option;
-    
+
     // Methods (IEEE 1800-2023 Section 19.9)
     void __VnoInFunc_sample(Vmodule__Syms* vlSymsp);
     void __VnoInFunc_get_inst_coverage(..., double& retval);
     void __VnoInFunc_set_inst_name(Vmodule__Syms* vlSymsp, std::string name);
     void __VnoInFunc_start(Vmodule__Syms* vlSymsp) {}  // No-op
     void __VnoInFunc_stop(Vmodule__Syms* vlSymsp) {}   // No-op
-    
+
     // Constructor/Destructor
     Vmodule_t__03a__03acg(Vmodule__Syms* vlSymsp);
     ~Vmodule_t__03a__03acg() {}
@@ -325,7 +325,7 @@ class Vmodule_t__03a__03acg : public virtual VlClass {
 void __VnoInFunc_sample(Vmodule__Syms* __restrict vlSymsp) {
     // Access coverpoint via symbol table
     auto current = vlSymsp->TOP__t.__PVT__state;
-    
+
     // Bin matching logic
     if (current == 0) { this->__PVT____Vcov_bin0++; }
     if (current == 1) { this->__PVT____Vcov_bin1++; }
@@ -354,12 +354,12 @@ All cross coverage uses **array-based storage** with computed indices:
 
 - **Compact code size**: Single array per cross, computed index at runtime
 - **Efficient memory**: 4 bytes (uint32_t) per possible bin combination
-- **Scalable**: Handles small (2×2=4 bins) to large (10×10×10×10=10,000 bins) crosses uniformly
+- **Scalable**: Handles small (22=4 bins) to large (10101010=10,000 bins) crosses uniformly
 - **Consistent behavior**: Same code generation pattern for all cross coverage
 
 #### Example: Small 2-Way Cross
 
-For a 2-way cross with 2×2=4 bins:
+For a 2-way cross with 22=4 bins:
 
 ```cpp
 // Single unpacked array for all bins
@@ -374,19 +374,19 @@ void __VnoInFunc_sample(...) {
     } else if (a >= 4 && a <= 7) {
         __Vbin_cp0 = 1;  // Matched bin a1
     }
-    
+
     IData __Vbin_cp1 = 0xffffffffU;
     if (b >= 0 && b <= 3) {
         __Vbin_cp1 = 0;  // Matched bin b0
     } else if (b >= 4 && b <= 7) {
         __Vbin_cp1 = 1;  // Matched bin b1
     }
-    
+
     // Step 2: Check if all coverpoints matched
     if (__Vbin_cp0 != 0xffffffffU && __Vbin_cp1 != 0xffffffffU) {
         // Step 3: Calculate linear array index
         IData __Vindex = __Vbin_cp0 + (__Vbin_cp1 * 2);
-        
+
         // Step 4: Increment array element
         this->__PVT____Vcov_cross_ab_bins[__Vindex]++;
     }
@@ -405,7 +405,7 @@ void __VnoInFunc_get_inst_coverage(...) {
 
 #### Example: Large 4-Way Cross
 
-For a 4-way cross with 4×4×4×4=256 bins:
+For a 4-way cross with 4444=256 bins:
 
 ```cpp
 // Single unpacked array for all bins
@@ -421,14 +421,14 @@ void __VnoInFunc_sample(...) {
         __Vbin_cp0 = 1;  // Matched bin a1
     }
     // ... similar for __Vbin_cp1, __Vbin_cp2, __Vbin_cp3
-    
+
     // Step 2: Calculate linear array index
     // Formula: index = bin0 + bin1*size0 + bin2*size0*size1 + bin3*size0*size1*size2
-    IData __Vindex = (__Vbin_cp0 
-                    + (__Vbin_cp1 << 2)   // × 4
-                    + (__Vbin_cp2 << 4)   // × 16
-                    + (__Vbin_cp3 << 6)); // × 64
-    
+    IData __Vindex = (__Vbin_cp0
+                    + (__Vbin_cp1 << 2)   //  4
+                    + (__Vbin_cp2 << 4)   //  16
+                    + (__Vbin_cp3 << 6)); //  64
+
     // Step 3: Increment array element
     this->__PVT____Vcov_cross_abcd_bins[__Vindex]++;
 }
@@ -450,13 +450,13 @@ void __VnoInFunc_get_inst_coverage(...) {
 The linear array index is calculated using a multi-dimensional to single-dimensional mapping:
 
 ```
-index = bin[0] + bin[1] × size[0] + bin[2] × size[0] × size[1] + ...
+index = bin[0] + bin[1]  size[0] + bin[2]  size[0]  size[1] + ...
 ```
 
 For optimization, multiplications by powers of 2 are converted to bit shifts:
-- `× 4` → `<< 2`
-- `× 16` → `<< 4`
-- `× 64` → `<< 6`
+- ` 4`  `<< 2`
+- ` 16`  `<< 4`
+- ` 64`  `<< 6`
 
 #### Implementation Details
 
@@ -464,8 +464,8 @@ For optimization, multiplications by powers of 2 are converted to bit shifts:
 - Below 64 bins: Code size is manageable (typically <2-4KB)
 - Above 64 bins: Compilation time increases significantly with inline approach
 - Memory comparison for 256-bin cross:
-  - Inline: 256 × 4 bytes = 1KB (variables) + ~10KB (code)
-  - Array: 256 × 4 bytes = 1KB (array) + ~0.5KB (code)
+  - Inline: 256  4 bytes = 1KB (variables) + ~10KB (code)
+  - Array: 256  4 bytes = 1KB (array) + ~0.5KB (code)
 
 **Array Index Calculation:**
 Uses bit shifts for power-of-2 sizes (optimized to multiply for non-power-of-2):
@@ -539,7 +539,7 @@ class VerilatedCovImp {
     // Key and value strings are indexed to save memory
     ValueIndexMap m_valueIndexes;  // string -> unique ID
     IndexValueMap m_indexValues;   // unique ID -> string
-    
+
     // Each coverage item stores key-value pairs as integer indices
     ItemList m_items;  // List of VerilatedCovImpItem*
 };
@@ -594,7 +594,7 @@ Keys and values are concatenated without delimiters. Single-letter keys are used
 **Example Functional Coverage Entry:**
 
 ```
-C 'ftest.vl10n5tlinepagev_funccov/cgocoverpointbin低' 42
+C 'ftest.vl10n5tlinepagev_funccov/cgocoverpointbin' 42
 ```
 
 Decoded:
@@ -683,7 +683,7 @@ The `CovergroupSamplingVisitor` runs after the main `ActiveVisitor` to inject au
 void Vt___nba_sequent__TOP__t__0(Vt_t* vlSelf) {
     // Automatic sample() call injected here
     VL_NULL_CHECK(vlSelfRef.__PVT__cg_inst, "file.v", 23)->__VnoInFunc_sample(vlSymsp);
-    
+
     // Rest of user's always block code...
 }
 ```
@@ -815,7 +815,7 @@ coverpoint value {
 - Generate check with runtime error:
   ```cpp
   if (value >= 14 && value <= 15) {
-      VL_FATAL_MT(__FILE__, __LINE__, "", 
+      VL_FATAL_MT(__FILE__, __LINE__, "",
                   "Illegal bin 'bad' hit in coverpoint 'cp_value'");
   }
   ```
@@ -831,7 +831,7 @@ coverpoint value {
 covergroup cg;
     cp_a: coverpoint a { bins a0 = {0}; bins a1 = {1}; }
     cp_b: coverpoint b { bins b0 = {0}; bins b1 = {1}; }
-    cross_ab: cross cp_a, cp_b;  // 2×2 = 4 bins
+    cross_ab: cross cp_a, cp_b;  // 22 = 4 bins
 endgroup
 ```
 
@@ -854,23 +854,23 @@ void sample() {
     IData __Vbin_cp_a = 0xffffffffU;  // No match initially
     if (a == 0) __Vbin_cp_a = 0;      // Matched bin a0
     else if (a == 1) __Vbin_cp_a = 1; // Matched bin a1
-    
+
     IData __Vbin_cp_b = 0xffffffffU;
     if (b == 0) __Vbin_cp_b = 0;      // Matched bin b0
     else if (b == 1) __Vbin_cp_b = 1; // Matched bin b1
-    
+
     // Step 2: Check if all coverpoints matched
     if (__Vbin_cp_a != 0xffffffffU && __Vbin_cp_b != 0xffffffffU) {
         // Step 3: Calculate array index
         IData __Vindex = __Vbin_cp_a + (__Vbin_cp_b * 2);
-        
+
         // Step 4: Increment counter
         this->__Vcov_cross_ab_bins[__Vindex]++;
     }
 }
 ```
 
-**Advantages:** Fast sampling (direct increments), explicit variable tracking  
+**Advantages:** Fast sampling (direct increments), explicit variable tracking
 **Disadvantages:** Large code size for many bins
 
 #### Large Crosses (>64 bins): Array-Based Storage
@@ -893,13 +893,13 @@ void sample() {
     IData __Vbin_cp1 = /* similar for b */;
     IData __Vbin_cp2 = /* similar for c */;
     IData __Vbin_cp3 = /* similar for d */;
-    
-    // Calculate array index: bin0 + bin1×4 + bin2×16 + bin3×64
-    IData __Vindex = __Vbin_cp0 
-                   + (__Vbin_cp1 << 2)   // × 4
-                   + (__Vbin_cp2 << 4)   // × 16
-                   + (__Vbin_cp3 << 6);  // × 64
-    
+
+    // Calculate array index: bin0 + bin14 + bin216 + bin364
+    IData __Vindex = __Vbin_cp0
+                   + (__Vbin_cp1 << 2)   //  4
+                   + (__Vbin_cp2 << 4)   //  16
+                   + (__Vbin_cp3 << 6);  //  64
+
     // Increment array element
     this->__Vcov_cross_abcd_bins[__Vindex]++;
 }
@@ -916,7 +916,7 @@ void get_inst_coverage() {
 
 For N-way crosses, the index formula is:
 ```
-index = bin[0] + bin[1] × size[0] + bin[2] × size[0] × size[1] + ...
+index = bin[0] + bin[1]  size[0] + bin[2]  size[0]  size[1] + ...
 ```
 
 **Coverage Calculation:**
@@ -1074,7 +1074,7 @@ endgroup
 |--------|----------|--------|
 | Bin matching | Compiled to if/else checks | Fast runtime, larger executable |
 | Coverage computation | Inlined in get_coverage() | Fast query, no overhead |
-| Cross coverage | All combinations pre-generated | Fast sampling, O(N²) space |
+| Cross coverage | All combinations pre-generated | Fast sampling, O(N2) space |
 | Transition bins | State machine in sample() | Minimal overhead, 1-2 bytes extra state |
 
 ### Memory Usage
@@ -1097,7 +1097,7 @@ endgroup
 - Simple bin: ~2-5 CPU cycles (compare + conditional increment)
 - Transition bin: ~5-10 cycles (prev check + compare + update)
 - Multi-value transition: ~10-20 cycles (state machine)
-- Cross (2-way, 4×4 bins): ~64-128 cycles (16 nested checks)
+- Cross (2-way, 44 bins): ~64-128 cycles (16 nested checks)
 
 **For typical testbench with 5 covergroups, 50 bins total:**
 - Per sample: ~150-300 cycles
@@ -1116,94 +1116,94 @@ This section provides a comprehensive mapping of IEEE 1800-2023 Section 19 (Func
 
 | Feature | IEEE 1800 Ref | Status | Test File(s) | Notes |
 |---------|---------------|--------|--------------|-------|
-| **Basic Coverpoints** | 19.5 | ✅ Full | `t_covergroup_simple.v` | Single-variable coverage with bins |
-| **Explicit Value Bins** | 19.5.1 | ✅ Full | `t_covergroup_simple.v`<br>`t_covergroup_bins_advanced.v` | `bins name = {value1, value2, ...}` |
-| **Range Bins** | 19.5.1 | ✅ Full | `t_covergroup_bins_advanced.v`<br>`t_covergroup_negative_ranges.v` | `bins name = {[low:high]}` including negative ranges |
-| **Array Bins** | 19.5.1 | ✅ Full | `t_covergroup_bins_advanced.v` | `bins name[] = {values}` expands to multiple bins |
-| **Auto-Partitioned Bins** | 19.5.3 | ✅ Full | `t_funccov_auto_bins.v` | `bins auto[N]` partitions range into N bins |
-| **Wildcard Bins** | 19.5.1 | ✅ Full | `t_covergroup_bins_advanced.v` | `wildcard bins name = {pattern}` with `?` wildcards |
-| **Default Bins** | 19.5.1 | ✅ Full | `t_covergroup_bins_default_illegal.v` | `bins name = default` catches unspecified values |
-| **Ignore Bins** | 19.5.1 | ✅ Full | `t_covergroup_bins_advanced.v` | `ignore_bins name = {values}` excludes from coverage |
-| **Illegal Bins** | 19.5.1 | ✅ Full | `t_covergroup_bins_default_illegal.v` | `illegal_bins name = {values}` triggers runtime error |
+| **Basic Coverpoints** | 19.5 |  Full | `t_covergroup_simple.v` | Single-variable coverage with bins |
+| **Explicit Value Bins** | 19.5.1 |  Full | `t_covergroup_simple.v`<br>`t_covergroup_bins_advanced.v` | `bins name = {value1, value2, ...}` |
+| **Range Bins** | 19.5.1 |  Full | `t_covergroup_bins_advanced.v`<br>`t_covergroup_negative_ranges.v` | `bins name = {[low:high]}` including negative ranges |
+| **Array Bins** | 19.5.1 |  Full | `t_covergroup_bins_advanced.v` | `bins name[] = {values}` expands to multiple bins |
+| **Auto-Partitioned Bins** | 19.5.3 |  Full | `t_funccov_auto_bins.v` | `bins auto[N]` partitions range into N bins |
+| **Wildcard Bins** | 19.5.1 |  Full | `t_covergroup_bins_advanced.v` | `wildcard bins name = {pattern}` with `?` wildcards |
+| **Default Bins** | 19.5.1 |  Full | `t_covergroup_bins_default_illegal.v` | `bins name = default` catches unspecified values |
+| **Ignore Bins** | 19.5.1 |  Full | `t_covergroup_bins_advanced.v` | `ignore_bins name = {values}` excludes from coverage |
+| **Illegal Bins** | 19.5.1 |  Full | `t_covergroup_bins_default_illegal.v` | `illegal_bins name = {values}` triggers runtime error |
 
 #### Transition Coverage
 
 | Feature | IEEE 1800 Ref | Status | Test File(s) | Notes |
 |---------|---------------|--------|--------------|-------|
-| **2-Value Transitions** | 19.5.2 | ✅ Full | `t_covergroup_trans_simple.v` | `bins trans = (val1 => val2)` |
-| **Multi-Value Sequences** | 19.5.2 | ✅ Full | `t_covergroup_trans_3value.v`<br>`t_covergroup_trans_restart.v` | `bins trans = (v0 => v1 => v2 => v3)` with restart logic |
-| **Transition with Ranges** | 19.5.2 | ✅ Full | `t_covergroup_trans_ranges.v` | `bins trans = ([lo:hi] => [lo2:hi2])` |
-| **Repetition `[*N]`** | 19.5.2 | ❌ Not Supported | N/A | See `REPETITION_ROADMAP.md` |
-| **Goto Repetition `[->N]`** | 19.5.2 | ❌ Not Supported | N/A | See `REPETITION_ROADMAP.md` |
-| **Nonconsecutive `[=N]`** | 19.5.2 | ❌ Not Supported | N/A | See `REPETITION_ROADMAP.md` |
+| **2-Value Transitions** | 19.5.2 |  Full | `t_covergroup_trans_simple.v` | `bins trans = (val1 => val2)` |
+| **Multi-Value Sequences** | 19.5.2 |  Full | `t_covergroup_trans_3value.v`<br>`t_covergroup_trans_restart.v` | `bins trans = (v0 => v1 => v2 => v3)` with restart logic |
+| **Transition with Ranges** | 19.5.2 |  Full | `t_covergroup_trans_ranges.v` | `bins trans = ([lo:hi] => [lo2:hi2])` |
+| **Repetition `[*N]`** | 19.5.2 |  Not Supported | N/A | See `REPETITION_ROADMAP.md` |
+| **Goto Repetition `[->N]`** | 19.5.2 |  Not Supported | N/A | See `REPETITION_ROADMAP.md` |
+| **Nonconsecutive `[=N]`** | 19.5.2 |  Not Supported | N/A | See `REPETITION_ROADMAP.md` |
 
 #### Cross Coverage
 
 | Feature | IEEE 1800 Ref | Status | Test File(s) | Notes |
 |---------|---------------|--------|--------------|-------|
-| **2-Way Cross** | 19.6 | ✅ Full | `t_covergroup_cross_simple.v`<br>`t_covergroup_cross_small.v` | `cross cp_a, cp_b` generates all combinations |
-| **3-Way Cross** | 19.6 | ✅ Full | `t_covergroup_cross_3way.v` | `cross cp_a, cp_b, cp_c` |
-| **4-Way Cross** | 19.6 | ✅ Full | `t_covergroup_cross_4way.v` | `cross cp_a, cp_b, cp_c, cp_d` |
-| **N-Way Cross** | 19.6 | ✅ Full | `t_covergroup_cross_large.v` | Supports arbitrary N with array-based storage |
-| **Cross with `binsof`** | 19.6.3 | ⚠️ Partial | N/A | Basic filtering supported, advanced expressions limited |
-| **Cross with `intersect`** | 19.6.3 | ❌ Not Supported | N/A | Not yet implemented |
+| **2-Way Cross** | 19.6 |  Full | `t_covergroup_cross_simple.v`<br>`t_covergroup_cross_small.v` | `cross cp_a, cp_b` generates all combinations |
+| **3-Way Cross** | 19.6 |  Full | `t_covergroup_cross_3way.v` | `cross cp_a, cp_b, cp_c` |
+| **4-Way Cross** | 19.6 |  Full | `t_covergroup_cross_4way.v` | `cross cp_a, cp_b, cp_c, cp_d` |
+| **N-Way Cross** | 19.6 |  Full | `t_covergroup_cross_large.v` | Supports arbitrary N with array-based storage |
+| **Cross with `binsof`** | 19.6.3 |  Partial | N/A | Basic filtering supported, advanced expressions limited |
+| **Cross with `intersect`** | 19.6.3 |  Not Supported | N/A | Not yet implemented |
 
 #### Sampling and Triggers
 
 | Feature | IEEE 1800 Ref | Status | Test File(s) | Notes |
 |---------|---------------|--------|--------------|-------|
-| **Manual Sampling** | 19.3 | ✅ Full | `t_covergroup_simple.v` | Explicit `cg.sample()` calls |
-| **Automatic Sampling** | 19.3.1 | ✅ Full | `t_covergroup_auto_sample.v` | `covergroup cg @(posedge clk)` in both `--timing` and `--no-timing` |
-| **Conditional Sampling** | 19.4.1 | ✅ Full | `t_covergroup_iff.v` | `coverpoint expr iff (condition)` |
-| **Sample Arguments** | 19.3.2 | ✅ Full | `t_covergroup_with_sample_args.v`<br>`t_covergroup_with_sample_namedargs.v` | `with function sample(args)` with positional and named args |
-| **Default Arguments** | 19.3.2 | ✅ Full | `t_covergroup_with_sample_args_default.v` | Sample function parameters with defaults |
-| **Zero-Argument Sample** | 19.3.2 | ✅ Full | `t_covergroup_with_sample_zeroargs.v` | `with function sample()` |
+| **Manual Sampling** | 19.3 |  Full | `t_covergroup_simple.v` | Explicit `cg.sample()` calls |
+| **Automatic Sampling** | 19.3.1 |  Full | `t_covergroup_auto_sample.v` | `covergroup cg @(posedge clk)` in both `--timing` and `--no-timing` |
+| **Conditional Sampling** | 19.4.1 |  Full | `t_covergroup_iff.v` | `coverpoint expr iff (condition)` |
+| **Sample Arguments** | 19.3.2 |  Full | `t_covergroup_with_sample_args.v`<br>`t_covergroup_with_sample_namedargs.v` | `with function sample(args)` with positional and named args |
+| **Default Arguments** | 19.3.2 |  Full | `t_covergroup_with_sample_args_default.v` | Sample function parameters with defaults |
+| **Zero-Argument Sample** | 19.3.2 |  Full | `t_covergroup_with_sample_zeroargs.v` | `with function sample()` |
 
 #### Options and Configuration
 
 | Feature | IEEE 1800 Ref | Status | Test File(s) | Notes |
 |---------|---------------|--------|--------------|-------|
-| **`option.name`** | 19.7 | ✅ Full | `t_covergroup_option.v` | Set covergroup/point name |
-| **`option.comment`** | 19.7 | ✅ Full | `t_covergroup_option.v` | Add descriptive comment |
-| **`option.at_least`** | 19.7 | ✅ Full | `t_covergroup_option.v` | Minimum hits for coverage (default: 1) |
-| **`option.auto_bin_max`** | 19.7 | ⚠️ Parsed | N/A | Parsed but auto-creation without bins not implemented |
-| **`option.per_instance`** | 19.7 | ✅ Full | `t_covergroup_cross_small.v` | Per-instance vs. type-level coverage |
-| **`option.get_inst_coverage`** | 19.7 | ❌ Not Supported | N/A | Use method instead |
-| **Coverpoint Options** | 19.7 | ✅ Full | `t_covergroup_option.v` | Same options apply to coverpoints |
+| **`option.name`** | 19.7 |  Full | `t_covergroup_option.v` | Set covergroup/point name |
+| **`option.comment`** | 19.7 |  Full | `t_covergroup_option.v` | Add descriptive comment |
+| **`option.at_least`** | 19.7 |  Full | `t_covergroup_option.v` | Minimum hits for coverage (default: 1) |
+| **`option.auto_bin_max`** | 19.7 |  Parsed | N/A | Parsed but auto-creation without bins not implemented |
+| **`option.per_instance`** | 19.7 |  Full | `t_covergroup_cross_small.v` | Per-instance vs. type-level coverage |
+| **`option.get_inst_coverage`** | 19.7 |  Not Supported | N/A | Use method instead |
+| **Coverpoint Options** | 19.7 |  Full | `t_covergroup_option.v` | Same options apply to coverpoints |
 
 #### Instance Management
 
 | Feature | IEEE 1800 Ref | Status | Test File(s) | Notes |
 |---------|---------------|--------|--------------|-------|
-| **Static Declaration** | 19.3 | ✅ Full | `t_covergroup_simple.v` | `cg cg_inst = new;` |
-| **Dynamic Creation** | 19.3 | ✅ Full | `t_covergroup_dynamic.v` | Runtime instantiation with `new` operator |
-| **Multiple Instances** | 19.3 | ✅ Full | `t_covergroup_multi_instance.v` | Independent instances of same covergroup |
-| **Covergroup in Class** | 19.3 | ✅ Full | `t_covergroup_in_class.v`<br>`t_covergroup_in_class_with_sample.v` | Covergroup as class member |
-| **Empty Covergroup** | 19.3 | ✅ Full | `t_covergroup_empty.v` | Covergroup with no coverpoints (100% coverage) |
+| **Static Declaration** | 19.3 |  Full | `t_covergroup_simple.v` | `cg cg_inst = new;` |
+| **Dynamic Creation** | 19.3 |  Full | `t_covergroup_dynamic.v` | Runtime instantiation with `new` operator |
+| **Multiple Instances** | 19.3 |  Full | `t_covergroup_multi_instance.v` | Independent instances of same covergroup |
+| **Covergroup in Class** | 19.3 |  Full | `t_covergroup_in_class.v`<br>`t_covergroup_in_class_with_sample.v` | Covergroup as class member |
+| **Empty Covergroup** | 19.3 |  Full | `t_covergroup_empty.v` | Covergroup with no coverpoints (100% coverage) |
 
 #### Coverage Query Methods
 
 | Feature | IEEE 1800 Ref | Status | Test File(s) | Notes |
 |---------|---------------|--------|--------------|-------|
-| **`get_inst_coverage()`** | 19.8.1 | ✅ Full | `t_covergroup_get_coverage.v`<br>`t_covergroup_coverage_pct.v` | Returns instance coverage percentage |
-| **`get_coverage()`** | 19.8.1 | ❌ Not Supported | `t_covergroup_static_coverage.v` | Static method blocked by architecture |
-| **`start()`** | 19.8.2 | ❌ Not Supported | N/A | Coverage always active |
-| **`stop()`** | 19.8.2 | ❌ Not Supported | N/A | Coverage always active |
+| **`get_inst_coverage()`** | 19.8.1 |  Full | `t_covergroup_get_coverage.v`<br>`t_covergroup_coverage_pct.v` | Returns instance coverage percentage |
+| **`get_coverage()`** | 19.8.1 |  Not Supported | `t_covergroup_static_coverage.v` | Static method blocked by architecture |
+| **`start()`** | 19.8.2 |  Not Supported | N/A | Coverage always active |
+| **`stop()`** | 19.8.2 |  Not Supported | N/A | Coverage always active |
 
 #### Advanced Features
 
 | Feature | IEEE 1800 Ref | Status | Test File(s) | Notes |
 |---------|---------------|--------|--------------|-------|
-| **Covergroup Inheritance** | 19.12 | ✅ Full | `t_covergroup_extends.v`<br>`t_covergroup_extends_newfirst.v` | `extends` keyword support |
-| **Type Parameters** | 19.3 | ✅ Full | `t_covergroup_args.v` | Parameterized covergroups |
-| **Minimal Syntax** | 19.3 | ✅ Full | `t_covergroup_minimal.v` | Simplest valid covergroup |
-| **Performance Test** | N/A | ✅ Full | `t_covergroup_perf.v` | Large-scale coverage stress test |
+| **Covergroup Inheritance** | 19.12 |  Full | `t_covergroup_extends.v`<br>`t_covergroup_extends_newfirst.v` | `extends` keyword support |
+| **Type Parameters** | 19.3 |  Full | `t_covergroup_args.v` | Parameterized covergroups |
+| **Minimal Syntax** | 19.3 |  Full | `t_covergroup_minimal.v` | Simplest valid covergroup |
+| **Performance Test** | N/A |  Full | `t_covergroup_perf.v` | Large-scale coverage stress test |
 
 ### Legend
 
-- ✅ **Full**: Fully implemented and tested according to IEEE 1800-2023
-- ⚠️ **Partial**: Implemented with known limitations or subset support
-- ❌ **Not Supported**: Feature not yet implemented
+-  **Full**: Fully implemented and tested according to IEEE 1800-2023
+-  **Partial**: Implemented with known limitations or subset support
+-  **Not Supported**: Feature not yet implemented
 
 ### Test Organization
 
@@ -1324,6 +1324,6 @@ For implementation questions or contributions, see:
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2026-02-09  
+**Document Version:** 1.0
+**Last Updated:** 2026-02-09
 **Maintainer:** Verilator Development Team

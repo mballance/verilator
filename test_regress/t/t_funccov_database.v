@@ -8,7 +8,7 @@
 // Checks that coverage.dat contains funccov entries with correct format
 
 // Expected coverage database entries will contain:
-// - Type "funccov" 
+// - Type "funccov"
 // - Bin names ("low", "high")
 // - Hierarchy ("cg.cp.low", "cg.cp.high")
 
@@ -28,7 +28,7 @@ module t (/*AUTOARG*/);
         // Sample both bins
         data = 2'b00;
         cg_inst.sample();
-        
+
         data = 2'b11;
         cg_inst.sample();
 
