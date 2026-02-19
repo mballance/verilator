@@ -22,7 +22,7 @@ EXEMPT_FILES_RE = (
     r'|^coverage_report/|^coverage_report_.*?/|^tmp/|^references/'
     r'|^our$|^out$|^plan_update\.md$|^status-.*\.md$|^todo\.md$'
     r'|^verilator-funccov\.code-workspace$|^test\.sv$|^test_coverage_output\.cpp$'
-    r'|^test_trans_main\.cpp$|^test_regress/t/t_(covergroup|funccov)_.*\.(cpp|h|py|sv|v)$)')
+    r'|^test_trans_main\.cpp$|^test_regress/t/t_(covergroup|funccov)_.*\.(cpp|h|sv|v)$)')
 
 EXEMPT_FILES_LIST = """
     CITATION.cff
