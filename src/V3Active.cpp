@@ -666,8 +666,7 @@ class CovergroupSamplingVisitor final : public VNVisitor {
                             for (AstNode* modp = v3Global.rootp()->modulesp(); modp;
                                  modp = modp->nextp()) {
                                 if (AstClass* const classp = VN_CAST(modp, Class)) {
-                                    if (classp->isCovergroup()
-                                        && classp->name() == className) {
+                                    if (classp->isCovergroup() && classp->name() == className) {
                                         s_covergroupSampleFuncs[classp] = cfuncp;
                                         break;
                                     }
