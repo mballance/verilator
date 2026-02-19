@@ -863,9 +863,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                     bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
                     bool skipUpperCheck = false;
                     if (maxConstp && exprWidth > 0 && exprWidth <= 64) {
-                        const uint64_t maxVal
-                            = (exprWidth == 64) ? ~static_cast<uint64_t>(0)
-                                                : ((1ULL << exprWidth) - 1ULL);
+                        const uint64_t maxVal = (exprWidth == 64) ? ~static_cast<uint64_t>(0)
+                                                                  : ((1ULL << exprWidth) - 1ULL);
                         skipUpperCheck = (maxConstp->toUQuad() == maxVal);
                     }
 
@@ -907,9 +906,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                     bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
                     bool skipUpperCheck = false;
                     if (maxConstp && exprWidth > 0 && exprWidth <= 64) {
-                        const uint64_t maxVal
-                            = (exprWidth == 64) ? ~static_cast<uint64_t>(0)
-                                                : ((1ULL << exprWidth) - 1ULL);
+                        const uint64_t maxVal = (exprWidth == 64) ? ~static_cast<uint64_t>(0)
+                                                                  : ((1ULL << exprWidth) - 1ULL);
                         skipUpperCheck = (maxConstp->toUQuad() == maxVal);
                     }
 
@@ -1423,10 +1421,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                 bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
                                 bool skipUpperCheck = false;
                                 if (maxConstp && exprWidth > 0 && exprWidth <= 64) {
-                                    const uint64_t maxVal
-                                        = (exprWidth == 64)
-                                              ? ~static_cast<uint64_t>(0)
-                                              : ((1ULL << exprWidth) - 1ULL);
+                                    const uint64_t maxVal = (exprWidth == 64)
+                                                                ? ~static_cast<uint64_t>(0)
+                                                                : ((1ULL << exprWidth) - 1ULL);
                                     skipUpperCheck = (maxConstp->toUQuad() == maxVal);
                                 }
 

@@ -14,18 +14,15 @@ test.scenarios('dist')
 
 RELEASE_OK_RE = r'(^test_regress/t/.*\.(cpp|h|map|mk|py|sv|v|vlt)|^test_regress/t_done/|^examples/)'
 
-EXEMPT_AUTHOR_RE = (
-    r'(^ci/|^nodist/fastcov.py|^nodist/fuzzer'
-    r'|^test_regress/t/.*\.(cpp|h|mk|py|s?vh?|vlt)$)'
-)
+EXEMPT_AUTHOR_RE = (r'(^ci/|^nodist/fastcov.py|^nodist/fuzzer'
+                    r'|^test_regress/t/.*\.(cpp|h|mk|py|s?vh?|vlt)$)')
 
 EXEMPT_FILES_RE = (
     r'(^\.|/\.|\.gitignore$|\.dat|\.gprof|\.mem|\.out$|\.png$|\.tree|\.vc$|\.vcd$|^\.'
     r'|^coverage_report/|^coverage_report_.*?/|^tmp/|^references/'
     r'|^our$|^out$|^plan_update\.md$|^status-.*\.md$|^todo\.md$'
     r'|^verilator-funccov\.code-workspace$|^test\.sv$|^test_coverage_output\.cpp$'
-    r'|^test_trans_main\.cpp$|^test_regress/t/t_(covergroup|funccov)_.*\.(cpp|h|py|sv|v)$)'
-)
+    r'|^test_trans_main\.cpp$|^test_regress/t/t_(covergroup|funccov)_.*\.(cpp|h|py|sv|v)$)')
 
 EXEMPT_FILES_LIST = """
     CITATION.cff
