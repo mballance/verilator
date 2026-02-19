@@ -1,6 +1,8 @@
-// DESCRIPTION: Verilator: Functional coverage - automatic bins test
+// DESCRIPTION: Verilator: Verilog Test module
 //
-// Test that bins auto[N] automatically divides the value space
+// This file ONLY is placed under the Creative Commons Public Domain, for
+// any use, without warranty, 2026 by Wilson Snyder.
+// SPDX-License-Identifier: CC0-1.0
 
 module t;
     /* verilator lint_off UNSIGNED */
