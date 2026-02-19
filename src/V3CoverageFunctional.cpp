@@ -64,6 +64,16 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     std::map<AstCoverBin*, AstVar*> m_seqStateVars;  // transition bin -> sequence state variable
 
     // METHODS
+    void clearBinInfos() {
+        // Delete pseudo-bins created for cross coverage (they're never inserted into the AST)
+        for (const BinInfo& bi : m_binInfos) {
+            if (!bi.coverpointp && bi.crossp && bi.binp) {
+                VL_DO_DANGLING(bi.binp->deleteTree(), bi.binp);
+            }
+        }
+        m_binInfos.clear();
+    }
+
     void processCovergroup() {
         if (!m_covergroupp) return;
 
@@ -71,8 +81,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                            << m_coverpoints.size() << " coverpoints and "
                                            << m_coverCrosses.size() << " crosses" << endl);
 
-        // Clear bin info for this covergroup
-        m_binInfos.clear();
+        // Clear bin info for this covergroup (deleting any orphaned cross pseudo-bins)
+        clearBinInfos();
 
         // For each coverpoint, generate sampling code
         for (AstCoverpoint* cpp : m_coverpoints) { generateCoverpointCode(cpp); }
@@ -92,6 +102,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
         // Generate coverage database registration if coverage is enabled
         if (v3Global.opt.coverage()) { generateCoverageRegistration(); }
+
+        // Clean up orphaned cross pseudo-bins now that we're done with them
+        clearBinInfos();
     }
 
     void expandAutomaticBins(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {

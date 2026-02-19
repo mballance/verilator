@@ -835,5 +835,11 @@ void V3Active::activeAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");
     { ActiveVisitor{nodep}; }  // Destruct before checking
     { CovergroupSamplingVisitor{nodep}; }  // Add automatic covergroup sampling
+    // Delete orphaned SenTree nodes that were unlinked for covergroup auto-sampling
+    for (auto& pair : s_covergroupEvents) {
+        if (pair.second) VL_DO_DANGLING(pair.second->deleteTree(), pair.second);
+    }
+    s_covergroupEvents.clear();
+    s_covergroupSampleFuncs.clear();
     V3Global::dumpCheckGlobalTree("active", 0, dumpTreeEitherLevel() >= 3);
 }

@@ -252,6 +252,10 @@ public:
             varp->direction(VDirection::INPUT);
             funcp->addStmtsp(varp);
         }
+
+        // The original arg lists were cloned above; delete the orphaned originals
+        if (constructorArgs) VL_DO_DANGLING(constructorArgs->deleteTree(), constructorArgs);
+        if (sampleArgs) VL_DO_DANGLING(sampleArgs->deleteTree(), sampleArgs);
     }
     // Helper to move bins from parser list to coverpoint
     void addCoverpointBins(AstCoverpoint* cp, AstNode* binsList) {
