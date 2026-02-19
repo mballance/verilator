@@ -23,13 +23,13 @@ module t (/*AUTOARG*/);
 
     initial begin
         cg_inst = new;
-        
+
         // Sample different values
         data = 1;  cg_inst.sample();
         data = 5;  cg_inst.sample();
         data = 10; cg_inst.sample();
         data = 2;  cg_inst.sample();  // low hit twice
-        
+
         $write("*-* All Finished *-*\n");
         $finish;
     end

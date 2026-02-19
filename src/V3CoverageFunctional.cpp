@@ -40,7 +40,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     std::vector<AstCoverCross*> m_coverCrosses;  // Cross coverage items in current covergroup
 
     // Structure to track bins with their variables and options
-    struct BinInfo {
+    struct BinInfo final {
         AstCoverBin* binp;
         AstVar* varp;
         int atLeast;  // Minimum hits required for coverage (from option.at_least)
@@ -452,7 +452,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     }
 
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
-        if (!m_sampleFuncp || !m_constructorp) {
+        if (!m_sampleFuncp || !m_constructorp)
+        {
             coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without sample() or constructor");
             return;
         }
@@ -1302,7 +1303,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     }
 
     void generateCrossCode(AstCoverCross* crossp) {
-        if (!m_sampleFuncp || !m_constructorp) {
+        if (!m_sampleFuncp || !m_constructorp)
+        {
             crossp->v3warn(E_UNSUPPORTED, "Cross coverage without sample() or constructor");
             return;
         }
@@ -1390,8 +1392,6 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                     AstNodeExpr* minExprp = VN_CAST(minp, NodeExpr);
                     AstNodeExpr* maxExprp = VN_CAST(maxp, NodeExpr);
                     if (minExprp && maxExprp) {
-                        AstNodeExpr* exprClone2p = exprp->cloneTree(false);
-
                         AstConst* minConstp = VN_CAST(minExprp, Const);
                         AstConst* maxConstp = VN_CAST(maxExprp, Const);
 
@@ -1408,6 +1408,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                             AstNodeExpr* gep;
                             AstNodeExpr* lep;
                             if (exprClonep->isSigned()) {
+                                AstNodeExpr* const exprClone2p = exprp->cloneTree(false);
                                 gep = new AstGteS{binp->fileline(), exprClonep,
                                                   minExprp->cloneTree(false)};
                                 lep = new AstLteS{binp->fileline(), exprClone2p,
@@ -1432,7 +1433,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                         = new AstConst{binp->fileline(), AstConst::BitTrue{}};
                                 } else if (skipLowerCheck) {
                                     // Only check upper bound for [0:max]
-                                    lep = new AstLte{binp->fileline(), exprClone2p,
+                                    lep = new AstLte{binp->fileline(), exprClonep,
                                                      maxExprp->cloneTree(false)};
                                     rangeCondp = lep;
                                 } else if (skipUpperCheck) {
@@ -1441,6 +1442,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                                      minExprp->cloneTree(false)};
                                     rangeCondp = gep;
                                 } else {
+                                    AstNodeExpr* const exprClone2p = exprp->cloneTree(false);
                                     lep = new AstLte{binp->fileline(), exprClone2p,
                                                      maxExprp->cloneTree(false)};
                                     gep = new AstGte{binp->fileline(), exprClonep,
@@ -1690,7 +1692,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
         // We need to add the registration code to the constructor
         // The registration should happen after member variables are initialized
-        if (!m_constructorp) {
+        if (!m_constructorp)
+        {
             m_covergroupp->v3warn(E_UNSUPPORTED,
                                   "Cannot generate coverage registration without constructor");
             return;

@@ -8,7 +8,7 @@
 
 module t;
    int unsigned addr;  // Use unsigned to avoid comparison warnings
-   
+
    covergroup cg;
       cp_addr: coverpoint addr {
          bins low = {[0:127]};
@@ -19,14 +19,14 @@ module t;
    initial begin
       cg cg_inst;
       cg_inst = new;
-      
+
       // Sample some values
       addr = 10;
       cg_inst.sample();
-      
+
       addr = 200;
       cg_inst.sample();
-      
+
       $display("Coverage: %0.1f%%", cg_inst.get_coverage());
       $write("*-* All Finished *-*\n");
       $finish;

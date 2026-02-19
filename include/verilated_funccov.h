@@ -34,7 +34,7 @@
 //=============================================================================
 // VerilatedCoverBin - Represents a single bin in a coverpoint
 
-class VerilatedCoverBin {
+class VerilatedCoverBin VL_NOT_FINAL {
 private:
     std::string m_name;  // Bin name
     std::string m_rangeStr;  // String representation of range (e.g., "0:15")
@@ -82,7 +82,7 @@ public:
 //=============================================================================
 // VerilatedCoverpoint - Represents a coverage point
 
-class VerilatedCoverpoint {
+class VerilatedCoverpoint VL_NOT_FINAL {
 private:
     std::string m_name;  // Coverpoint name
     std::vector<VerilatedCoverBin*> m_bins;  // Bins in this coverpoint
@@ -127,10 +127,12 @@ public:
     void registerCoverage(VerilatedCovContext* contextp, const std::string& hier,
                           const std::string& cgName) {
         for (auto* bin : m_bins) {
-            std::string fullName = cgName + "." + m_name;
+            const std::string fullName = cgName + "." + m_name;
+            const std::string& binName = bin->name();
+            const std::string& binRange = bin->rangeStr();
             VL_COVER_INSERT(contextp, hier.c_str(), bin->countp(), "type", "coverpoint", "name",
-                            fullName.c_str(), "bin", bin->name().c_str(), "range",
-                            bin->rangeStr().c_str());
+                            fullName.c_str(), "bin", binName.c_str(), "range",
+                            binRange.c_str());
         }
     }
 };
@@ -138,7 +140,7 @@ public:
 //=============================================================================
 // VerilatedCoverCross - Represents cross coverage between coverpoints
 
-class VerilatedCoverCross {
+class VerilatedCoverCross VL_NOT_FINAL {
 private:
     std::string m_name;  // Cross name
     std::vector<VerilatedCoverpoint*> m_coverpoints;  // Coverpoints being crossed
@@ -203,9 +205,10 @@ public:
         for (const auto& pair : m_crossBins) {
             // Note: We need a persistent counter, so we use the map value's address
             // This is safe because std::map doesn't reallocate on insert
+            const std::string& binName = pair.first;
             VL_COVER_INSERT(contextp, hier.c_str(),
-                            const_cast<uint32_t*>(&m_crossBins[pair.first]), "type", "cross",
-                            "name", fullName.c_str(), "bin", pair.first.c_str());
+                            const_cast<uint32_t*>(&pair.second), "type", "cross", "name",
+                            fullName.c_str(), "bin", binName.c_str());
         }
     }
 };
@@ -213,7 +216,7 @@ public:
 //=============================================================================
 // VerilatedCovergroup - Represents a covergroup instance
 
-class VerilatedCovergroup {
+class VerilatedCovergroup VL_NOT_FINAL {
 private:
     std::string m_name;  // Covergroup type name
     std::string m_instName;  // Instance name

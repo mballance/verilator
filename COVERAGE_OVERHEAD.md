@@ -25,7 +25,7 @@ void isCovergroup(bool flag) { m_covergroup = flag; }
 
 **Impact:** Negligible - AstClass already has 5 other flags:
 - `m_extended`
-- `m_interfaceClass` 
+- `m_interfaceClass`
 - `m_needRNG`
 - `m_useVirtualPublic`
 - `m_virtual`
@@ -69,7 +69,7 @@ std::unordered_map<const AstClass*, AstCFunc*> s_covergroupSampleFuncs;
 class AstCovergroup final : public AstNode {
     string m_name;        // Covergroup name
     bool m_isClass = false;  // Legacy flag (unused?)
-    
+
     // Children (via @astgen):
     // op1: argsp (sample arguments)
     // op2: membersp (unused - empty)
@@ -136,7 +136,7 @@ class AstCovergroup final : public AstNodeModule {
     uint32_t m_declTokenNum = 0;
     int m_autoBinMax = -1;
     // ... more fields ...
-    
+
     // Plus all the visitor handling code duplicated
 };
 ```
@@ -162,16 +162,16 @@ class AstCovergroup final : public AstNodeModule {
 
 The covergroup implementation using flags adds:
 
-✅ **~1-2 KB memory** per design (negligible)
-✅ **1 boolean flag** in AstClass (essentially free)
-✅ **2 global maps** for auto-sampling (small)
-✅ **Minimal code changes** (~500 lines vs 1500+)
+ **~1-2 KB memory** per design (negligible)
+ **1 boolean flag** in AstClass (essentially free)
+ **2 global maps** for auto-sampling (small)
+ **Minimal code changes** (~500 lines vs 1500+)
 
 Compare to separate node type approach:
-❌ **Same or more memory**
-❌ **Much more code** (1500+ lines)
-❌ **Ongoing maintenance burden**
-❌ **Only 10% test pass rate**
+ **Same or more memory**
+ **Much more code** (1500+ lines)
+ **Ongoing maintenance burden**
+ **Only 10% test pass rate**
 
 **The flag pattern is not only architecturally correct, it's also highly efficient.**
 

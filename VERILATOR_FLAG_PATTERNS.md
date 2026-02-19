@@ -15,17 +15,17 @@ The covergroup implementation (`AstClass` with `isCovergroup()` flag) is **100% 
 class AstModule final : public AstNodeModule {
     const bool m_isChecker;  // Module represents a checker
     const bool m_isProgram;  // Module represents a program
-    
+
     // Three constructors:
     AstModule(FileLine* fl, const string& name, const string& libname)
         : m_isChecker{false}, m_isProgram{false} {}  // Regular module
-    
+
     AstModule(FileLine* fl, const string& name, const string& libname, Checker)
         : m_isChecker{true}, m_isProgram{false} {}   // Checker
-    
+
     AstModule(FileLine* fl, const string& name, const string& libname, Program)
         : m_isChecker{false}, m_isProgram{true} {}   // Program
-    
+
     string verilogKwd() const override {
         return m_isChecker ? "checker" : m_isProgram ? "program" : "module";
     }
@@ -62,7 +62,7 @@ class AstClass final : public AstNodeModule {
     bool m_interfaceClass = false;    // Interface class
     bool m_virtual = false;           // Virtual class
     bool m_needRNG = false;           // Uses randomize
-    
+
     string verilogKwd() const override {
         return isCovergroup() ? "covergroup" : "class";
     }
@@ -102,7 +102,7 @@ class AstPrimitive : public AstNodeModule { /* primitive */ };
 
 ### Pattern:
 - **Interface** gets its own node type (AstIface) - different enough
-- **Package** gets its own node type (AstPackage) - different enough  
+- **Package** gets its own node type (AstPackage) - different enough
 - **Class variations** use flags - similar enough
 - **Module variations** use flags - similar enough
 - **Covergroups** use class flags - **similar enough!**
@@ -148,9 +148,9 @@ class AstIface final : public AstNodeModule {
 
 | Construct | Base Type | Uses Flags? | Rationale |
 |-----------|-----------|-------------|-----------|
-| **module/program/checker** | AstModule | ✅ Yes (m_isChecker, m_isProgram) | Too similar to duplicate |
-| **class/covergroup/interface class** | AstClass | ✅ Yes (m_covergroup, m_interfaceClass) | Share class semantics |
-| **constraints** | AstConstraint | ✅ Yes (5+ flags) | Many variants, shared logic |
+| **module/program/checker** | AstModule |  Yes (m_isChecker, m_isProgram) | Too similar to duplicate |
+| **class/covergroup/interface class** | AstClass |  Yes (m_covergroup, m_interfaceClass) | Share class semantics |
+| **constraints** | AstConstraint |  Yes (5+ flags) | Many variants, shared logic |
 | **interface** | AstIface | Separate type | Sufficiently different |
 | **package** | AstPackage | Separate type | Sufficiently different |
 
@@ -171,13 +171,13 @@ class AstIface final : public AstNodeModule {
 
 ### Covergroups Decision:
 - Covergroups share ~90% with classes:
-  - ✅ Constructors
-  - ✅ Member variables
-  - ✅ Methods (sample, get_coverage, etc.)
-  - ✅ Instantiation semantics
-  - ✅ Scoping rules
+  -  Constructors
+  -  Member variables
+  -  Methods (sample, get_coverage, etc.)
+  -  Instantiation semantics
+  -  Scoping rules
 - Only differs: Coverage tracking, no inheritance
-- **Conclusion: Flags are appropriate** ✅
+- **Conclusion: Flags are appropriate**
 
 ---
 
@@ -196,15 +196,15 @@ This shows the Verilator team **explicitly considered** a separate type and chos
 
 **Covergroups using `AstClass` + flags is the CORRECT Verilator pattern:**
 
-1. ✅ **Matches module/program/checker pattern** exactly
-2. ✅ **Matches class variant pattern** (interface classes)
-3. ✅ **Proven by test results** (71% vs 10% pass rate)
-4. ✅ **Explicitly considered and chosen** by maintainers
-5. ✅ **Less code, easier maintenance** (Verilator philosophy)
+1.  **Matches module/program/checker pattern** exactly
+2.  **Matches class variant pattern** (interface classes)
+3.  **Proven by test results** (71% vs 10% pass rate)
+4.  **Explicitly considered and chosen** by maintainers
+5.  **Less code, easier maintenance** (Verilator philosophy)
 
 The attempted `AstCovergroup : public AstNodeModule` approach was **fighting against established patterns**. The current approach **follows them perfectly**.
 
-**Result: Current architecture is validated as "Verilator style"** ✅
+**Result: Current architecture is validated as "Verilator style"**
 
 ---
 

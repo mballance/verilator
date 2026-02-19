@@ -104,28 +104,28 @@ class MyPassVisitor final : public VNVisitor {
     //  AstNode::user2p() -> AstNode*. Pointer to definition
     const VNUser1InUse m_inuser1;  // Mark user1 as in-use
     const VNUser2InUse m_inuser2;
-    
+
     // STATE - Member variables for passing context
     AstNodeModule* m_modp = nullptr;  // Current module
     AstNodeFTask* m_ftaskp = nullptr;  // Current function/task
-    
+
     // METHODS
     void visit(AstModule* nodep) override {
         VL_RESTORER(m_modp);  // Save/restore for nested contexts
         m_modp = nodep;
         iterateChildren(nodep);
     }
-    
+
     void visit(AstVar* nodep) override {
         // Access current context via m_modp
         // Process variable...
     }
-    
+
     void visit(AstNode* nodep) override {
         // Default handler - iterate children
         iterateChildren(nodep);
     }
-    
+
 public:
     MyPassVisitor(AstNetlist* nodep) {
         iterate(nodep);
@@ -144,8 +144,8 @@ class V3GraphEdge;       // Edge base
 class V3GraphAlg;        // Algorithm base
 
 // Iterating edges:
-for (V3GraphEdge* edgep = vertexp->inBeginp(); 
-     edgep; 
+for (V3GraphEdge* edgep = vertexp->inBeginp();
+     edgep;
      edgep = edgep->inNextp()) {
     // Process incoming edge
 }
@@ -225,10 +225,10 @@ end
 class MyClass {
     int m_counter;        // REQUIRED: Comment every member variable
     bool m_initialized;   // Tracks initialization state
-    
+
     /// Triple-slash for user-facing API (include directory)
     void publicFunction();
-    
+
     // Double-slash for internal code
     void internalFunction();
 };
@@ -321,11 +321,11 @@ AstNode* newp = nodep->acceptSubtreeReturnEdits(visitor);
 
 ### Data Passing Between Visitors
 
-**1. Member Variables (Parent → Child):**
+**1. Member Variables (Parent  Child):**
 ```cpp
 class MyVisitor final : public VNVisitor {
     AstNodeModule* m_modp = nullptr;
-    
+
     void visit(AstModule* nodep) override {
         VL_RESTORER(m_modp);  // Auto save/restore
         m_modp = nodep;
@@ -334,7 +334,7 @@ class MyVisitor final : public VNVisitor {
 };
 ```
 
-**2. User Attributes (Child → Parent or Annotations):**
+**2. User Attributes (Child  Parent or Annotations):**
 ```cpp
 // At top of visitor - document usage!
 // NODE STATE
@@ -444,12 +444,12 @@ class MyPassVisitor final : public VNVisitor {
     // NODE STATE
     //  AstNode::user1()  -> [document usage]
     const VNUser1InUse m_inuser1;
-    
+
     // STATE
     AstNodeModule* m_modp = nullptr;
-    
+
     // METHODS
-    
+
     // Visitors
     void visit(AstModule* nodep) override {
         UINFO(4, " MOD   " << nodep);
@@ -457,11 +457,11 @@ class MyPassVisitor final : public VNVisitor {
         m_modp = nodep;
         iterateChildren(nodep);
     }
-    
+
     void visit(AstNode* nodep) override {
         iterateChildren(nodep);
     }
-    
+
 public:
     // CONSTRUCTORS
     explicit MyPassVisitor(AstNetlist* nodep) {
@@ -550,12 +550,12 @@ test.passes()
 
 module t(clk);
   input clk;
-  
+
   integer cyc; initial cyc = 0;
-  
+
   always @(posedge clk) begin
     cyc <= cyc + 1;
-    
+
     if (cyc == 10) begin
       $write("*-* All Finished *-*\n");
       $finish;
@@ -709,19 +709,19 @@ verilator --trace --trace-depth 99 top.v
 
 ```
 verilator/
-├── src/                  # Main source
-│   ├── V3*.cpp/h        # Compiler passes
-│   ├── Verilator.cpp    # Main entry point
-│   ├── verilog.y        # Parser grammar
-│   ├── verilog.l        # Lexer
-│   └── astgen           # AST code generator
-├── include/             # Runtime library headers
-├── test_regress/        # Regression tests
-│   ├── t/              # Test cases
-│   └── driver.py       # Test driver
-├── docs/               # Documentation
-├── examples/           # Example designs
-└── ci/                 # CI configuration
+ src/                  # Main source
+    V3*.cpp/h        # Compiler passes
+    Verilator.cpp    # Main entry point
+    verilog.y        # Parser grammar
+    verilog.l        # Lexer
+    astgen           # AST code generator
+ include/             # Runtime library headers
+ test_regress/        # Regression tests
+    t/              # Test cases
+    driver.py       # Test driver
+ docs/               # Documentation
+ examples/           # Example designs
+ ci/                 # CI configuration
 ```
 
 ### Build Process
@@ -748,7 +748,7 @@ make test
 - **astgen** generates:
   - `V3Ast__gen_*.cpp/h` - AST node members
   - `V3*__gen.cpp` - Preprocessed source files
-  
+
 - **Build directories:**
   - `obj_opt/` - Optimized build
   - `obj_dbg/` - Debug build
@@ -810,10 +810,10 @@ handle.relink(newp);
 // List iteration with edits
 for (AstNode* nodep = listp; nodep; ) {
     AstNode* const nextp = nodep->nextp();  // Save next
-    
+
     // May delete/modify nodep
     processNode(nodep);
-    
+
     nodep = nextp;  // Continue with saved pointer
 }
 ```
@@ -823,7 +823,7 @@ for (AstNode* nodep = listp; nodep; ) {
 ```cpp
 // Create variable in module scope
 AstVar* const varp = new AstVar{
-    nodep->fileline(), 
+    nodep->fileline(),
     VFlagChildDType{},  // Has child dtype
     "temp_var",
     VVarType::BLOCKTEMP  // Temporary variable
@@ -912,7 +912,7 @@ AstNodeDType* dtypep = new AstBasicDType{
 ### Key Documentation
 
 - **docs/internals.rst** - Comprehensive internal documentation
-- **docs/CONTRIBUTING.rst** - Contribution guidelines  
+- **docs/CONTRIBUTING.rst** - Contribution guidelines
 - **Verilator Manual** - User documentation at https://verilator.org/verilator_doc.html
 - **Verilator Website** - https://verilator.org
 - **Verilator Forum** - https://verilator.org/forum

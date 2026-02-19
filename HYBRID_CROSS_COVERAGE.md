@@ -38,33 +38,33 @@
 
 ## Analysis: Which Approach is Better?
 
-### Remote Approach (Current) - WINNER ✅
+### Remote Approach (Current) - WINNER
 
 **Advantages:**
-- ✅ **71.4% tests passing** vs 10.7%
-- ✅ Reuses battle-tested class infrastructure
-- ✅ Smaller code changes
-- ✅ Less duplication between class/covergroup handling
-- ✅ Easier to maintain (one code path for class-like things)
-- ✅ Natural fit: covergroups ARE like classes in SystemVerilog
+-  **71.4% tests passing** vs 10.7%
+-  Reuses battle-tested class infrastructure
+-  Smaller code changes
+-  Less duplication between class/covergroup handling
+-  Easier to maintain (one code path for class-like things)
+-  Natural fit: covergroups ARE like classes in SystemVerilog
 
 **Disadvantages:**
-- ❌ Coverage-specific options need to be handled differently
-- ❌ Less type-safe (relies on flag check)
-- ❌ Can't prevent class features (inheritance, etc.) at compile time
+-  Coverage-specific options need to be handled differently
+-  Less type-safe (relies on flag check)
+-  Can't prevent class features (inheritance, etc.) at compile time
 
 ### Local Approach (AstNodeModule)
 
 **Advantages:**
-- ✅ Type-safe: covergroups are distinct from classes
-- ✅ Can add covergroup-specific fields to node
-- ✅ Prevents mixing class/covergroup concepts
+-  Type-safe: covergroups are distinct from classes
+-  Can add covergroup-specific fields to node
+-  Prevents mixing class/covergroup concepts
 
 **Disadvantages:**
-- ❌ Only 10.7% tests passing
-- ❌ Massive code duplication (every visitor needs covergroup handling)
-- ❌ More places to maintain
-- ❌ Fights against Verilator's architecture (classes work well already)
+-  Only 10.7% tests passing
+-  Massive code duplication (every visitor needs covergroup handling)
+-  More places to maintain
+-  Fights against Verilator's architecture (classes work well already)
 
 ## Recommendation: KEEP CURRENT (Remote) APPROACH
 
@@ -97,4 +97,4 @@ This is pragmatic and works well.
 
 The local "Phases 1-6" work was exploratory and led to a dead-end (10% pass rate). The remote approach is production-ready (71% pass rate).
 
-**Action: Continue with current hybrid approach** ✅
+**Action: Continue with current hybrid approach**

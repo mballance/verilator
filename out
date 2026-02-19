@@ -1,16 +1,15 @@
-	   coverage.dat
-	   out
-	   run_all_coverage_tests.sh
-	   src/V3AstNodeOther.h
-	   src/V3CoverageFunctional.cpp
-	   src/V3ParseGrammar.h
-	   src/V3Width.cpp
-	   src/verilog.y
-	   test_regress/t/t_covergroup_autobins.v
-	   test_regress/t/t_covergroup_negative_ranges.v
+       coverage.dat
+       out
+       run_all_coverage_tests.sh
+       src/V3AstNodeOther.h
+       src/V3CoverageFunctional.cpp
+       src/V3ParseGrammar.h
+       src/V3Width.cpp
+       src/verilog.y
+       test_regress/t/t_covergroup_autobins.v
+       test_regress/t/t_covergroup_negative_ranges.v
 
-	test_regress/t/t_covergroup_clocking_internal.py
-	test_regress/t/t_covergroup_clocking_internal.v
-	test_regress/t/t_covergroup_clocking_module_input.py
-	test_regress/t/t_covergroup_clocking_module_input.v
-
+    test_regress/t/t_covergroup_clocking_internal.py
+    test_regress/t/t_covergroup_clocking_internal.v
+    test_regress/t/t_covergroup_clocking_module_input.py
+    test_regress/t/t_covergroup_clocking_module_input.v

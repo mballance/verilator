@@ -10,7 +10,7 @@ module t;
    logic [7:0] data;
    logic [3:0] state;
    logic [15:0] addr;
-   
+
    // Large covergroup with multiple coverpoints and many bins
    covergroup cg_perf;
       // Coverpoint with many bins
@@ -32,7 +32,7 @@ module t;
          bins d50 = {[50:59]};
          bins rest = {[60:255]};
       }
-      
+
       cp_state: coverpoint state {
          bins s0 = {0};
          bins s1 = {1};
@@ -51,7 +51,7 @@ module t;
          bins s14 = {14};
          bins s15 = {15};
       }
-      
+
       // verilator lint_off UNSIGNED
       // verilator lint_off CMPCONST
       cp_addr: coverpoint addr {
@@ -61,42 +61,42 @@ module t;
       }
       // verilator lint_on CMPCONST
       // verilator lint_on UNSIGNED
-      
+
       // Cross coverage adds more bins
       cross_data_state: cross cp_data, cp_state;
    endgroup
-   
+
    cg_perf cg_inst = new;
-   
+
    initial begin
       longint start_time, end_time, elapsed;
       int iterations = 100000;
       real avg_time_ns;
-      
+
       $display("=== Functional Coverage Performance Test ===");
       $display("Iterations: %0d", iterations);
-      
+
       // Measure sample() overhead
       start_time = $time;
-      
+
       for (int i = 0; i < iterations; i++) begin
          // Vary the data to hit different bins
          data = i[7:0];
          state = i[3:0];
          addr = i[15:0];
-         
+
          cg_inst.sample();
       end
-      
+
       end_time = $time;
       elapsed = end_time - start_time;
-      
+
       avg_time_ns = real'(elapsed) / real'(iterations);
-      
+
       $display("Total time: %0d time units", elapsed);
       $display("Average time per sample(): %0.2f time units", avg_time_ns);
       $display("Coverage: %0.1f%%", cg_inst.get_inst_coverage());
-      
+
       // Performance target: < 100 cycles per sample()
       // Assuming 1 time unit = 1 ns, typical CPU @ 3 GHz = 0.33 ns/cycle
       // 100 cycles = 33 ns
@@ -105,7 +105,7 @@ module t;
       end else begin
          $display("WARNING: Performance may need optimization (> 100 cycles)");
       end
-      
+
       $write("*-* All Finished *-*\n");
       $finish;
    end

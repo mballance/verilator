@@ -33,15 +33,15 @@ module t (/*AUTOARG*/
       // Sample some values
       addr = 10; cmd = 0;
       @(posedge clk);
-      
+
       addr = 200; cmd = 1;
       @(posedge clk);
-      
+
       addr = 50; cmd = 0;
       @(posedge clk);
-      
+
       $display("Coverage: %0.1f%%", cg_inst.get_coverage());
-      
+
       $write("*-* All Finished *-*\n");
       $finish;
    end

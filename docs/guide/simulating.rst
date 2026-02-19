@@ -228,7 +228,7 @@ bins that track specific values or value ranges.
    module top;
       logic [7:0] addr;
       logic       cmd;
-      
+
       // Define a covergroup
       covergroup cg;
          cp_addr: coverpoint addr {
@@ -240,10 +240,10 @@ bins that track specific values or value ranges.
             bins write = {1};
          }
       endgroup
-      
+
       // Instantiate the covergroup
       cg cg_inst = new;
-      
+
       always @(posedge clk) begin
          // Sample coverage explicitly
          cg_inst.sample();
@@ -331,7 +331,7 @@ Cross coverage tracks combinations of values from multiple coverpoints:
          bins low  = {[0:127]};
          bins high = {[128:255]};
       }
-      
+
       // Cross coverage of command and address
       cross_cmd_addr: cross cp_cmd, cp_addr;
    endgroup
@@ -365,11 +365,11 @@ Verilator supports multi-value transition sequences:
    coverpoint state {
       // Two-value transitions
       bins trans_2 = (0 => 1);
-      
+
       // Multi-value transitions
       bins trans_3 = (0 => 1 => 2);
       bins trans_4 = (0 => 1 => 2 => 3);
-      
+
       // Transitions with value sets
       bins trans_set = (0, 1 => 2, 3);  // (0=>2), (0=>3), (1=>2), (1=>3)
    }
@@ -383,19 +383,19 @@ ignored:
 * **Consecutive repetition** ``[*N]`` - Repeat value N times consecutively
 
   .. code-block:: sv
-  
+
      bins trans = (1 => 2 [*3] => 3);  // Unsupported: 1, 2, 2, 2, 3
 
 * **Goto repetition** ``[->N]`` - See value N times with any gaps, next value follows immediately
 
   .. code-block:: sv
-  
+
      bins trans = (1 => 2 [->3] => 3);  // Unsupported: 1, 2, X, 2, Y, 2, 3
 
 * **Nonconsecutive repetition** ``[=N]`` - See value N times with gaps allowed everywhere
 
   .. code-block:: sv
-  
+
      bins trans = (1 => 2 [=3] => 3);  // Unsupported: 1, 2, X, 2, Y, 2, Z, 3
 
 If you need repetition behavior, consider using multiple bins to represent the
@@ -437,7 +437,7 @@ tool:
    # Run simulation with coverage enabled
    $ verilator --coverage --exe --build sim.cpp top.v
    $ ./obj_dir/Vtop
-   
+
    # Generate coverage report
    $ verilator_coverage --annotate coverage_report coverage.dat
    $ verilator_coverage --write merged.dat coverage.dat
@@ -473,7 +473,7 @@ with :command:`verilator_coverage`:
 
    # Only process functional coverage
    $ verilator_coverage --filter-type funccov --annotate report coverage.dat
-   
+
    # Exclude functional coverage
    $ verilator_coverage --filter-type '!funccov' --annotate report coverage.dat
 
@@ -487,7 +487,7 @@ Covergroups support various options:
    covergroup cg with function sample(logic [7:0] addr);
       option.name = "my_covergroup";
       option.comment = "Address coverage";
-      
+
       coverpoint addr;
    endgroup
 
@@ -506,7 +506,7 @@ Covergroups can be created dynamically at runtime:
 .. code-block:: sv
 
    cg cg_inst;
-   
+
    initial begin
       if (enable_coverage) begin
          cg_inst = new;
@@ -522,15 +522,15 @@ Covergroups can be defined inside classes:
 
    class MyClass;
       logic [7:0] data;
-      
+
       covergroup cg;
          coverpoint data;
       endgroup
-      
+
       function new();
          cg = new;
       endfunction
-      
+
       task record();
          cg.sample();
       endtask
@@ -548,12 +548,12 @@ but automatic sampling is not performed. Use explicit ``sample()`` calls:
    covergroup cg @(posedge clk);  // Automatic sampling not supported
       ...
    endgroup
-   
+
    // Do this:
    covergroup cg;
       ...
    endgroup
-   
+
    cg cg_inst = new;
    always @(posedge clk) cg_inst.sample();  // Explicit sampling
 
@@ -565,7 +565,7 @@ is not currently supported. This will generate an error:
    covergroup base_cg;
       coverpoint value;
    endgroup
-   
+
    covergroup derived_cg extends base_cg;  // Not supported
       coverpoint other_value;
    endgroup
@@ -581,13 +581,13 @@ coverage via ``get_inst_coverage()`` is available:
    covergroup cg;
       coverpoint value;
    endgroup
-   
+
    cg cg1 = new;
    cg cg2 = new;
-   
+
    // This works - instance-level coverage
    real inst_cov = cg1.get_inst_coverage();
-   
+
    // This is not supported - type-level coverage
    // real type_cov = cg::get_coverage();  // Will not aggregate across instances
 
@@ -600,7 +600,7 @@ statement coverage in generated code. Simple 2-state transitions work correctly:
    coverpoint state {
       // This works well
       bins trans_2state = (0 => 1);
-      
+
       // This may generate incomplete case statements
       bins trans_3state = (0 => 1 => 2);  // Limited support
    }

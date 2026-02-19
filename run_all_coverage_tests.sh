@@ -14,15 +14,15 @@ TESTS=$(ls test_regress/t/t_covergroup_*.v test_regress/t/t_funccov_*.v 2>/dev/n
 
 for test in $TESTS; do
     ((TOTAL++))
-    
+
     # Skip _bad tests
     if [[ $test =~ _bad ]]; then
         ((BAD++))
         continue
     fi
-    
+
     rm -rf obj_dir 2>/dev/null
-    
+
     # Check if test has .cpp harness
     HARNESS=""
     if [ -f "test_regress/t/${test}.cpp" ]; then
@@ -30,7 +30,7 @@ for test in $TESTS; do
     else
         HARNESS="--exe --main"
     fi
-    
+
     # Verilate
     ./bin/verilator --cc --coverage $HARNESS test_regress/t/${test}.v -Wno-UNSIGNED -Wno-CMPCONST --no-timing >/tmp/v_${test}.log 2>&1
     if [ $? -ne 0 ]; then
@@ -38,7 +38,7 @@ for test in $TESTS; do
         ((V_FAIL++))
         continue
     fi
-    
+
     # Compile
     make -C obj_dir -f V${test}.mk -j4 >/tmp/c_${test}.log 2>&1
     if [ $? -ne 0 ]; then
@@ -46,7 +46,7 @@ for test in $TESTS; do
         ((C_FAIL++))
         continue
     fi
-    
+
     # Check if it's compile-only (no execution in .py)
     if [ -f "test_regress/t/${test}.py" ]; then
         if ! grep -q "execute()" "test_regress/t/${test}.py"; then
@@ -56,7 +56,7 @@ for test in $TESTS; do
             continue
         fi
     fi
-    
+
     # Run (with timeout)
     timeout 5 ./obj_dir/V${test} >/tmp/r_${test}.log 2>&1
     RET=$?

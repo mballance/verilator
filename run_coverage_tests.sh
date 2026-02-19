@@ -17,16 +17,16 @@ TESTS=$(ls test_regress/t/t_covergroup_*.v test_regress/t/t_funccov_*.v 2>/dev/n
 
 for test in $TESTS; do
     ((TOTAL++))
-    
+
     # Check if it's a _bad test (expected to fail)
     if [[ $test =~ _bad ]]; then
         ((BAD_TESTS++))
         continue
     fi
-    
+
     # Clean up
     rm -rf obj_dir /tmp/v_${test}.log 2>/dev/null
-    
+
     # Verilate
     ./bin/verilator --cc --coverage --exe --main test_regress/t/${test}.v -Wno-UNSIGNED > /tmp/v_${test}.log 2>&1
     if [ $? -ne 0 ]; then
@@ -34,7 +34,7 @@ for test in $TESTS; do
         ((V_FAIL++))
         continue
     fi
-    
+
     # Find makefile
     MAKEFILE=$(ls obj_dir/V${test}.mk 2>/dev/null | head -1)
     if [ -z "$MAKEFILE" ]; then
@@ -42,7 +42,7 @@ for test in $TESTS; do
         ((V_FAIL++))
         continue
     fi
-    
+
     # Compile
     make -C obj_dir -f $(basename $MAKEFILE) > /tmp/c_${test}.log 2>&1
     if [ $? -ne 0 ]; then
@@ -50,7 +50,7 @@ for test in $TESTS; do
         ((C_FAIL++))
         continue
     fi
-    
+
     # Run
     ./obj_dir/V${test} > /tmp/r_${test}.log 2>&1
     if [ $? -ne 0 ]; then
@@ -58,7 +58,7 @@ for test in $TESTS; do
         ((R_FAIL++))
         continue
     fi
-    
+
     echo "$test: PASS"
     ((PASSED++))
 done

@@ -1,5 +1,5 @@
 IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 19. Functional coverage
 
@@ -7,17 +7,17 @@ IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Ve
 
 This clause describes the following:
 
-— Defining coverage groups
+ Defining coverage groups
 
-— Defining coverage points
+ Defining coverage points
 
-— Defining cross coverage
+ Defining cross coverage
 
-— Coverage options
+ Coverage options
 
-— Coverage system tasks and system functions
+ Coverage system tasks and system functions
 
-— Coverage computation
+ Coverage computation
 
 19.2 Overview
 
@@ -37,14 +37,14 @@ the topic of this clause.
 
 Functional  coverage  is  a  user-defined  metric  that  measures  how  much  of  the  design  specification,  as
 enumerated by features in the test plan, has been exercised. It can be used to measure whether interesting
-scenarios, corner cases, specification invariants, or other applicable design conditions—captured as features
-of the test plan—have been observed, validated, and tested.
+scenarios, corner cases, specification invariants, or other applicable design conditionscaptured as features
+of the test planhave been observed, validated, and tested.
 
 The key aspects of functional coverage are as follows:
 
-— It is user-specified and is not automatically inferred from the design.
+ It is user-specified and is not automatically inferred from the design.
 
-— It is based on the design specification (i.e., its intent) and is thus independent of the actual design
+ It is based on the design specification (i.e., its intent) and is thus independent of the actual design
 
 code or its structure.
 
@@ -61,41 +61,41 @@ cases and required scenarios, without redundant work.
 
 The SystemVerilog functional coverage constructs enable the following:
 
-— Coverage of variables and expressions, as well as cross coverage between them
+ Coverage of variables and expressions, as well as cross coverage between them
 
-— Automatic as well as user-defined coverage bins
+ Automatic as well as user-defined coverage bins
 
 575
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
-— Associate bins with sets of values, transitions, or cross products
+ Associate bins with sets of values, transitions, or cross products
 
-— Filtering conditions at multiple levels
+ Filtering conditions at multiple levels
 
-— Events and sequences to automatically trigger coverage sampling
+ Events and sequences to automatically trigger coverage sampling
 
-— Procedural activation and query of coverage
+ Procedural activation and query of coverage
 
-— Optional directives to control and regulate coverage
+ Optional directives to control and regulate coverage
 
 19.3 Defining the coverage model: covergroup
 
 The  covergroup  construct  encapsulates  the  specification  of  a  coverage  model.  Each  covergroup
 specification can include the following components:
 
-— A coverage event that synchronizes the sampling of coverage points
+ A coverage event that synchronizes the sampling of coverage points
 
-— A set of coverage points
+ A set of coverage points
 
-— Cross coverage between coverage points
+ Cross coverage between coverage points
 
-— Optional formal arguments
+ Optional formal arguments
 
-— Coverage options
+ Coverage options
 
 The  covergroup  construct  is  a  user-defined  type.  The  type  definition  is  written  once,  and  multiple
 instances of that type can be created in different contexts. Similar to a class, once defined, a covergroup
@@ -151,14 +151,14 @@ hierarchical_tf_identifier
 
 576
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 29) The extends specification of covergroup is allowed only within a class.
 
-Syntax 19-1—Covergroup syntax (excerpt from Annex A)
+Syntax 19-1Covergroup syntax (excerpt from Annex A)
 
 The identifier associated with the covergroup declaration defines the name of the coverage model. Using
 this name, an arbitrary number of coverage model instances can be created. For example:
@@ -214,10 +214,10 @@ associated  with  value  sets  are  referred  to  as  state  bins  while  bins  
 
 577
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 referred to as transition bins. The bins can be explicitly defined by the user or automatically created by the
 tool. Coverage points are discussed in detail in 19.5.
@@ -286,10 +286,10 @@ bit m_z;
 
 578
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 covergroup cov1 @m_z;
 coverpoint m_x;
@@ -333,7 +333,7 @@ In  covergroup  cv1, public class member variable m_x is sampled at every positi
 Local class member m_z is covered by another covergroup cv2.  Each coverage group is sampled by a
 different clocking event.
 
-An embedded coverage group may be instantiated in the new() method of the covergroup’s parent class by
+An embedded coverage group may be instantiated in the new() method of the covergroups parent class by
 assigning the result of the new() operator to the covergroup variable. If this assignment is not present, then
 the coverage group is not created and no data will be sampled. The covergroup variable shall not be assigned
 outside the new() method of the parent class.
@@ -360,10 +360,10 @@ m_obj = new;
 
 579
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 Cov = new;
 
@@ -434,10 +434,10 @@ belong to the derived covergroup.
 
 580
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 If the base covergroup has a list of arguments specified, the derived covergroup implicitly has the same list
 of arguments. If the base covergroup has a coverage event specified, the derived covergroup shall use that
@@ -497,10 +497,10 @@ endclass
 
 581
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 19.5 Defining coverage points
 
@@ -567,14 +567,14 @@ covergroup_expression ::= expression33
 
 33) This expression is restricted as described in 19.5.
 
-Syntax 19-2—Coverage point syntax (excerpt from Annex A)
+Syntax 19-2Coverage point syntax (excerpt from Annex A)
 
 582
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 A  coverpoint  coverage  point  creates  a  hierarchical  scope  and  can  be  optionally  labeled.  If  the  label  is
 specified, then it designates the name of the coverage point. This name can be used to add this coverage
@@ -597,12 +597,12 @@ the coverpoint expression.
 A  coverpoint  name  has  limited  visibility.  An  identifier  can  only  refer  to  a  coverpoint  in  the  following
 contexts:
 
-— In the coverpoint list of a cross declaration (see 19.6),
-— In a hierarchical name where the prefix specifies the name of a covergroup variable. For example,
+ In the coverpoint list of a cross declaration (see 19.6),
+ In a hierarchical name where the prefix specifies the name of a covergroup variable. For example,
 cov1.cp.option.weight where cov1 is the name of a covergroup variable and cp is the name of
 a coverpoint declared within the covergroup.
 
-— Following ::, where the left operand of the scope resolution operator refers to a covergroup. For
+ Following ::, where the left operand of the scope resolution operator refers to a covergroup. For
 
 example, covtype :: cp :: type_option.weight.
 
@@ -618,12 +618,12 @@ body of any looping statement (see 12.7) or fork-join_none, either before or aft
 Function  calls  may  participate  in  a  covergroup_expression,  but  the  following  semantic  restrictions  are
 imposed:
 
-— Functions shall not contain output, inout, or ref arguments (const ref is allowed).
-— Functions shall be automatic (or preserve no state information) and have no side effects.
+ Functions shall not contain output, inout, or ref arguments (const ref is allowed).
+ Functions shall be automatic (or preserve no state information) and have no side effects.
 
-— Functions shall not reference non-constant variables outside the local scope of the function.
+ Functions shall not reference non-constant variables outside the local scope of the function.
 
-— System function calls are restricted to constant system function calls (see 11.2.1).
+ System function calls are restricted to constant system function calls (see 11.2.1).
 
 For example:
 
@@ -647,10 +647,10 @@ option.weight = c;
 
 583
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 bit [7:0] d: coverpoint y[31:24]; // creates coverpoint "d" covering the
 // high order 8 bits of the formal "y"
@@ -726,10 +726,10 @@ coverpoint,  specified  by  a  covergroup_range_list.  For  a  coverpoint  of  a
 
 584
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 construct allows creating a single bin for all the values in the covergroup_range_list, a separate bin for each
 value, or a fixed number of bins.
@@ -761,8 +761,8 @@ bins fixed [5] = {1, 4, 7};
 In  the  above  example,  number  of  values  =  3  and  number  of  bins  =  5;  therefore  B  =  1.  The  3  values  are
 distributed as follows: <1>, <4>, <7>, < >, < >. Note the empty fourth and fifth bins.
 
-For integral state bins declared as “binname[],” bin names are “binname[value].” For state bins declared as
-“binname[N],” bin names range from “binname[0]” through “binname[N-1].”
+For integral state bins declared as binname[], bin names are binname[value]. For state bins declared as
+binname[N], bin names range from binname[0] through binname[N-1].
 
 The following code example shows various bin groupings.
 
@@ -794,10 +794,10 @@ array.
 
 585
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 real  expressions,
 
@@ -856,9 +856,9 @@ subsequent real interval starts at the ending value of the preceding real interv
 the maximum value of the covergroup_value_range. If the size of a range is smaller than the interval size,
 only one bin will be used.
 
-For real open bin arrays declared as “binname[]”, the bin names of intervals shall use “[” and “]” to denote
-inclusivity  and  “)”  to  denote  exclusivity  of  the  end  points:  “binname[low_value:high_value)”  or
-“binname[low_value:high_value]”.  A  bin  for  an  individual  real  value  shall  be  named  “binname[value]”.
+For real open bin arrays declared as binname[], the bin names of intervals shall use [ and ] to denote
+inclusivity  and  )  to  denote  exclusivity  of  the  end  points:  binname[low_value:high_value)  or
+binname[low_value:high_value].  A  bin  for  an  individual  real  value  shall  be  named  binname[value].
 For example, if a real number coverpoint open bin array is defined as bins a2[] = {[1.0:3.0], 7.5,
 [8.5+/-0.1]}; using the default real interval size of 1.0, the resultant bins will be named a2[1.0:2.0),
 a2[2.0:3.0], a2[7.5], and a2[8.4:8.6].
@@ -875,8 +875,8 @@ identical  intervals  [2.0:3.0)  will  be  merged,  and  the  final  set  of  bi
 a3[2.0:3.0),  a3[3.0:4.0],  a3[3.0:4.0),  a3[4.0:5.0],  a3[1.1:2.1),  a3[2.1:3.1],  a3[3.3],
 and a3[1.0:2.0].
 
-For  a  fixed  number  of  bins,  declared  as  “binname[N]”,  bin  names  range  from  “binname[0]”  through
-“binname[N-1].” The number of items to be distributed is the sum of the number of intervals of the specified
+For  a  fixed  number  of  bins,  declared  as  binname[N],  bin  names  range  from  binname[0]  through
+binname[N-1]. The number of items to be distributed is the sum of the number of intervals of the specified
 ranges and the number of individual values. If the number of bins is smaller than the specified number of
 items, then the items are uniformly distributed among the specified bins, as described here. Let B represent
 the number of items assigned to each bin. B is defined as the total number of items divided by the number of
@@ -884,10 +884,10 @@ bins, rounded down, but not less than 1. The first B specified items are assigne
 
 586
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 specified items are assigned to the next bin, etc. If the number of items is not evenly divisible by the number
 of bins, then the last bin will include the remaining items. Duplicate items are retained; thus, the same value
@@ -951,10 +951,10 @@ covergroup cg_real_value;
 
 587
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
                                    //   "a3[2.0:3.0)" - 2.0 to less than 3.0
                                    //   "a3[3.0:4.0)" - 3.0 to less than 4.0
@@ -998,48 +998,48 @@ IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Ve
     }
   endgroup
 
-Features  of  the  bins  in  this  example  are  as  follows  (for  these  notes,  “interval  size”  refers  to  the  value  of
+Features  of  the  bins  in  this  example  are  as  follows  (for  these  notes,  interval  size  refers  to  the  value  of
 type_option.real_interval for the coverpoint):
 
-— Bin highz covers an absolute ±0.1 tolerance range around the real value ZSTATE inclusively.
-— In x_st, the integer is cast to real. The bin covers a range of a real value with a relative tolerance of
+ Bin highz covers an absolute 0.1 tolerance range around the real value ZSTATE inclusively.
+ In x_st, the integer is cast to real. The bin covers a range of a real value with a relative tolerance of
 
-±1.0% inclusively.
+1.0% inclusively.
 
-— In a1, the range is smaller than the interval size, so only one bin will be created and will cover the
+ In a1, the range is smaller than the interval size, so only one bin will be created and will cover the
 
 specified range inclusively.
 
-— In a2, the range is smaller than the interval size, so the first bin will cover the range, and the remain-
+ In a2, the range is smaller than the interval size, so the first bin will cover the range, and the remain-
 
 ing bins will be empty.
 
-— In a3, the range is greater than the interval size. Four bins will be created, one for each interval.
-— In a4, the range size equals the interval size. Only one bin will be created, covering the whole range
+ In a3, the range is greater than the interval size. Four bins will be created, one for each interval.
+ In a4, the range size equals the interval size. Only one bin will be created, covering the whole range
 
 inclusively.
 
-— a5 is a single bin covering all values equal to or greater than 0.1.
+ a5 is a single bin covering all values equal to or greater than 0.1.
 
 588
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
-— a6 is a single default bin forall values not specified in other bins.
+ a6 is a single default bin forall values not specified in other bins.
 
-— Bin xstate shows an integer that is cast to real and covers a single value of 100.0.
-— In b1, the range is greater than the interval, so 10 bins are created.
-— In b2, bins are created for each range separately.The gap between the ranges is not covered.
-— In b3, there are five bins for the range and one separate bin for the real value outside of the range.
-— In b4, there are five bins for the range and one separate bin for the real value inside of the range.
-— b5 will have 13 bins: ten bins for the range intervals of [0.75:0.85], two bins for the tolerance
+ Bin xstate shows an integer that is cast to real and covers a single value of 100.0.
+ In b1, the range is greater than the interval, so 10 bins are created.
+ In b2, bins are created for each range separately.The gap between the ranges is not covered.
+ In b3, there are five bins for the range and one separate bin for the real value outside of the range.
+ In b4, there are five bins for the range and one separate bin for the real value inside of the range.
+ b5 will have 13 bins: ten bins for the range intervals of [0.75:0.85], two bins for the tolerance
 
 range intervals of [0.753+/-0.01], and one bin for the single real number 0.902.
 
-— ab_cross is crossing bins of real values.
+ ab_cross is crossing bins of real values.
 
 An iff construct at the end of a bin definition provides a per-bin guard condition. If the expression within
 the iff construct is false at a sampling point, the count for the bin is not incremented.
@@ -1098,10 +1098,10 @@ coverpoint b
 
 589
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 {
 
@@ -1174,15 +1174,15 @@ trans_range_list ::=
 trans_item
 
 | trans_item [* repeat_range ]
-| trans_item [–> repeat_range ]
+| trans_item [> repeat_range ]
 | trans_item [= repeat_range ]
 
 590
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 trans_item ::= covergroup_range_list
 
@@ -1201,7 +1201,7 @@ covergroup_expression
 
 | covergroup_expression : covergroup_expression
 
-Syntax 19-3—Transition bin syntax (excerpt from Annex A)
+Syntax 19-3Transition bin syntax (excerpt from Annex A)
 
 A trans_list specifies one or more sets of ordered integral value transitions of the coverage point. Transition
 bins of real values are not allowed. A single integral value transition is thus specified as follows:
@@ -1247,10 +1247,10 @@ An example of a range of repetitions is as follows:
 
 591
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 3 [* 3:5]
 
@@ -1304,8 +1304,8 @@ is the same as
 
 A trans_list specifies one or more sets of ordered value transitions of the coverage point. If the sequence of
 value transitions of the coverage point matches any complete sequence in the trans_list, the coverage count
-of  the  corresponding  bin  is  incremented.  For  transition  bins  declared  as  “binname[],”  bin  names  are
-“binname[transition]” for some bounded transition. For example:
+of  the  corresponding  bin  is  incremented.  For  transition  bins  declared  as  binname[],  bin  names  are
+binname[transition] for some bounded transition. For example:
 
 bit [4:1] v_a;
 
@@ -1313,10 +1313,10 @@ covergroup cg @(posedge clk);
 
 592
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 coverpoint v_a
 {
@@ -1334,8 +1334,8 @@ The  preceding  example  defines  three  transition  coverage  bins.  The  first
 following sequences with bin sa:  4=>5=>6, or  7=>11,  8=>11,  9=>11, 10=>11,  7=>12,  8=>12,  9=>12,
 10=>12.  The  second  bins  construct  associates  an  individual  bin  with  each  of  the  above  sequences:
 sb[4=>5=>6], ..., sb[10=>12].  The  third  bins  construct  associates  the  unbounded  sequence
-12=>...=>3  with  bin  sc.  The  bin  allother  is  incremented  when  none  of  the  coverpoint’s  other
-nondefault sequence transition bins increments, and none of the coverpoint’s previously pending transition
+12=>...=>3  with  bin  sc.  The  bin  allother  is  incremented  when  none  of  the  coverpoints  other
+nondefault sequence transition bins increments, and none of the coverpoints previously pending transition
 bins remains pending. For example, consider the following sequence of sampled values:
 
 4 5 7 11 8 12 2 2 3
@@ -1399,13 +1399,13 @@ and the sequence of sampled values for coverpoint variable v
 
 593
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 the preceding sequence causes transition bin b2 to be incremented on the 8th sample (three nonconsecutive
-2’s),  and  transition  bin  b3  to  be  incremented  on  the  6th  sample  (three  nonconsecutive  3’s).  Likewise,
+2s),  and  transition  bin  b3  to  be  incremented  on  the  6th  sample  (three  nonconsecutive  3s).  Likewise,
 transition bin b2 is incremented on the 10th sample, and transition bin b3 is incremented on the 9th and 11th
 samples. Transition bin b5 is incremented on the 15th, 16th, 17th, and 18th samples. Transition bin b6 is
 incremented on the 12th sample. Transition bin b7 is incremented on the 13th sample.
@@ -1426,8 +1426,8 @@ for a coverpoint of real expressions.
 When the automatic bin creation mechanism is used, SystemVerilog creates N bins to collect the sampled
 values of a coverage point. The value N is determined as follows:
 
-— For an enum coverage point, N is the cardinality of the enumeration.
-— For any other integral coverage point, N is the minimum of 2M and the value of the auto_bin_max
+ For an enum coverage point, N is the cardinality of the enumeration.
+ For any other integral coverage point, N is the minimum of 2M and the value of the auto_bin_max
 
 option, where M is the number of bits needed to represent the coverage point.
 
@@ -1470,10 +1470,10 @@ In the following example a separate bin is created for each of the four values s
 
 594
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 wildcard bins g12_15_array[] = { 4'b11?? };
 
@@ -1545,10 +1545,10 @@ endgroup
 
 595
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 All values or transitions associated with illegal bins are excluded from coverage. For state bins, each illegal
 value is removed from the set of values associated with any coverage bin. For transition bins, any covered
@@ -1608,15 +1608,15 @@ and z shall be treated as 0 and 1 as described above.
 
 If a warning is issued for a bins element, the following rules shall apply:
 
-— If an element of a bins covergroup_range_list or set_covergroup_expression is a singleton value b,
+ If an element of a bins covergroup_range_list or set_covergroup_expression is a singleton value b,
 
 the element shall not participate in the bins values.
 
-— If an element of a bins covergroup_range_list is a range [b1:b2] and either b1 or b2 contains any
+ If an element of a bins covergroup_range_list is a range [b1:b2] and either b1 or b2 contains any
 x  or  z  bits  or  every  value  in  the  range  would  generate  a  warning,  then  the  element  shall  not
 participate in the bins values.
 
-— If  an  element  of  a  bins  covergroup_range_list  is  a  range  [b1:b2]  and  there  exists  at  least  one
+ If  an  element  of  a  bins  covergroup_range_list  is  a  range  [b1:b2]  and  there  exists  at  least  one
 value  in  the  range  for  which  a  warning  would  not  be  issued,  then  the  range  shall  be  treated  as
 containing the intersection of the values in the range and the values expressible by the effective type
 of e.
@@ -1630,7 +1630,7 @@ covergroup g1 @(posedge clk);
 coverpoint p1 {
 
 // type expresses values in the range  0 to 7
-// type expresses values in the range –4 to 3
+// type expresses values in the range 4 to 3
 
 bins b1 = { 1, [2:5], [6:10]};
 bins b2 = {-1, [1:10], 15};
@@ -1640,10 +1640,10 @@ coverpoint p2 {
 
 596
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 bins b3 = { 1, [2:5], [6:10]};
 bins b4 = {-1, [1:10], 15};
@@ -1652,19 +1652,19 @@ bins b4 = {-1, [1:10], 15};
 
 endgroup
 
-— For b1, a warning is issued for the range [6:10]. b1 is treated as though it had the specification
+ For b1, a warning is issued for the range [6:10]. b1 is treated as though it had the specification
 
 {1, [2:5], [6:7]}.
 
-— For b2, a warning is issued for the range [1:10] and for the values  –1 and  15.  b2 is treated as
+ For b2, a warning is issued for the range [1:10] and for the values  1 and  15.  b2 is treated as
 
 though it had the specification {[1:7]}.
 
-— For b3, a warning is issued for the ranges [2:5] and [6:10].  b3 is treated as though it had the
+ For b3, a warning is issued for the ranges [2:5] and [6:10].  b3 is treated as though it had the
 
 specification {1, [2:3]}.
 
-— For b4, a warning is issued for the range [1:10] and for the value 15.  b2 is treated as though it had
+ For b4, a warning is issued for the range [1:10] and for the value 15.  b2 is treated as though it had
 
 the specification {-1, [1:3]}.
 
@@ -1724,10 +1724,10 @@ select_condition
 
 597
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 | cross_set_expression [ matches integer_covergroup_expression ]
 
@@ -1756,18 +1756,18 @@ cross_set_expression ::= covergroup_expression
 
 31) The result of this expression shall be assignment compatible with an integral type as described in 19.5.1.1.
 
-Syntax 19-4—Cross coverage syntax (excerpt from Annex A)
+Syntax 19-4Cross coverage syntax (excerpt from Annex A)
 
 The label for a cross declaration provides an optional name. The label also creates a hierarchical scope for
 the bins defined within the cross.
 
 A cross name has limited visibility. An identifier can only refer to a cross in the following contexts:
 
-— In a hierarchical name where the prefix specifies the name of a covergroup variable. For example,
+ In a hierarchical name where the prefix specifies the name of a covergroup variable. For example,
 cov1.crs.option.weight where cov1 is the name of a covergroup variable and crs is the name
 of a cross declared within the covergroup.
 
-— Following  ::  where the left operand of the scope resolution  operator refers  to  a covergroup.  For
+ Following  ::  where the left operand of the scope resolution  operator refers  to  a covergroup.  For
 
 example, covtype :: crs :: type_option.weight.
 
@@ -1793,10 +1793,10 @@ endgroup
 
 598
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 The coverage group cov in the preceding example specifies the cross coverage of two 4-bit variables, a and
 b.  SystemVerilog  implicitly  creates  a coverage  point  for  each  variable. Each  coverage  point  has  16  bins,
@@ -1829,7 +1829,7 @@ endgroup
 
 The  coverage  group  cov3  crosses  variable  b_var  with  coverage  point  A  (labeled  CC).  Variable  b_var
 automatically  creates  16  bins  (auto[0]...auto[15]).  Coverage  point  A  explicitly  creates  10  bins
-(yy[0]...yy[9]). The cross of two coverage points creates 16 × 10 = 160 cross product bins, namely the
+(yy[0]...yy[9]). The cross of two coverage points creates 16  10 = 160 cross product bins, namely the
 following pairs:
 
 <auto[0], yy[0]>
@@ -1860,10 +1860,10 @@ bin select expressions is given in Syntax 19-4.
 
 599
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 User-defined  cross  bins  and  automatically  generated  bins  may  coexist  in  the  same  cross.  By  default,
 automatically  generated  bins  are  retained  for  those  cross  products  that  do  not  intersect  cross  products
@@ -1932,10 +1932,10 @@ covergroup cg @(posedge clk);
 
 600
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 a: coverpoint v_a
 {
@@ -2000,10 +2000,10 @@ transition.
 
 601
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 19.6.1.2 Cross bin with covergroup expressions
 
@@ -2066,7 +2066,7 @@ binsof(b.two) with (b > 12)
 
 endgroup
 
-The bin structure for coverpoint a is straightforward—bin array low contains 128 single-element bins for
+The bin structure for coverpoint a is straightforwardbin array low contains 128 single-element bins for
 each value between 0 and 127, and bin high contains all values from 128 to 255. The bins of coverpoint b
 are specified using the with clause; bin array two contains a bin for each even value, and three contains a
 bin for each value divisible by 3.
@@ -2080,10 +2080,10 @@ tuples consisting of a bin from b containing a value between 0 and 50 are select
 
 602
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 selects from those bin tuples the bin tuples with a bin from a.low containing a value between 0 and 50. The
 with clause then selects from those only the bin tuples containing at least one value tuple where a==b.
@@ -2091,7 +2091,7 @@ with clause then selects from those only the bin tuples containing at least one 
 The cross bin plum demonstrates a select_expression composed of with covergroup expressions. The first
 with covergroup expression selects those bin tuples containing bins in the b.two bin array whose values
 are  greater  than  12.  The  ||  operator  then  adds  the  bin  tuples  selected  by  the  second  with  covergroup
-expression—namely  those  containing  a  bin  from  a.low  and  for  which  the  bitwise-AND  of  the  a-value,
+expressionnamely  those  containing  a  bin  from  a.low  and  for  which  the  bitwise-AND  of  the  a-value,
 b-value and a mask is nonzero for some values a and b in the bins of the bin tuple.
 
 As with array manipulation methods involving with (see 7.12), if the expression has side effects, the results
@@ -2141,15 +2141,15 @@ enumerations of cross bins.
 
 The cross_set_expression syntax allows specifying an expression yielding a queue of elements that define
 the cross bin, similarly to the set_covergroup_expression for coverpoint bins. However, for cross bins the
-type of the queue shall be the cross’s CrossQueueType, whose elements are of type CrossValType (see
+type of the queue shall be the crosss CrossQueueType, whose elements are of type CrossValType (see
 19.6.1.3).
 
 603
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 The selection of bin tuples for the cross bin by the elements of the cross_set_expression is subject to the
 same  policy  specification  as  the  cross  bin  with  covergroup  expression  (see  19.6.1.2).  The  optional
@@ -2177,7 +2177,7 @@ endgroup
 The  cross  bin  definition  uses  an  array  literal  to  define  the  bin  tuples  in  cross  bin  one  as  <a.x[1],
 b.y[2]>,  <a.x[3],  b.y[4]>,  and  <a.x[5],  b.y[6]>.  Here,  the  cross  bin  provides  the  context
 required to determine the type of the literal (in this case, the cross's CrossQueueType). In general, literal
-arrays are not required; any expression may be used as long as it evaluates to the cross’s CrossQueueType.
+arrays are not required; any expression may be used as long as it evaluates to the crosss CrossQueueType.
 A cast is required if the type is assignment-incompatible with the cross type.
 
 Following is a more involved example:
@@ -2225,10 +2225,10 @@ Here functions are used to create the queues that define the cross bins. Note th
 
 604
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 By using functions, the user is able to restrict the bin computation to a reasonable subset of value tuples; the
 entire cross space need not be considered.
@@ -2288,16 +2288,16 @@ error.
 
 605
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 Table 19-1 lists instance-specific covergroup options and their description. Each instance of a covergroup
 can initialize an instance-specific option to a different value. The initialized option value affects only that
 instance.
 
-Table 19-1—Instance-specific coverage options
+Table 19-1Instance-specific coverage options
 
 Option name
 
@@ -2408,10 +2408,10 @@ option . member_name = expression ;
 
 606
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 The  identifier  option  is  a  built-in  member  of  every  covergroup,  coverpoint  and  cross  (see  19.10  for  a
 description).
@@ -2476,12 +2476,12 @@ levels.
 
 607
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
-Table 19-2—Coverage options per syntactic level
+Table 19-2Coverage options per syntactic level
 
 Option name
 
@@ -2594,7 +2594,7 @@ type_option . member_name = constant_expression ;
 The  identifier  type_option  is  a  built-in  static  member  of  every  covergroup,  coverpoint,  and  cross  (see
 19.10 for a description).
 
-Table 19-3—Coverage group type (static) options
+Table 19-3Coverage group type (static) options
 
 Option name
 
@@ -2631,12 +2631,12 @@ the coverage database and included in the coverage report.
 
 608
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
-Table 19-3—Coverage group type (static) options  (continued)
+Table 19-3Coverage group type (static) options  (continued)
 
 Option name
 
@@ -2718,19 +2718,19 @@ type_option.weight = 5;
 endgroup
 
 In the preceding example, the coverage for each instance of g1 is computed as follows:
-(((instance coverage of a) × 2) + ((instance coverage of b) × w)) / ( 2 + w)
+(((instance coverage of a)  2) + ((instance coverage of b)  w)) / ( 2 + w)
 
 On the other hand, the coverage for covergroup type g1 is computed as follows:
 
 609
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
-( ((merge of coverage of a from all instances) × 3)
-+ ((merge of coverage of b from all instances) × 5) ) / (3 + 5)
+( ((merge of coverage of a from all instances)  3)
++ ((merge of coverage of b from all instances)  5) ) / (3 + 5)
 
 The strobe and real_interval type options can only be set in the covergroup definition. Other type
 options can be assigned procedurally at any time during simulation.
@@ -2770,7 +2770,7 @@ distribute_first
 
 real_interval
 
-Table 19-4—Coverage type options
+Table 19-4Coverage type options
 
 Allowed syntactic level
 
@@ -2827,7 +2827,7 @@ No
 The  coverage  methods  in  Table 19-5  are  provided  for  the  covergroup.  These  methods  can  be  invoked
 procedurally at any time.
 
-Table 19-5—Predefined coverage methods
+Table 19-5Predefined coverage methods
 
 Method
 (function)
@@ -2855,12 +2855,12 @@ covergroup
 
 610
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
-Table 19-5—Predefined coverage methods  (continued)
+Table 19-5Predefined coverage methods  (continued)
 
 real get_coverage()
 real get_coverage(ref int, ref int)
@@ -2977,10 +2977,10 @@ instance  of  a  process,  or  from  within  a  sequence  or  property  of  a  c
 
 611
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 assertions have special sampling semantics (values are sampled in the Preponed region), passing their values
 as arguments to an overridden sample method facilitates managing various aspects of assertion coverage,
@@ -3044,22 +3044,22 @@ endgroup
 SystemVerilog  provides  the  following  system  tasks  and  system  functions  to  help  manage  coverage  data
 collection.
 
-— $set_coverage_db_name(filename)  sets  the  file  name  of  the  coverage  database  into  which
+ $set_coverage_db_name(filename)  sets  the  file  name  of  the  coverage  database  into  which
 
 coverage information is saved at the end of a simulation run.
 
-— $load_coverage_db(filename)  loads  from  the  given  file  name  the  cumulative  coverage
+ $load_coverage_db(filename)  loads  from  the  given  file  name  the  cumulative  coverage
 
 information for all coverage group types.
 
 612
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
-— $get_coverage()  returns  as  a  real  number  in  the  range  of  0  to  100  the  overall  coverage  of  all
+ $get_coverage()  returns  as  a  real  number  in  the  range  of  0  to  100  the  overall  coverage  of  all
 
 coverage group types. This number is computed as previously described.
 
@@ -3172,10 +3172,10 @@ weight ;
 
 613
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 int
 string
@@ -3220,13 +3220,13 @@ Cg
 
 =
 
-×
+
 Wi  Ci
-
+
 i
 ----------------------------
 Wi
-
+
 
 i
 
@@ -3236,7 +3236,7 @@ i
 Wi
 Ci
 
-∈
+
 
  set of coverage items (coverage points and crosses) defined in the coverage group
 
@@ -3254,9 +3254,9 @@ denominator.
 There are several circumstances that can result in the denominator of the covergroup calculation equation
 being zero, as follows:
 
-— All items in a covergroup are excluded from coverage due to the rules for computation of Ci
-— All weights Wi are zero
-— A covergroup contains no coverpoints or crosses
+ All items in a covergroup are excluded from coverage due to the rules for computation of Ci
+ All weights Wi are zero
+ A covergroup contains no coverpoints or crosses
 
 Any zero denominator in the coverage calculation shall result in the following:
 
@@ -3266,10 +3266,10 @@ The covergroup does not contribute to the overall coverage score.
 
 614
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 b)
 
@@ -3277,12 +3277,12 @@ c)
 
 d)
 
-If  the  covergroup’s  weight  is  nonzero,  a  value  of  0.0  is  returned  by  get_coverage  and
+If  the  covergroups  weight  is  nonzero,  a  value  of  0.0  is  returned  by  get_coverage  and
 get_inst_coverage.
-If  the  covergroup’s  weight  is  zero,  a  value  of  100.0  is  returned  by  get_coverage  and
+If  the  covergroups  weight  is  zero,  a  value  of  100.0  is  returned  by  get_coverage  and
 get_inst_coverage.
 If get_coverage or get_inst_coverage is called with two arguments, zero is assigned to both
-arguments—the numerator and denominator.
+argumentsthe numerator and denominator.
 
 Consistent with the above behavior, $get_coverage shall return a value of 100.0 if called on a design that
 has no covergroup instances, or if called on a design in which all covergroups have a weight of 0.
@@ -3307,7 +3307,7 @@ where
 |binscovered|
 
 is the cardinality of the set of bins defined
-is the cardinality of the covered bins—the subset of all (defined) bins that are covered
+is the cardinality of the covered binsthe subset of all (defined) bins that are covered
 
 For automatically generated bins, the coverage of a coverpoint is computed as follows:
 
@@ -3323,7 +3323,7 @@ where
 
 |binscovered|
 
-is  the  cardinality  of  the  covered  bins—the  subset  of  all  (auto-defined)  bins  that  are
+is  the  cardinality  of  the  covered  binsthe  subset  of  all  (auto-defined)  bins  that  are
 
 covered
 
@@ -3349,12 +3349,12 @@ c)
 d)
 
 The coverpoint does not contribute to the coverage computation (of the parent covergroup).
-If  the  coverpoint’s  weight  is  nonzero,  a  value  of  0.0  is  returned  by  get_coverage  and
+If  the  coverpoints  weight  is  nonzero,  a  value  of  0.0  is  returned  by  get_coverage  and
 get_inst_coverage.
-If  the  coverpoint’s  weight  is  zero,  a  value  of  100.0  is  returned  by  get_coverage  and
+If  the  coverpoints  weight  is  zero,  a  value  of  100.0  is  returned  by  get_coverage  and
 get_inst_coverage.
 If get_coverage or get_inst_coverage is called with two arguments, zero is assigned to both
-arguments—the numerator and denominator.
+argumentsthe numerator and denominator.
 
 For example:
 
@@ -3363,10 +3363,10 @@ covergroup ct;
 
 615
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 coverpoint b {
 
@@ -3403,12 +3403,12 @@ Bc
 
 =
 
-
-∏
 
- Bb–
+
+
+ Bb
 Bj
-
+
 
 j
 
@@ -3424,12 +3424,12 @@ Bb
 
  set of coverpoints being crossed
 
-∈
+
 is the cardinality (number of bins) of the jth coverpoint being crossed
 is the number of auto-cross bins
 is
 
-the  number  of  significant  user-defined  cross  bins—excluding  ignore_bins  and
+the  number  of  significant  user-defined  cross  binsexcluding  ignore_bins  and
 illegal_bins
 
 is the number of cross products that comprise all user-defined cross bins
@@ -3447,18 +3447,18 @@ c)
 d)
 
 The cross does not contribute to the coverage computation (of the parent covergroup).
-If  the  cross’s  weight  is  nonzero,  a  value  of  0.0  is  returned  by  get_coverage  and
+If  the  crosss  weight  is  nonzero,  a  value  of  0.0  is  returned  by  get_coverage  and
 get_inst_coverage.
 If
 get_inst_coverage.
 If get_coverage or get_inst_coverage is called with two arguments, zero is assigned to both
-arguments—the numerator and denominator.
+argumentsthe numerator and denominator.
 
 is  returned  by  get_coverage  and
 
 is  zero,  a  value  of  100.0
 
-the  cross’s  weight
+the  crosss  weight
 
 19.11.3 Type coverage computation
 
@@ -3485,21 +3485,21 @@ is
 
 616
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 When type coverage is computed as the weighted average of all instances, the covergroup type coverage
 depends on the instances only, not its coverpoints or crosses, as follows:
 
-
 
-×
+
+
 Ii
 
 Wi
-Wi
+Wi
 
 where
 Wi
@@ -3544,17 +3544,17 @@ for  both
 to  1
 
 To compute the union of all bins in all instances, bins are compared by name, so that bins with the same
-name  are  overlapping  among  instances.  For  state  or  transition  bins  declared  as  “binname,”  all  instances
-share the same name, so the bin overlaps in all instances. For state bins declared as “binname[],” bin names
-are  “binname[value]”  (as specified  in  19.5.1)  for  a  set  of  scalar  values.  Instances sharing  the  same  value
-have  overlapping  bins.  For  state  bins  declared  as  “binname[N],”  bin  names  range  from  “binname[0]”
-through  “binname[N-1].”  Instances  sharing  the  same  indices  have  overlapping  bins.  For  automatically
-created bins, bin names are of the form “auto[value]” or “auto[low:high]” (as specified in 19.5.3), and these
+name  are  overlapping  among  instances.  For  state  or  transition  bins  declared  as  binname,  all  instances
+share the same name, so the bin overlaps in all instances. For state bins declared as binname[], bin names
+are  binname[value]  (as specified  in  19.5.1)  for  a  set  of  scalar  values.  Instances sharing  the  same  value
+have  overlapping  bins.  For  state  bins  declared  as  binname[N],  bin  names  range  from  binname[0]
+through  binname[N-1].  Instances  sharing  the  same  indices  have  overlapping  bins.  For  automatically
+created bins, bin names are of the form auto[value] or auto[low:high] (as specified in 19.5.3), and these
 names are unaffected by ignored or illegal values in the coverpoint except inasmuch as they may empty an
 automatically created bin. Instances sharing the same value or low:high range have overlapping bins. For
-transition bins declared as “binname[ ],” bin names are “binname[transition]” for some bounded transition
+transition bins declared as binname[ ], bin names are binname[transition] for some bounded transition
 (as  specified  in  19.5.2).  Instances  sharing  the  same  transition  have  overlapping  bins.  For  automatically
-created cross bins, bin names are of the form “<binname1,...,binnameN>” where the bin names are derived
+created cross bins, bin names are of the form <binname1,...,binnameN> where the bin names are derived
 from the crossed coverpoint bins (as specified in 19.6). Instances sharing exactly the same cross product bin
 name have overlapping bins.
 
@@ -3567,10 +3567,10 @@ option.auto_bin_max = abm;
 
 617
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
+Copyright  2024 IEEE. All rights reserved.
 
-IEEE Std 1800-2023
-IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language
+IEEE Std 1800-2023
+IEEE Standard for SystemVerilogUnified Hardware Design, Specification, and Verification Language
 
 coverpoint a {ignore_bins i = {3};}
 
@@ -3585,6 +3585,4 @@ instances, the covergroup type ga has 96 cumulative bins.
 
 618
 Authorized licensed use limited to: Matthew Ballance. Downloaded on February 07,2026 at 18:18:43 UTC from IEEE Xplore.  Restrictions apply.
-Copyright © 2024 IEEE. All rights reserved.
-
-
+Copyright  2024 IEEE. All rights reserved.

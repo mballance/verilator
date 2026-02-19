@@ -6905,9 +6905,9 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
         /*cont*/ yENDGROUP endLabelE
                         { AstClass *cgClassp = new AstClass{$<fl>2, *$2, PARSEP->libname()};
                           cgClassp->isCovergroup(true);
-                          
+
                           AstNode* sampleArgs = nullptr;
-                          
+
                           // coverage_eventE can be either a clocking event or sample arguments
                           if ($4) {
                               if (VN_IS($4, SenItem)) {
@@ -6921,7 +6921,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                                   sampleArgs = $4;
                               }
                           }
-                          
+
                           // Convert constructor parameters to member variables
                           // This must happen BEFORE the covergroup body is added,
                           // so coverpoints can reference these members
@@ -6939,7 +6939,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                                   }
                               }
                           }
-                          
+
                           // Convert sample parameters to member variables
                           if (sampleArgs) {
                               AstNode* nextArgp = nullptr;
@@ -6954,7 +6954,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
                                   }
                               }
                           }
-                          
+
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};
                           newp->fileline()->warnOff(V3ErrorCode::NORETURN, true);
                           newp->classMethod(true);
@@ -7112,7 +7112,7 @@ bins_or_options<nodep>:  // ==IEEE: bins_or_options
                               $$ = new AstCoverBin{$<fl>2, *$2, $4};
                               DEL($6);
                           } else {
-                              $$ = nullptr; 
+                              $$ = nullptr;
                               BBCOVERIGN($<fl>2, "Ignoring unsupported: bin array (non-auto)");
                               DEL($4, $6);
                           }
@@ -7158,22 +7158,22 @@ bins_or_options<nodep>:  // ==IEEE: bins_or_options
         //
         //                      // cgexpr part of trans_list
         |       yBINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
-                        { 
+                        {
                                 FileLine* isArray = $<fl>3;
                                 $$ = new AstCoverBin{$<fl>2, *$2, static_cast<AstCoverTransSet*>($5), false, false, isArray != nullptr};
-                                DEL($6); 
+                                DEL($6);
                         }
         |       yIGNORE_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
-                        { 
+                        {
                                 FileLine* isArray = $<fl>3;
                                 $$ = new AstCoverBin{$<fl>2, *$2, static_cast<AstCoverTransSet*>($5), true, false, isArray != nullptr};
-                                DEL($6); 
+                                DEL($6);
                         }
         |       yILLEGAL_BINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
-                        { 
+                        {
                                 FileLine* isArray = $<fl>3;
                                 $$ = new AstCoverBin{$<fl>2, *$2, static_cast<AstCoverTransSet*>($5), false, true, isArray != nullptr};
-                                DEL($6); 
+                                DEL($6);
                         }
         |       yWILDCARD yBINS idAny/*bin_identifier*/ bins_orBraE '=' trans_list iffE
                         { $$ = nullptr; BBCOVERIGN($<fl>1, "Ignoring unsupported: cover bin 'wildcard' trans list"); DEL($6, $7);}
@@ -7211,12 +7211,12 @@ trans_list<nodep>:  // ==IEEE: trans_list
         ;
 
 trans_set<nodep>:  // ==IEEE: trans_set (returns AstCoverTransSet)
-                trans_range_list                        { 
+                trans_range_list                        {
                         // Single transition item - wrap in AstCoverTransSet
-                        $$ = new AstCoverTransSet{$<fl>1, static_cast<AstCoverTransItem*>($1)}; 
+                        $$ = new AstCoverTransSet{$<fl>1, static_cast<AstCoverTransItem*>($1)};
                 }
         |       trans_set yP_EQGT trans_range_list
-                { 
+                {
                         // Chain transition items with => operator
                         // Add new item to existing set
                         $$ = $1;
@@ -7225,7 +7225,7 @@ trans_set<nodep>:  // ==IEEE: trans_set (returns AstCoverTransSet)
         ;
 
 trans_range_list<nodep>:  // ==IEEE: trans_range_list (returns AstCoverTransItem)
-                trans_item                              { 
+                trans_item                              {
                         // Simple transition item without repetition
                         $$ = new AstCoverTransItem{$<fl>1, $1, VTransRepType::NONE};
                 }
@@ -7255,8 +7255,8 @@ covergroup_range_list<nodep>:  // ==IEEE: covergroup_range_list
 
 cover_cross<nodep>:  // ==IEEE: cover_cross
                 id/*cover_point_identifier*/ ':' yCROSS list_of_cross_items iffE cross_body
-                        { 
-                          AstCoverCross* const nodep = new AstCoverCross{$<fl>3, *$1, 
+                        {
+                          AstCoverCross* const nodep = new AstCoverCross{$<fl>3, *$1,
                                                           VN_AS($4, CoverpointRef)};
                           if ($6) {  // cross_body items (options, bins)
                               for (AstNode* itemp = $6; itemp; ) {
@@ -7288,8 +7288,8 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                           $$ = nodep;
                         }
         |       yCROSS list_of_cross_items iffE cross_body
-                        { 
-                          AstCoverCross* const nodep = new AstCoverCross{$<fl>1, 
+                        {
+                          AstCoverCross* const nodep = new AstCoverCross{$<fl>1,
                                                           "__cross" + cvtToStr(GRAMMARP->s_typeImpNum++),
                                                           VN_AS($2, CoverpointRef)};
                           if ($4) {  // cross_body items (options, bins)
@@ -7335,7 +7335,7 @@ cross_itemList<nodep>:  // IEEE: part of list_of_cross_items
         ;
 
 cross_item<nodep>:  // ==IEEE: cross_item
-                id/*cover_point_identifier*/  
+                id/*cover_point_identifier*/
                         { $$ = new AstCoverpointRef{$<fl>1, *$1}; }
         ;
 

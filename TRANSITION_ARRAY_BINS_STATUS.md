@@ -51,20 +51,20 @@ coverpoint state {
 
 ### Supported Features
 
-✅ Array syntax with multiple transitions  
-✅ 2-state transitions (optimized direct comparison)  
-✅ Multi-state transitions (state machine generation)  
-✅ illegal_bins arrays  
-✅ ignore_bins arrays  
-✅ Works with iff conditions  
-✅ Proper coverage calculation  
+ Array syntax with multiple transitions
+ 2-state transitions (optimized direct comparison)
+ Multi-state transitions (state machine generation)
+ illegal_bins arrays
+ ignore_bins arrays
+ Works with iff conditions
+ Proper coverage calculation
 
 ### Testing
 
 **Test Status:**
-- ✅ `t_covergroup_trans_ranges.py` - Now passes (was previously marked as unsupported)
-- ✅ All existing transition tests still pass
-- ✅ All funccov tests still pass
+-  `t_covergroup_trans_ranges.py` - Now passes (was previously marked as unsupported)
+-  All existing transition tests still pass
+-  All funccov tests still pass
 
 **Example Test Output:**
 ```
@@ -78,8 +78,8 @@ Generates three member variables:
 
 ## Implementation Complexity
 
-**Actual effort:** ~2 hours implementation + testing  
-**Lines of code:** ~100 added, ~100 refactored  
+**Actual effort:** ~2 hours implementation + testing
+**Lines of code:** ~100 added, ~100 refactored
 **Difficulty:** 3/10 (as predicted)
 
 The implementation was straightforward because:
@@ -103,7 +103,7 @@ Author: Matthew Ballance
 Date:   Fri Feb 14 2026
 
     Add support for transition array bins
-    
+
     Implemented transition array bins functionality by:
     - Added generateTransitionArrayBins() to handle array syntax
     - Extracted generateSingleTransitionCode() helper

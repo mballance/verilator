@@ -13,7 +13,7 @@ module t (/*AUTOARG*/
    input clk;
 
    logic [2:0] value1;
-   
+
    covergroup cg;
       cp: coverpoint value1 {
          bins low = {[0:3]};
@@ -30,7 +30,7 @@ module t (/*AUTOARG*/
 
    always @(posedge clk) begin
       cyc <= cyc + 1;
-      
+
       case (cyc)
         0: begin
            value1 <= 1;  // low bin for all instances
@@ -44,11 +44,11 @@ module t (/*AUTOARG*/
               cov1 = cg_inst1.get_inst_coverage();
               cov2 = cg_inst2.get_inst_coverage();
               cov3 = cg_inst3.get_inst_coverage();
-              
+
               $display("Instance 1 coverage: %f%%", cov1);
               $display("Instance 2 coverage: %f%%", cov2);
               $display("Instance 3 coverage: %f%%", cov3);
-              
+
               // All instances sample the same coverpoint (value1), so they should all be 100%
               // This tests that multiple instances track coverage independently,
               // even when sampling the same expression
@@ -64,13 +64,13 @@ module t (/*AUTOARG*/
            end
         end
       endcase
-      
+
       // Each instance samples the same value (value1)
       // But tracks coverage independently
       cg_inst1.sample();
       cg_inst2.sample();
       cg_inst3.sample();
-      
+
       if (cyc > 10) begin
          $display("ERROR: Test timed out");
          $stop;

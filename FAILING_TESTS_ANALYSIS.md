@@ -1,13 +1,13 @@
 # Analysis of Failing Covergroup Tests
 
-**Test Run Date:** 2026-02-13  
+**Test Run Date:** 2026-02-13
 **Overall Status:** 46/56 tests passing (82.1%) - UP FROM 45/56 (80.3%)
 
 ## Recent Fix
 
-**t_covergroup_negative_ranges** - ✅ **FIXED!**
+**t_covergroup_negative_ranges** -  **FIXED!**
 - **Issue:** Internal error with negative values in bin ranges like `{[-100:-1]}`
-- **Root cause:** 
+- **Root cause:**
   1. Parser created NEGATE(100) nodes that weren't constant-folded before V3Width
   2. V3Width's InsideRange visitor didn't constant-fold its children
   3. Generated code used unsigned comparisons (AstGte/AstLte) instead of signed (AstGteS/AstLteS)
@@ -43,7 +43,7 @@ These tests verify that Verilator correctly rejects unsupported SystemVerilog co
 - **Expected errors:** Member 'a' not found, member 'b' not found, etc.
 - **Action:** None needed - working as designed
 
-### 2. t_covergroup_unsup  
+### 2. t_covergroup_unsup
 - **Status:** Expected to fail with specific error messages
 - **Python driver:** `test.lint(expect_filename=test.golden_filename, fails=True)`
 - **Purpose:** Tests comprehensive list of unsupported coverage features
@@ -71,8 +71,8 @@ These tests fail because they use **internally generated clocks** with clocking 
 - **Priority:** Low (partial feature limitation)
 
 **Status Tests Created:**
-- `t_covergroup_clocking_module_input.v` - ✅ PASSES (documents working case)
-- `t_covergroup_clocking_internal.v` - ❌ FAILS (documents limitation)
+- `t_covergroup_clocking_module_input.v` -  PASSES (documents working case)
+- `t_covergroup_clocking_internal.v` -  FAILS (documents limitation)
 
 **Note:** 8+ other tests successfully use clocking events with module input clocks, proving the feature works in the common case.
 
@@ -95,7 +95,7 @@ These tests fail because they use **internally generated clocks** with clocking 
 - **Description:** Base covergroup defines variable 'b', but derived covergroup can't access it
 - **Priority:** High (inheritance is important feature)
 
-### 7. t_covergroup_extends_newfirst  
+### 7. t_covergroup_extends_newfirst
 - **Error:** Unknown (likely similar to t_covergroup_extends)
 - **Cause:** Covergroup inheritance with `new()` call ordering
 - **Priority:** High (related to inheritance)

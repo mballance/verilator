@@ -33,16 +33,16 @@ module t;
       // Hit different cross bins
       addr = 0; cmd = 0; cg_inst.sample(); // addr0 x read
       $display("After sample 1: addr=%0d, cmd=%0d", addr, cmd);
-      
+
       addr = 1; cmd = 1; cg_inst.sample(); // addr1 x write
       $display("After sample 2: addr=%0d, cmd=%0d", addr, cmd);
-      
+
       addr = 2; cmd = 0; cg_inst.sample(); // addr2 x read
       $display("After sample 3: addr=%0d, cmd=%0d", addr, cmd);
-      
+
       addr = 0; cmd = 1; cg_inst.sample(); // addr0 x write
       $display("After sample 4: addr=%0d, cmd=%0d", addr, cmd);
-      
+
       // Check coverage - should be 50% (4 out of 8 bins hit)
       // Actually, with cross bins, we have:
       // - 4 bins in cp_addr: addr0, addr1, addr2, addr3
@@ -51,13 +51,13 @@ module t;
       // Hit: addr0, addr1, addr2 (3 bins), read, write (2 bins), 4 cross bins
       // Total = 9 out of 14 = 64.3%
       $display("Coverage: %0.1f%%", cg_inst.get_inst_coverage());
-      
+
       if (cg_inst.get_inst_coverage() < 63.0 || cg_inst.get_inst_coverage() > 65.0) begin
-         $display("%%Error: Expected coverage around 64%%, got %0.1f%%", 
+         $display("%%Error: Expected coverage around 64%%, got %0.1f%%",
                   cg_inst.get_inst_coverage());
          $stop;
       end
-      
+
       $write("*-* All Finished *-*\n");
       $finish;
    end

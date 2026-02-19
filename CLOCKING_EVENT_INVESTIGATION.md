@@ -17,14 +17,14 @@ This appeared to be a simple test configuration issue - just add `--timing` flag
 ## Discovery
 
 After investigation, found that **8+ other tests** successfully use clocking events:
-- `t_covergroup_auto_sample` ✅
-- `t_covergroup_cross_small` ✅
-- `t_covergroup_cross_large` ✅
-- `t_covergroup_empty` ✅
-- `t_covergroup_get_coverage` ✅
-- `t_covergroup_iff` ✅
-- `t_covergroup_multi_instance` ✅
-- `t_covergroup_negative_ranges` ✅
+- `t_covergroup_auto_sample`
+- `t_covergroup_cross_small`
+- `t_covergroup_cross_large`
+- `t_covergroup_empty`
+- `t_covergroup_get_coverage`
+- `t_covergroup_iff`
+- `t_covergroup_multi_instance`
+- `t_covergroup_negative_ranges`
 
 **Key difference identified:**
 
@@ -36,11 +36,11 @@ After investigation, found that **8+ other tests** successfully use clocking eve
 
 Verilator's clocking event implementation has **partial support**:
 
-✅ **Works:** Clocking events with module input clocks
+ **Works:** Clocking events with module input clocks
 - Verilator automatically inserts `.sample()` calls in `always @(posedge clk)` blocks
 - This is the common use case
 
-❌ **Doesn't Work:** Clocking events with internally generated clocks
+ **Doesn't Work:** Clocking events with internally generated clocks
 - No automatic `.sample()` insertion for internal signals
 - Tests timeout because covergroups never sample
 
@@ -50,11 +50,11 @@ Verilator's clocking event implementation has **partial support**:
 
 **`t_covergroup_clocking_module_input.v/.py`** - Documents working case
 - Uses module input clock
-- ✅ PASSES
+-  PASSES
 
 **`t_covergroup_clocking_internal.v/.py`** - Documents limitation
 - Uses internally generated clock
-- ❌ FAILS (as expected)
+-  FAILS (as expected)
 - Contains clear comments explaining the limitation
 
 ### 2. Created Documentation
@@ -88,7 +88,7 @@ Verilator's clocking event implementation has **partial support**:
 
 2. **For developers:** To fully implement internal clock support:
    - Track internal signal edges in scheduling phase
-   - Identify procedural blocks sensitive to those edges  
+   - Identify procedural blocks sensitive to those edges
    - Insert `.sample()` calls appropriately
    - Handle edge cases (multiple domains, gated clocks)
 

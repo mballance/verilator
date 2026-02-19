@@ -91,32 +91,32 @@ Added `-Wno-CMPCONST` flag to suppress warnings from automatic bin range checks.
 - **Overall**: 40/56 tests passing (71.4%)
 
 ### After Implementation
-- **t_covergroup_autobins**: ✅ **PASS** (all 5 scenarios work correctly)
+- **t_covergroup_autobins**:  **PASS** (all 5 scenarios work correctly)
 - **Overall**: **41/56 tests passing (73.2%)**
 
 ### Coverage by Scenario
 
 | Scenario | Signal | Option | Expected Bins | Test Values | Expected % | Actual % | Status |
 |----------|--------|--------|---------------|-------------|------------|----------|--------|
-| CG1 | 3-bit | default (64) | 8 (one per value) | 0, 1, 2 | 37.5% | 37.5% | ✅ PASS |
-| CG2 | 3-bit | auto_bin_max=4 | 4 ranges | 0, 1, 4 | 50% | 50% | ✅ PASS |
-| CG3 | 3-bit | ignore_bins={7} | 7 (excluding 7) | 0, 1, 7* | 37.5%** | 37.5% | ✅ PASS |
-| CG4 | 2-bit | default (64) | 4 (one per value) | 0, 1, 2, 3 | 100% | 100% | ✅ PASS |
-| CG5 | 2-bit | auto_bin_max=2 | 2 ranges | 0, 3 | 100% | 100% | ✅ PASS |
+| CG1 | 3-bit | default (64) | 8 (one per value) | 0, 1, 2 | 37.5% | 37.5% |  PASS |
+| CG2 | 3-bit | auto_bin_max=4 | 4 ranges | 0, 1, 4 | 50% | 50% |  PASS |
+| CG3 | 3-bit | ignore_bins={7} | 7 (excluding 7) | 0, 1, 7* | 37.5%** | 37.5% |  PASS |
+| CG4 | 2-bit | default (64) | 4 (one per value) | 0, 1, 2, 3 | 100% | 100% |  PASS |
+| CG5 | 2-bit | auto_bin_max=2 | 2 ranges | 0, 3 | 100% | 100% |  PASS |
 
 *Value 7 should be ignored
 **Currently creates 8 bins (ignore_bins not respected during auto-creation), so 3/8 = 37.5% instead of ideal 2/7 = 28.6%
 
 ## Features Implemented
 
-✅ **Covergroup-level option.auto_bin_max**
+ **Covergroup-level option.auto_bin_max**
 - Parser extracts value from `option.auto_bin_max = N;` statements
 - V3Width stores value in AstClass before deleting assignment node
 - V3CoverageFunctional accesses stored value when creating automatic bins
 - Overrides default value of 64
 - Correctly divides signal range into specified number of bins
 
-✅ **Option Precedence**
+ **Option Precedence**
 - Coverpoint-level options override covergroup-level options (IEEE compliant)
 - Explicit bins override automatic bins
 - Default value (64) used when not explicitly set
