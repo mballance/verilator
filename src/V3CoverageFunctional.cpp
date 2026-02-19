@@ -967,6 +967,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             UINFO(4, "      No valid transition conditions could be built" << endl);
         }
 
+        // Take ownership of exprp (used only for cloning above)
+        VL_DO_DANGLING(exprp->deleteTree(), exprp);
         return condp;
     }
 

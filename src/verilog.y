@@ -7260,31 +7260,42 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                                                           VN_AS($4, CoverpointRef)};
                           if ($6) {  // cross_body items (options, bins)
                               for (AstNode* itemp = $6; itemp; ) {
-                                  AstNode* nextp = itemp->nextp();
+                                  AstNode* const nextp = itemp->nextp();
+                                  // Helper: unlink itemp from the standalone bison list.
+                                  // Head nodes have m_backp==nullptr; use nextp->unlinkFrBackWithNext()
+                                  // to detach the rest of the list so itemp->m_nextp becomes null.
+                                  const auto unlinkItem = [&]() {
+                                      if (itemp->backp()) {
+                                          itemp->unlinkFrBack();
+                                      } else if (nextp) {
+                                          nextp->unlinkFrBackWithNext();
+                                      }
+                                  };
                                   if (AstCoverOption* optp = VN_CAST(itemp, CoverOption)) {
-                                      itemp->unlinkFrBack();
+                                      unlinkItem();
                                       nodep->addOptionsp(optp);
                                   } else if (AstCoverCrossBins* binp = VN_CAST(itemp, CoverCrossBins)) {
-                                      itemp->unlinkFrBack();
+                                      unlinkItem();
                                       nodep->addBinsp(binp);
                                   } else if (VN_IS(itemp, CgOptionAssign)) {
-                                      // AstCgOptionAssign nodes are attached to the covergroup member list
-                                      // Don't delete them here - V3Width will process them later
-                                      // Just skip them in the cross body
+                                      unlinkItem();
+                                      VL_DO_DANGLING(itemp->deleteTree(), itemp);
                                   } else if (VN_IS(itemp, Func)) {
                                       // Function declarations in cross bodies are unsupported
                                       // Skip them - they will be deleted when bins expressions referencing
                                       // them are deleted via DEL() in the cross_body_item rules
                                   } else {
                                       // Delete other unsupported items
-                                      itemp->unlinkFrBack();
+                                      unlinkItem();
                                       VL_DO_DANGLING(itemp->deleteTree(), itemp);
                                   }
                                   itemp = nextp;
                               }
                           }
-                          // TODO: Handle iffE ($5)
-                          if ($5) $5->v3warn(COVERIGN, "Ignoring unsupported: cross iff condition");
+                          if ($5) {
+                              $5->v3warn(COVERIGN, "Ignoring unsupported: cross iff condition");
+                              VL_DO_DANGLING($5->deleteTree(), $5);
+                          }
                           $$ = nodep;
                         }
         |       yCROSS list_of_cross_items iffE cross_body
@@ -7294,31 +7305,42 @@ cover_cross<nodep>:  // ==IEEE: cover_cross
                                                           VN_AS($2, CoverpointRef)};
                           if ($4) {  // cross_body items (options, bins)
                               for (AstNode* itemp = $4; itemp; ) {
-                                  AstNode* nextp = itemp->nextp();
+                                  AstNode* const nextp = itemp->nextp();
+                                  // Helper: unlink itemp from the standalone bison list.
+                                  // Head nodes have m_backp==nullptr; use nextp->unlinkFrBackWithNext()
+                                  // to detach the rest of the list so itemp->m_nextp becomes null.
+                                  const auto unlinkItem = [&]() {
+                                      if (itemp->backp()) {
+                                          itemp->unlinkFrBack();
+                                      } else if (nextp) {
+                                          nextp->unlinkFrBackWithNext();
+                                      }
+                                  };
                                   if (AstCoverOption* optp = VN_CAST(itemp, CoverOption)) {
-                                      itemp->unlinkFrBack();
+                                      unlinkItem();
                                       nodep->addOptionsp(optp);
                                   } else if (AstCoverCrossBins* binp = VN_CAST(itemp, CoverCrossBins)) {
-                                      itemp->unlinkFrBack();
+                                      unlinkItem();
                                       nodep->addBinsp(binp);
                                   } else if (VN_IS(itemp, CgOptionAssign)) {
-                                      // AstCgOptionAssign nodes are attached to the covergroup member list
-                                      // Don't delete them here - V3Width will process them later
-                                      // Just skip them in the cross body
+                                      unlinkItem();
+                                      VL_DO_DANGLING(itemp->deleteTree(), itemp);
                                   } else if (VN_IS(itemp, Func)) {
                                       // Function declarations in cross bodies are unsupported
                                       // Skip them - they will be deleted when bins expressions referencing
                                       // them are deleted via DEL() in the cross_body_item rules
                                   } else {
                                       // Delete other unsupported items
-                                      itemp->unlinkFrBack();
+                                      unlinkItem();
                                       VL_DO_DANGLING(itemp->deleteTree(), itemp);
                                   }
                                   itemp = nextp;
                               }
                           }
-                          // TODO: Handle iffE ($3)
-                          if ($3) $3->v3warn(COVERIGN, "Ignoring unsupported: cross iff condition");
+                          if ($3) {
+                              $3->v3warn(COVERIGN, "Ignoring unsupported: cross iff condition");
+                              VL_DO_DANGLING($3->deleteTree(), $3);
+                          }
                           $$ = nodep;
                         }
         ;
