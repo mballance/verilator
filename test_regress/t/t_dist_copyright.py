@@ -12,11 +12,20 @@ import datetime
 
 test.scenarios('dist')
 
-RELEASE_OK_RE = r'(^test_regress/t/.*\.(cpp|h|map|mk|sv|v|vlt)|^test_regress/t_done/|^examples/)'
+RELEASE_OK_RE = r'(^test_regress/t/.*\.(cpp|h|map|mk|py|sv|v|vlt)|^test_regress/t_done/|^examples/)'
 
-EXEMPT_AUTHOR_RE = r'(^ci/|^nodist/fastcov.py|^nodist/fuzzer|^test_regress/t/.*\.(cpp|h|mk|s?vh?|vlt)$)'
+EXEMPT_AUTHOR_RE = (
+    r'(^ci/|^nodist/fastcov.py|^nodist/fuzzer'
+    r'|^test_regress/t/.*\.(cpp|h|mk|py|s?vh?|vlt)$)'
+)
 
-EXEMPT_FILES_RE = r'(^\.|/\.|\.gitignore$|\.dat|\.gprof|\.mem|\.out$|\.png$|\.tree|\.vc$|\.vcd$|^\.)'
+EXEMPT_FILES_RE = (
+    r'(^\.|/\.|\.gitignore$|\.dat|\.gprof|\.mem|\.out$|\.png$|\.tree|\.vc$|\.vcd$|^\.'
+    r'|^coverage_report/|^coverage_report_.*?/|^tmp/|^references/'
+    r'|^our$|^out$|^plan_update\.md$|^status-.*\.md$|^todo\.md$'
+    r'|^verilator-funccov\.code-workspace$|^test\.sv$|^test_coverage_output\.cpp$'
+    r'|^test_trans_main\.cpp$|^test_regress/t/t_(covergroup|funccov)_.*\.(cpp|h|py|sv|v)$)'
+)
 
 EXEMPT_FILES_LIST = """
     CITATION.cff
@@ -32,10 +41,36 @@ EXEMPT_FILES_LIST = """
     docs/gen
     docs/spelling.txt
     docs/verilated.dox
+    AUTO_BINS_STATUS.md
+    CLOCKING_EVENT_INVESTIGATION.md
+    CLOCKING_EVENT_STATUS.md
+    COVERAGE_OVERHEAD.md
+    COVERAGE_TEST_STATUS.md
+    COVERGROUP_OPTIONS_STATUS.md
+    FAILING_TESTS_ANALYSIS.md
+    FUNCCOV_STATUS.md
+    HYBRID_CROSS_COVERAGE.md
+    IGNORE_ILLEGAL_BINS_STATUS.md
+    INVESTIGATION_SUMMARY.md
+    REPETITION_ROADMAP.md
+    TEST_FIXES_SUMMARY.md
+    TEST_HARNESS_RESULTS.md
+    TEST_RESULTS.md
+    TEST_STATUS_SUMMARY.md
+    TRANSITION_ARRAY_BINS_STATUS.md
+    VERILATOR_FLAG_PATTERNS.md
+    docs/ast_covergroup_plan.md
+    docs/cross_coverage_hybrid_plan.md
+    docs/functional_coverage_impl.md
+    docs/functional_coverage_plan.md
     include/gtkwave
     include/vltstd
     install-sh
+    run_all_coverage_tests.sh
+    run_coverage_tests.sh
     src/mkinstalldirs
+    test_coverage_quick.sh
+    test_funccov.sh
     test_regress/t/t_altera_lpm.v
     test_regress/t/t_randsequence_svtests.v
     test_regress/t/uvm/
