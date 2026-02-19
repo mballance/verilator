@@ -21,19 +21,19 @@ void testFuncCovInfrastructure() {
     VerilatedCovergroup cg("test_cg");
 
     // Create a coverpoint with automatic bins
-    auto* cp_addr = new VerilatedCoverpoint("cp_addr");
-    cp_addr->addBin(new VerilatedCoverRangeBin("low", 0, 127));
-    cp_addr->addBin(new VerilatedCoverRangeBin("high", 128, 255));
+    auto* cp_addr = new VerilatedCoverpoint{"cp_addr"};
+    cp_addr->addBin(new VerilatedCoverRangeBin{"low", 0, 127});
+    cp_addr->addBin(new VerilatedCoverRangeBin{"high", 128, 255});
     cg.addCoverpoint(cp_addr);
 
     // Create another coverpoint
-    auto* cp_cmd = new VerilatedCoverpoint("cp_cmd");
-    cp_cmd->addBin(new VerilatedCoverRangeBin("read", 0, 0));
-    cp_cmd->addBin(new VerilatedCoverRangeBin("write", 1, 1));
+    auto* cp_cmd = new VerilatedCoverpoint{"cp_cmd"};
+    cp_cmd->addBin(new VerilatedCoverRangeBin{"read", 0, 0});
+    cp_cmd->addBin(new VerilatedCoverRangeBin{"write", 1, 1});
     cg.addCoverpoint(cp_cmd);
 
     // Create a cross coverage
-    auto* cross = new VerilatedCoverCross("cross_cmd_addr");
+    auto* cross = new VerilatedCoverCross{"cross_cmd_addr"};
     cross->addCoverpoint(cp_addr);
     cross->addCoverpoint(cp_cmd);
     cg.addCross(cross);

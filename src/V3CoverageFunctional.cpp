@@ -908,7 +908,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                                      AstConst::Signed32{}, val});
                     }
                 } else {
-                    arrayBinp->v3error("Array bins with non-constant ranges not supported");
+                    arrayBinp->v3error("covergroup value range");
                     return;
                 }
             } else if (AstInsideRange* const insideRangep = VN_CAST(rangep, InsideRange)) {
@@ -924,7 +924,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                                                      AstConst::Signed32{}, val});
                     }
                 } else {
-                    arrayBinp->v3error("Array bins with non-constant ranges not supported");
+                    arrayBinp->v3error("covergroup value range");
                     return;
                 }
             } else {
