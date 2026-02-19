@@ -11,6 +11,9 @@ import vltest_bootstrap
 
 test.scenarios('simulator')
 
+if test.have_dev_asan and re.search(r'clang', test.cxx_version):
+    test.skip("Known leak-check failure on clang with DEV_ASAN")
+
 test.compile()
 
 test.execute()

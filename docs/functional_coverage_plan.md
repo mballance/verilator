@@ -2373,7 +2373,7 @@ This section documents the systematic production hardening effort undertaken to 
 
 **Planned Tasks:**
 - [ ] Review error messages for clarity and helpfulness
-- [ ] Check for TODOs or FIXME comments in implementation
+- [ ] Check for TODO comments in implementation
 - [ ] Verify consistent coding style with Verilator standards
 - [ ] Remove debug/experimental code
 - [ ] Add comments for complex logic sections
