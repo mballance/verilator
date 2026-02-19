@@ -624,10 +624,6 @@ public:
 // This runs after ActiveVisitor to add automatic sample() calls for covergroups
 // declared with sensitivity events (e.g., covergroup cg @(posedge clk);)
 
-// Global map to store clocking events for covergroups
-// Key: AstClass pointer, Value: SenTree
-std::unordered_map<const AstClass*, AstSenTree*> s_covergroupEvents;
-
 // Global map to store sample CFuncs for covergroups
 // Key: AstClass pointer, Value: sample CFunc
 std::unordered_map<const AstClass*, AstCFunc*> s_covergroupSampleFuncs;
@@ -640,8 +636,12 @@ class CovergroupSamplingVisitor final : public VNVisitor {
 
     // Helper to get the clocking event from a covergroup class
     AstSenTree* getCovergroupEvent(AstClass* classp) {
-        auto it = s_covergroupEvents.find(classp);
-        if (it != s_covergroupEvents.end()) { return it->second; }
+        // The AstCovergroup (holding the SenTree) was left in membersp by V3CoverageFunctional
+        for (AstNode* memberp = classp->membersp(); memberp; memberp = memberp->nextp()) {
+            if (AstCovergroup* const cgp = VN_CAST(memberp, Covergroup)) {
+                if (cgp->eventp()) return cgp->eventp();
+            }
+        }
         return nullptr;
     }
 
@@ -662,11 +662,15 @@ class CovergroupSamplingVisitor final : public VNVisitor {
                         size_t dotPos = scopeName.find('.');
                         if (dotPos != string::npos) {
                             string className = scopeName.substr(dotPos + 1);
-                            // Find the class in the events map and store the CFunc
-                            for (auto& pair : s_covergroupEvents) {
-                                if (pair.first->name() == className) {
-                                    s_covergroupSampleFuncs[pair.first] = cfuncp;
-                                    break;
+                            // Search netlist for the matching covergroup class
+                            for (AstNode* modp = v3Global.rootp()->modulesp(); modp;
+                                 modp = modp->nextp()) {
+                                if (AstClass* const classp = VN_CAST(modp, Class)) {
+                                    if (classp->isCovergroup()
+                                        && classp->name() == className) {
+                                        s_covergroupSampleFuncs[classp] = cfuncp;
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -794,7 +798,10 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         });
 
         // Get or create the AstActive node for this sensitivity
+        // senTreep is a template used by getActive() which clones it into the AstActive;
+        // delete it afterwards as it is not added to the AST directly.
         AstActive* const activep = m_namer.getActive(fl, senTreep);
+        VL_DO_DANGLING(senTreep->deleteTree(), senTreep);
 
         // Add the CMethodCall statement to the active domain
         activep->addStmtsp(cmethodCallp->makeStmt());
@@ -812,8 +819,7 @@ public:
         // Previously disabled due to compatibility issues with V3Timing transformations
         // The current implementation injects sampling before V3Active, allowing both modes to work
 
-        UINFO(4, "CovergroupSamplingVisitor: Starting, found " << s_covergroupEvents.size()
-                                                               << " covergroup events" << endl);
+        UINFO(4, "CovergroupSamplingVisitor: Starting" << endl);
 
         // First pass: collect sample CFuncs from covergroup class scopes
         m_inFirstPass = true;
@@ -835,11 +841,22 @@ void V3Active::activeAll(AstNetlist* nodep) {
     UINFO(2, __FUNCTION__ << ":");
     { ActiveVisitor{nodep}; }  // Destruct before checking
     { CovergroupSamplingVisitor{nodep}; }  // Add automatic covergroup sampling
-    // Delete orphaned SenTree nodes that were unlinked for covergroup auto-sampling
-    for (auto& pair : s_covergroupEvents) {
-        if (pair.second) VL_DO_DANGLING(pair.second->deleteTree(), pair.second);
+    // Delete AstCovergroup nodes (event holders) left in covergroup classes by
+    // V3CoverageFunctional. They were kept in the AST to avoid orphaned SenTree nodes;
+    // now that V3Active has consumed them we can delete them.
+    for (AstNode* modp = nodep->modulesp(); modp; modp = modp->nextp()) {
+        if (AstClass* const classp = VN_CAST(modp, Class)) {
+            if (!classp->isCovergroup()) continue;
+            for (AstNode* memberp = classp->membersp(); memberp;) {
+                AstNode* const nextp = memberp->nextp();
+                if (AstCovergroup* const cgp = VN_CAST(memberp, Covergroup)) {
+                    cgp->unlinkFrBack();
+                    VL_DO_DANGLING(cgp->deleteTree(), cgp);
+                }
+                memberp = nextp;
+            }
+        }
     }
-    s_covergroupEvents.clear();
     s_covergroupSampleFuncs.clear();
     V3Global::dumpCheckGlobalTree("active", 0, dumpTreeEitherLevel() >= 3);
 }

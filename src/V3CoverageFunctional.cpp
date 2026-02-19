@@ -1607,7 +1607,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             if (existingReturnAssign) {
                 // Replace the RHS of existing assignment from 0 to 100.0
                 AstNode* oldRhs = existingReturnAssign->rhsp();
-                if (oldRhs) oldRhs->unlinkFrBack();
+                if (oldRhs) VL_DO_DANGLING(oldRhs->unlinkFrBack()->deleteTree(), oldRhs);
                 existingReturnAssign->rhsp(new AstConst{fl, AstConst::RealDouble{}, 100.0});
                 UINFO(4, "    Replaced return value assignment to 100.0" << endl);
             } else if (returnVarp) {
@@ -1818,16 +1818,16 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                         }
 
                         if (!eventUnsupported) {
-                            // Access the global map defined in V3Active.cpp
-                            extern std::unordered_map<const AstClass*, AstSenTree*>
-                                s_covergroupEvents;
-                            s_covergroupEvents[nodep] = cgp->eventp();
-                            cgp->eventp()->unlinkFrBack();  // Unlink to prevent deletion
-                            UINFO(4, "Stored clocking event for covergroup " << nodep->name()
-                                                                             << endl);
+                            // Leave cgp in the class membersp so the SenTree stays
+                            // linked in the AST. V3Active will find it via membersp,
+                            // use the event, then delete the AstCovergroup itself.
+                            UINFO(4, "Keeping covergroup event node for V3Active: "
+                                         << nodep->name() << endl);
+                            itemp = nextp;
+                            continue;
                         }
                     }
-                    // Remove the AstCovergroup node - it's just a holder for the event
+                    // Remove the AstCovergroup node - either unsupported event or no event
                     cgp->unlinkFrBack();
                     VL_DO_DANGLING(cgp->deleteTree(), cgp);
                 }
