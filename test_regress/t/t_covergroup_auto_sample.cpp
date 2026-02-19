@@ -1,5 +1,9 @@
 // -*- mode: C++; c-file-style: "cc-mode" -*-
 // Simple test harness for t_covergroup_auto_sample - provides clock
+//
+// This file ONLY is placed under the Creative Commons Public Domain, for
+// any use, without warranty, 2026 by Wilson Snyder.
+// SPDX-License-Identifier: CC0-1.0
 
 #include "verilated.h"
 

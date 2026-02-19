@@ -856,13 +856,29 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 } else {
                     // For unsigned, skip >= 0 check as it's always true
                     AstNodeExpr* minExprp = rangep->leftp();
+                    AstNodeExpr* maxExprp = rangep->rightp();
                     AstConst* minConstp = VN_CAST(minExprp, Const);
+                    AstConst* maxConstp = VN_CAST(maxExprp, Const);
+                    const int exprWidth = exprp->widthMin();
                     bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
+                    bool skipUpperCheck = false;
+                    if (maxConstp && exprWidth > 0 && exprWidth <= 64) {
+                        const uint64_t maxVal
+                            = (exprWidth == 64) ? ~static_cast<uint64_t>(0)
+                                                : ((1ULL << exprWidth) - 1ULL);
+                        skipUpperCheck = (maxConstp->toUQuad() == maxVal);
+                    }
 
-                    if (skipLowerCheck) {
+                    if (skipLowerCheck && skipUpperCheck) {
+                        singleCondp = new AstConst{rangep->fileline(), AstConst::BitTrue{}};
+                    } else if (skipLowerCheck) {
                         // Only check upper bound for [0:max]
                         singleCondp = new AstLte{rangep->fileline(), exprp->cloneTree(false),
-                                                 rangep->rightp()->cloneTree(false)};
+                                                 maxExprp->cloneTree(false)};
+                    } else if (skipUpperCheck) {
+                        // Only check lower bound when upper is maximal for the expression width
+                        singleCondp = new AstGte{rangep->fileline(), exprp->cloneTree(false),
+                                                 minExprp->cloneTree(false)};
                     } else {
                         singleCondp
                             = new AstAnd{rangep->fileline(),
@@ -884,13 +900,29 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 } else {
                     // For unsigned, skip >= 0 check as it's always true
                     AstNodeExpr* minExprp = inrangep->lhsp();
+                    AstNodeExpr* maxExprp = inrangep->rhsp();
                     AstConst* minConstp = VN_CAST(minExprp, Const);
+                    AstConst* maxConstp = VN_CAST(maxExprp, Const);
+                    const int exprWidth = exprp->widthMin();
                     bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
+                    bool skipUpperCheck = false;
+                    if (maxConstp && exprWidth > 0 && exprWidth <= 64) {
+                        const uint64_t maxVal
+                            = (exprWidth == 64) ? ~static_cast<uint64_t>(0)
+                                                : ((1ULL << exprWidth) - 1ULL);
+                        skipUpperCheck = (maxConstp->toUQuad() == maxVal);
+                    }
 
-                    if (skipLowerCheck) {
+                    if (skipLowerCheck && skipUpperCheck) {
+                        singleCondp = new AstConst{inrangep->fileline(), AstConst::BitTrue{}};
+                    } else if (skipLowerCheck) {
                         // Only check upper bound for [0:max]
                         singleCondp = new AstLte{inrangep->fileline(), exprp->cloneTree(false),
-                                                 inrangep->rhsp()->cloneTree(false)};
+                                                 maxExprp->cloneTree(false)};
+                    } else if (skipUpperCheck) {
+                        // Only check lower bound when upper is maximal for the expression width
+                        singleCondp = new AstGte{inrangep->fileline(), exprp->cloneTree(false),
+                                                 minExprp->cloneTree(false)};
                     } else {
                         singleCondp
                             = new AstAnd{inrangep->fileline(),
@@ -1386,14 +1418,34 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                             } else {
                                 // For unsigned, skip >= 0 check as it's always true
                                 AstConst* minConstp = VN_CAST(minExprp, Const);
+                                AstConst* maxConstp = VN_CAST(maxExprp, Const);
+                                const int exprWidth = exprClonep->widthMin();
                                 bool skipLowerCheck = (minConstp && minConstp->toUQuad() == 0);
+                                bool skipUpperCheck = false;
+                                if (maxConstp && exprWidth > 0 && exprWidth <= 64) {
+                                    const uint64_t maxVal
+                                        = (exprWidth == 64)
+                                              ? ~static_cast<uint64_t>(0)
+                                              : ((1ULL << exprWidth) - 1ULL);
+                                    skipUpperCheck = (maxConstp->toUQuad() == maxVal);
+                                }
 
-                                lep = new AstLte{binp->fileline(), exprClone2p,
-                                                 maxExprp->cloneTree(false)};
-                                if (skipLowerCheck) {
+                                if (skipLowerCheck && skipUpperCheck) {
+                                    rangeCondp
+                                        = new AstConst{binp->fileline(), AstConst::BitTrue{}};
+                                } else if (skipLowerCheck) {
                                     // Only check upper bound for [0:max]
+                                    lep = new AstLte{binp->fileline(), exprClone2p,
+                                                     maxExprp->cloneTree(false)};
                                     rangeCondp = lep;
+                                } else if (skipUpperCheck) {
+                                    // Only check lower bound when upper is maximal
+                                    gep = new AstGte{binp->fileline(), exprClonep,
+                                                     minExprp->cloneTree(false)};
+                                    rangeCondp = gep;
                                 } else {
+                                    lep = new AstLte{binp->fileline(), exprClone2p,
+                                                     maxExprp->cloneTree(false)};
                                     gep = new AstGte{binp->fileline(), exprClonep,
                                                      minExprp->cloneTree(false)};
                                     rangeCondp = new AstAnd{binp->fileline(), gep, lep};
