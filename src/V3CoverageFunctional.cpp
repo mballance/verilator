@@ -452,8 +452,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     }
 
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
-        if (!m_sampleFuncp || !m_constructorp)
-        {
+        if (!m_sampleFuncp || !m_constructorp) {
             coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without sample() or constructor");
             return;
         }
@@ -1303,8 +1302,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     }
 
     void generateCrossCode(AstCoverCross* crossp) {
-        if (!m_sampleFuncp || !m_constructorp)
-        {
+        if (!m_sampleFuncp || !m_constructorp) {
             crossp->v3warn(E_UNSUPPORTED, "Cross coverage without sample() or constructor");
             return;
         }
@@ -1692,8 +1690,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
         // We need to add the registration code to the constructor
         // The registration should happen after member variables are initialized
-        if (!m_constructorp)
-        {
+        if (!m_constructorp) {
             m_covergroupp->v3warn(E_UNSUPPORTED,
                                   "Cannot generate coverage registration without constructor");
             return;

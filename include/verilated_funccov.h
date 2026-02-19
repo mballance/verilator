@@ -131,8 +131,7 @@ public:
             const std::string& binName = bin->name();
             const std::string& binRange = bin->rangeStr();
             VL_COVER_INSERT(contextp, hier.c_str(), bin->countp(), "type", "coverpoint", "name",
-                            fullName.c_str(), "bin", binName.c_str(), "range",
-                            binRange.c_str());
+                            fullName.c_str(), "bin", binName.c_str(), "range", binRange.c_str());
         }
     }
 };
@@ -206,9 +205,8 @@ public:
             // Note: We need a persistent counter, so we use the map value's address
             // This is safe because std::map doesn't reallocate on insert
             const std::string& binName = pair.first;
-            VL_COVER_INSERT(contextp, hier.c_str(),
-                            const_cast<uint32_t*>(&pair.second), "type", "cross", "name",
-                            fullName.c_str(), "bin", binName.c_str());
+            VL_COVER_INSERT(contextp, hier.c_str(), const_cast<uint32_t*>(&pair.second), "type",
+                            "cross", "name", fullName.c_str(), "bin", binName.c_str());
         }
     }
 };
