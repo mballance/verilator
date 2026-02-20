@@ -10,10 +10,10 @@ endclass
 
 module t;
   initial begin
-    int i;
-    automatic Class1 q[int] = '{};
+    int i = 0;
+    Class1 q[int] = '{};
     for (int j = 0; j < 15; j = j + 1) begin
-      automatic Class1 x = new;
+      Class1 x = new;
       q[j] = x;
     end
     while (i < 15) begin

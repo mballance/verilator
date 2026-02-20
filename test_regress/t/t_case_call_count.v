@@ -25,7 +25,7 @@ endclass
 module t;
   Cls c;
   initial begin
-    bit called;
+    bit called = 0;
     c = new;
     case (c.get())
       4: $stop;

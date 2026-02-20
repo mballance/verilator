@@ -36,7 +36,7 @@ endclass
 module t;
 
   initial begin
-    automatic X x = new;
+    X x = new;
     $finish;
   end
 

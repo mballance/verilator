@@ -14,8 +14,7 @@ endclass
 
 module t;
   initial begin
-    Qux qux;
-    qux = new;
+    Qux qux = new;
     Foo::bar(qux);
     Foo::bar(null);
   end

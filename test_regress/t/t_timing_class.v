@@ -193,12 +193,12 @@ module t;
     endclass
 
     initial begin
-        static DelayClass dc;
-        static Delay10 d10 = new;
-        static Delay20 d20 = new;
-        static Delay40 d40 = new;
-        static NoDelay dNo = new;
-        static AssignDelayClass dAsgn = new;
+        DelayClass dc;
+        Delay10 d10 = new;
+        Delay20 d20 = new;
+        Delay40 d40 = new;
+        NoDelay dNo = new;
+        AssignDelayClass dAsgn = new;
         `WRITE_VERBOSE(("I'm at time %0t\n", $time));
         dc = d10;
         dc.do_delay;
@@ -266,7 +266,7 @@ module t;
     endclass
 
     initial begin
-        automatic ForkClass fc = new;
+        ForkClass fc = new;
         fc.do_fork;
         if (fc.done != 4 || $time != 70) $stop;
     end

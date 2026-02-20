@@ -11,7 +11,7 @@ endclass
 
 module t;
    initial begin
-      automatic Cls c = new;
+      Cls c = new;
       if (c.aconst !== 10) $stop;
       if (Cls::astatic !== 20) $stop;
       $write("*-* All Finished *-*\n");

@@ -270,7 +270,9 @@ class DataflowOptimize final {
                 // TODO: remove once Actives can tolerate NEVER SenItems
                 if (AstSenItem* senItemp = VN_CAST(nodep, SenItem)) {
                     senItemp->foreach([](const AstVarRef* refp) {
-                        DfgVertexVar::setHasExtRdRefs(refp->varScopep());
+                        // Check varScopep exists before accessing (may be null for covergroup
+                        // events)
+                        if (refp->varScopep()) DfgVertexVar::setHasExtRdRefs(refp->varScopep());
                     });
                 }
             } else {
@@ -313,10 +315,6 @@ class DataflowOptimize final {
     void optimize(DfgGraph& dfg) {
         // Dump the initial graph for debugging
         if (dumpDfgLevel() >= 8) dfg.dumpDotFilePrefixed(m_ctx.prefix() + "dfg-in");
-
-        // Remove unobservable variabels and logic that drives only such variables
-        V3DfgPasses::removeUnobservable(dfg, m_ctx);
-        if (dumpDfgLevel() >= 8) dfg.dumpDotFilePrefixed(m_ctx.prefix() + "pruned");
 
         // Synthesize DfgLogic vertices
         V3DfgPasses::synthesize(dfg, m_ctx);

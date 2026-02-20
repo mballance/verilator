@@ -7,7 +7,7 @@
 module t;
    initial begin
       begin : blk
-         int x;
+         int x = 0;
          fork : fork_blk
             begin
                #4;

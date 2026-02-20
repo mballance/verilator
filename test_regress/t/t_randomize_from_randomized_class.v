@@ -22,7 +22,7 @@ endclass
 
 module t;
   initial begin
-    automatic B b = new;
+    B b = new;
     b.r();
     if (b.a.j != 7) $stop;
     $write("*-* All Finished *-*\n");

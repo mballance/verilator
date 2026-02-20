@@ -500,7 +500,6 @@ class WidthVisitor final : public VNVisitor {
     void visit(AstTime* nodep) override { nodep->dtypeSetUInt64(); }
     void visit(AstTimeD* nodep) override { nodep->dtypeSetDouble(); }
     void visit(AstTimePrecision* nodep) override { nodep->dtypeSetSigned32(); }
-    void visit(AstGetInitialRandomSeed* nodep) override { nodep->dtypeSetSigned32(); }
     void visit(AstTimeUnit* nodep) override {
         nodep->replaceWith(
             new AstConst{nodep->fileline(), AstConst::Signed32{}, nodep->timeunit().powerOfTen()});
@@ -1675,8 +1674,32 @@ class WidthVisitor final : public VNVisitor {
         if (m_vup->prelim()) iterateCheckSizedSelf(nodep, "LHS", nodep->lhsp(), SELF, BOTH);
     }
     void visit(AstCgOptionAssign* nodep) override {
-        // We report COVERIGN on the whole covergroup; if get more fine-grained add this
-        // nodep->v3warn(COVERIGN, "Ignoring unsupported: coverage option");
+        // Extract covergroup option values and store in AstClass before deleting
+        // Find parent covergroup (AstClass with isCovergroup() == true)
+        AstClass* cgClassp = nullptr;
+        for (AstNode* parentp = nodep->backp(); parentp; parentp = parentp->backp()) {
+            if (AstClass* classp = VN_CAST(parentp, Class)) {
+                if (classp->isCovergroup()) {
+                    cgClassp = classp;
+                    break;
+                }
+            }
+        }
+
+        if (cgClassp) {
+            // Process supported options
+            if (nodep->name() == "auto_bin_max" && !nodep->typeOption()) {
+                // Extract constant value
+                if (AstConst* constp = VN_CAST(nodep->valuep(), Const)) {
+                    cgClassp->cgAutoBinMax(constp->toSInt());
+                    UINFO(6, "  Covergroup " << cgClassp->name() << " option.auto_bin_max = "
+                                             << constp->toSInt() << endl);
+                }
+            }
+            // Add more options here as needed (weight, goal, at_least, per_instance, comment)
+        }
+
+        // Delete the assignment node (we've extracted the value)
         VL_DO_DANGLING(pushDeletep(nodep->unlinkFrBack()), nodep);
     }
     void visit(AstPow* nodep) override {
@@ -2517,8 +2540,10 @@ class WidthVisitor final : public VNVisitor {
         // So two steps, first do the calculation's width (max of the two widths)
         {
             const int calcWidth = std::max(width, underDtp->width());
-            AstNodeDType* const calcDtp = nodep->findBitOrLogicDType(
-                calcWidth, calcWidth, underDtp->numeric(), underDtp->isFourstate());
+            AstNodeDType* const calcDtp
+                = (underDtp->isFourstate()
+                       ? nodep->findLogicDType(calcWidth, calcWidth, underDtp->numeric())
+                       : nodep->findBitDType(calcWidth, calcWidth, underDtp->numeric()));
             nodep->dtypep(calcDtp);
             // We ignore warnings as that is sort of the point of a cast
             iterateCheck(nodep, "Cast expr", underp, CONTEXT_DET, FINAL, calcDtp, EXTEND_EXP,
@@ -2529,8 +2554,10 @@ class WidthVisitor final : public VNVisitor {
         // UINFOTREE(1, nodep, "", "CastSizeClc");
         // Next step, make the proper output width
         {
-            AstNodeDType* const outDtp = nodep->findBitOrLogicDType(
-                width, width, underDtp->numeric(), underDtp->isFourstate());
+            AstNodeDType* const outDtp
+                = (underDtp->isFourstate()
+                       ? nodep->findLogicDType(width, width, underDtp->numeric())
+                       : nodep->findBitDType(width, width, underDtp->numeric()));
             nodep->dtypep(outDtp);
             // We ignore warnings as that is sort of the point of a cast
             widthCheckSized(nodep, "Cast expr", VN_AS(underp, NodeExpr), outDtp, EXTEND_EXP,
@@ -3136,7 +3163,8 @@ class WidthVisitor final : public VNVisitor {
             }
             nodep->dtypeSetBit();
             const VSigning numeric = nodep->exprp()->dtypep()->numeric();
-            expDTypep = nodep->findBitOrLogicDType(width, mwidth, numeric, isFourstate);
+            expDTypep = isFourstate ? nodep->findLogicDType(width, mwidth, numeric)
+                                    : nodep->findBitDType(width, mwidth, numeric);
         }
 
         iterateCheck(nodep, "Inside expression", nodep->exprp(), CONTEXT_DET, FINAL, expDTypep,
@@ -3155,15 +3183,8 @@ class WidthVisitor final : public VNVisitor {
         // executed so, there is no need for purification since they cannot generate sideeffects.
         if (!m_constraintp && !nodep->exprp()->isPure()) {
             FileLine* const fl = nodep->exprp()->fileline();
-            // Ensure sized dtype for temp variable
-            AstNodeDType* const exprDtp = nodep->exprp()->dtypep();
-            const int w = exprDtp->width();
-            AstNodeDType* const tempDTypep
-                = exprDtp->widthSized() ? exprDtp
-                                        : nodep->findBitOrLogicDType(w, w, exprDtp->numeric(),
-                                                                     exprDtp->isFourstate());
-            AstVar* const varp
-                = new AstVar{fl, VVarType::XTEMP, m_insideTempNames.get(nodep), tempDTypep};
+            AstVar* const varp = new AstVar{fl, VVarType::XTEMP, m_insideTempNames.get(nodep),
+                                            nodep->exprp()->dtypep()};
             exprp = new AstVarRef{fl, varp, VAccess::READ};
             exprStmtp = new AstExprStmt{fl,
                                         new AstAssign{fl, new AstVarRef{fl, varp, VAccess::WRITE},
@@ -3227,6 +3248,9 @@ class WidthVisitor final : public VNVisitor {
     }
     void visit(AstInsideRange* nodep) override {
         // Just do each side; AstInside will rip these nodes out later
+        // Constant-fold range bounds (e.g., NEGATE(100) becomes -100)
+        V3Const::constifyParamsEdit(nodep->lhsp());  // May relink pointed to node
+        V3Const::constifyParamsEdit(nodep->rhsp());  // May relink pointed to node
         userIterateAndNext(nodep->lhsp(), m_vup);
         userIterateAndNext(nodep->rhsp(), m_vup);
         nodep->dtypeFrom(nodep->lhsp());
@@ -4417,13 +4441,13 @@ class WidthVisitor final : public VNVisitor {
                     if (argp->exprp()) userIterate(argp->exprp(), WidthVP{SELF, BOTH}.p());
                 }
             }
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
             V3Randomize::newRandomizeFunc(m_memberMap, first_classp);
             handleRandomizeArgs(nodep, first_classp);
         } else if (nodep->name() == "srandom") {
             methodOkArguments(nodep, 1, 1);
             iterateCheckSigned32(nodep, "argument", methodArg(nodep, 0), BOTH);
-            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::READ);
+            methodCallLValueRecurse(nodep, nodep->fromp(), VAccess::WRITE);
             V3Randomize::newSRandomFunc(m_memberMap, first_classp);
         }
         UASSERT_OBJ(first_classp, nodep, "Unlinked");
@@ -5100,7 +5124,7 @@ class WidthVisitor final : public VNVisitor {
                 AstNodeExpr* const valuep = patternMemberValueIterate(patp);
                 AstConsPackMember* const cpmp
                     = new AstConsPackMember{patp->fileline(), memp, valuep};
-                membersp = AstNode::addNextNull(membersp, cpmp);
+                membersp = membersp ? membersp->addNext(cpmp) : cpmp;
             }
             newp = new AstConsPackUOrStruct{nodep->fileline(), vdtypep, membersp};
         }
@@ -5489,19 +5513,13 @@ class WidthVisitor final : public VNVisitor {
                     newp->dtypeFrom(nodep);
                     nodep->replaceWith(newp);
                     VL_DO_DANGLING(pushDeletep(nodep), nodep);
+                } else if (nodep->disablep()) {
+                    nodep->disablep()->v3warn(E_UNSUPPORTED,
+                                              "Unsupported: Disable iff with sequence expression");
+                    VL_DO_DANGLING(pushDeletep(nodep->disablep()->unlinkFrBack()), nodep);
                 }
             }
         }
-    }
-
-    bool firstNewStatementOkRecurse(AstNode* nodep) {
-        if (AstVar* const varp = VN_CAST(nodep, Var)) {
-            if (!varp->valuep() || VN_CAST(varp->valuep(), Const) || varp->isIO()) return true;
-        }
-        if (AstAssign* const aitemp = VN_CAST(nodep, Assign)) {
-            if (VN_IS(aitemp->rhsp(), Const) || VN_IS(aitemp->rhsp(), CReset)) return true;
-        }
-        return false;
     }
 
     //--------------------
@@ -6519,7 +6537,13 @@ class WidthVisitor final : public VNVisitor {
                     }
                     continue;
                 }
-                if (firstNewStatementOkRecurse(itemp)) continue;
+                if (AstVar* const varp = VN_CAST(itemp, Var)) {
+                    if (!varp->valuep() || VN_CAST(varp->valuep(), Const) || varp->isIO())
+                        continue;
+                }
+                if (AstAssign* const aitemp = VN_CAST(itemp, Assign)) {
+                    if (VN_IS(aitemp->rhsp(), Const)) continue;
+                }
                 firstp = itemp;
             }
         }
@@ -8260,7 +8284,7 @@ class WidthVisitor final : public VNVisitor {
             linker.relink(newp);
         } else if (VN_IS(underVDTypep, ClassRefDType) || VN_IS(underVDTypep, IfaceRefDType)
                    || (VN_IS(underVDTypep, BasicDType)
-                       && VN_AS(underVDTypep, BasicDType)->isCHandle())) {
+                       && VN_AS(underVDTypep, BasicDType)->keyword() == VBasicDTypeKwd::CHANDLE)) {
             // Allow warning-free "if (handle)"
             VL_DO_DANGLING(fixWidthReduce(VN_AS(underp, NodeExpr)), underp);  // Changed
         } else if (!underVDTypep->basicp()) {

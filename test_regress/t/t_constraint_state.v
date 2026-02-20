@@ -7,8 +7,8 @@
 
 `define check_rand(cl, field, cond) \
 begin \
-   automatic longint prev_result; \
-   automatic int ok; \
+   longint prev_result; \
+   int ok = 0; \
    if (!bit'(cl.randomize())) $stop; \
    prev_result = longint'(field); \
    if (!(cond)) $stop; \

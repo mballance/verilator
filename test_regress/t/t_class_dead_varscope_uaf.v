@@ -49,7 +49,7 @@ module t;
   import p::*;
 
   initial begin
-    automatic comp_proxy cp = new;
+    comp_proxy cp = new;
     void'(cp.get_config_object("x"));
     $finish;
   end

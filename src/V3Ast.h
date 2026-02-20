@@ -639,7 +639,6 @@ public:
     int widthWords() const { return VL_WORDS_I(width()); }
     bool isQuad() const VL_MT_STABLE { return (width() > VL_IDATASIZE && width() <= VL_QUADSIZE); }
     bool isWide() const VL_MT_STABLE { return (width() > VL_QUADSIZE); }
-    inline bool isCHandle() const VL_MT_STABLE;
     inline bool isDouble() const VL_MT_STABLE;
     inline bool isSigned() const VL_MT_STABLE;
     inline bool isString() const VL_MT_STABLE;
@@ -782,11 +781,6 @@ public:
     AstNodeDType* findVoidDType() const;
     AstNodeDType* findBitDType(int width, int widthMin, VSigning numeric) const;
     AstNodeDType* findLogicDType(int width, int widthMin, VSigning numeric) const;
-    AstNodeDType* findBitOrLogicDType(int width, int widthMin, VSigning numeric,
-                                      bool isFourstate) const {
-        return isFourstate ? findLogicDType(width, widthMin, numeric)
-                           : findBitDType(width, widthMin, numeric);
-    }
     AstNodeDType* findLogicRangeDType(const VNumRange& range, int widthMin,
                                       VSigning numeric) const VL_MT_STABLE;
     AstNodeDType* findBitRangeDType(const VNumRange& range, int widthMin,
@@ -825,16 +819,6 @@ public:
         static_assert(std::is_base_of<T_NodeResult, T_NodeNext>::value,
                       "'T_NodeNext' must be a subtype of 'T_NodeResult'");
         if (!newp) return nodep;
-        return static_cast<T_NodeResult*>(addNext<AstNode, AstNode>(nodep, newp));
-    }
-    template <typename T_NodeResult, typename T_NodeNext>
-    static T_NodeResult* addNextNull(T_NodeResult* nodep, T_NodeNext* newp) {
-        static_assert(std::is_base_of<AstNode, T_NodeResult>::value,
-                      "'T_NodeResult' must be a subtype of AstNode");
-        static_assert(std::is_base_of<T_NodeResult, T_NodeNext>::value,
-                      "'T_NodeNext' must be a subtype of 'T_NodeResult'");
-        if (!newp) return nodep;
-        if (!nodep) return newp;
         return static_cast<T_NodeResult*>(addNext<AstNode, AstNode>(nodep, newp));
     }
     inline AstNode* addNext(AstNode* newp);
@@ -1583,6 +1567,7 @@ AstNode* VNVisitor::iterateSubtreeReturnEdits(AstNode* nodep) {
 #include "V3AstNodeOther.h"
 #include "V3AstNodeExpr.h"
 #include "V3AstNodeStmt.h"
+#include "V3AstNodeFuncCov.h"
 // clang-format on
 
 // Inline function definitions need to go last

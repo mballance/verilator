@@ -6,8 +6,8 @@
 
 `define check_rand(cl, field, cond) \
 begin \
-   automatic longint prev_result; \
-   automatic int ok; \
+   longint prev_result; \
+   int ok = 0; \
    if (!bit'(cl.randomize())) $stop; \
    prev_result = longint'(field); \
    if (!(cond)) $stop; \
@@ -41,7 +41,7 @@ endclass
 
 module t_randomize_queue_constraints;
   initial begin
-    automatic Foo foo = new;
+    Foo foo = new;
 
     `check_rand(foo, foo.m_idx, foo.m_idx inside {[0:9]} && foo.m_intQueue[foo.m_idx] == foo.m_idx + 1);
     $display("Queue: %p", foo.m_intQueue);

@@ -144,8 +144,6 @@ class EmitCFunc VL_NOT_FINAL : public EmitCConstInit {
     } m_emitDispState;
 
 protected:
-    VL_DEFINE_DEBUG_FUNCTIONS;
-
     EmitCLazyDecls m_lazyDecls{*this};  // Visitor for emitting lazy declarations
     bool m_useSelfForThis = false;  // Replace "this" with "vlSelf"
     bool m_usevlSelfRef = false;  // Use vlSelfRef reference instead of vlSelf pointer
@@ -709,7 +707,6 @@ public:
     void visit(AstCAwait* nodep) override {
         putns(nodep, "co_await ");
         iterateConst(nodep->exprp());
-        puts(";\n");
     }
     void visit(AstCNew* nodep) override {
         if (VN_IS(nodep->dtypep(), VoidDType)) {
@@ -1341,9 +1338,6 @@ public:
                       / v3Global.rootp()->timeprecision().multiplier()));
         puts(")");
     }
-    void visit(AstGetInitialRandomSeed* nodep) override {
-        putns(nodep, "vlSymsp->_vm_contextp__->randSeed()");
-    }
     void visit(AstTimeFormat* nodep) override {
         putns(nodep, "VL_TIMEFORMAT_IINI(");
         if (nodep->unitsp()) {
@@ -1767,6 +1761,20 @@ public:
         // The location of the AstExecGraph within the containing AstCFunc is where we want to
         // invoke the graph and wait for it to complete. Emitting the children does just that.
         iterateChildrenConst(nodep);
+    }
+
+    // Functional coverage nodes - not yet implemented, just skip for now
+    void visit(AstCoverpoint* nodep) override {
+        // Functional coverage nodes are handled during the coverage transformation pass
+        // They should not reach the C++ emitter
+    }
+    void visit(AstCoverBin* nodep) override {
+        // Functional coverage nodes are handled during the coverage transformation pass
+        // They should not reach the C++ emitter
+    }
+    void visit(AstCoverCross* nodep) override {
+        // Functional coverage nodes are handled during the coverage transformation pass
+        // They should not reach the C++ emitter
     }
 
     // Default

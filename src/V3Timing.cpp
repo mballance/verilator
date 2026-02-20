@@ -66,15 +66,12 @@
 
 #include "V3Const.h"
 #include "V3EmitV.h"
-#include "V3Global.h"
 #include "V3Graph.h"
 #include "V3MemberMap.h"
 #include "V3SenExprBuilder.h"
 #include "V3SenTree.h"
-#include "V3Stats.h"
 #include "V3UniqueNames.h"
 
-#include <limits>
 #include <queue>
 
 VL_DEFINE_DEBUG_FUNCTIONS;
@@ -343,11 +340,26 @@ class TimingSuspendableVisitor final : public VNVisitor {
         }
     }
     void visit(AstNodeCCall* nodep) override {
-        new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(nodep->funcp()), getSuspendDepVtx(m_procp),
-                        P_CALL};
+        AstCFunc* const funcp = nodep->funcp();
 
-        new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(nodep->funcp()),
-                        getNeedsProcDepVtx(m_procp), P_CALL};
+        // Skip automatic covergroup sampling calls
+        if (funcp->isCovergroupSample()) {
+            iterateChildren(nodep);
+            return;
+        }
+
+        // Skip if we're not inside a function/procedure (m_procp would be null)
+        // This can happen for calls in Active nodes at module scope
+        if (!m_procp) {
+            iterateChildren(nodep);
+            return;
+        }
+
+        UINFO(9, "V3Timing: Processing CCall to " << funcp->name() << " in dependency graph\n");
+        new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(funcp), getSuspendDepVtx(m_procp), P_CALL};
+
+        new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(funcp), getNeedsProcDepVtx(m_procp),
+                        P_CALL};
 
         iterateChildren(nodep);
     }
@@ -478,8 +490,6 @@ class TimingControlVisitor final : public VNVisitor {
     int m_forkCnt = 0;  // Number of forks inside a module
     bool m_underJumpBlock = false;  // True if we are inside of a jump-block
     bool m_underProcedure = false;  // True if we are under an always or initial
-    bool m_hasStaticZeroDelay = false;  // True if we have a static #0 delay
-    std::vector<FileLine*> m_unknownDelayFlps;  // Locations of AstDelay with non-constant value
 
     // Unique names
     V3UniqueNames m_dlyforkNames{"__Vdlyfork"};  // Names for temp AssignW vars
@@ -505,11 +515,6 @@ class TimingControlVisitor final : public VNVisitor {
     // Other
     SenTreeFinder m_finder{m_netlistp};  // Sentree finder and uniquifier
     SenExprBuilder* m_senExprBuilderp = nullptr;  // Sens expression builder for current m_scope
-
-    // Stats
-    size_t m_statZeroDelays = 0;  // Number of statically known #0 delays
-    size_t m_statConstDelays = 0;  // Number of statically known #const (non-zero) delays
-    size_t m_statVariableDelays = 0;  // Number of delays with value unknown at compile time
 
     // METHODS
     // Transform an assignment with an intra timing control into a timing control with the
@@ -628,10 +633,9 @@ class TimingControlVisitor final : public VNVisitor {
     // Returns true if the given trigger expression needs a destructive post update after trigger
     // evaluation. Currently this only applies to named events.
     bool destructivePostUpdate(AstNode* const exprp) const {
-        return exprp->exists([](const AstNode* const nodep) {
-            const AstNodeDType* const dtypep = nodep->dtypep();
-            const AstBasicDType* const basicp = dtypep ? dtypep->skipRefp()->basicp() : nullptr;
-            return basicp && basicp->isEvent();
+        return exprp->exists([](const AstNodeVarRef* const refp) {
+            AstBasicDType* const dtypep = refp->dtypep()->basicp();
+            return dtypep && dtypep->isEvent();
         });
     }
     // Creates a trigger scheduler variable
@@ -770,7 +774,9 @@ class TimingControlVisitor final : public VNVisitor {
         joinp->dtypeSetVoid();
         addProcessInfo(joinp);
         addDebugInfo(joinp);
-        forkp->addNextHere(new AstCAwait{flp, joinp});
+        AstCAwait* const awaitp = new AstCAwait{flp, joinp};
+        awaitp->dtypeSetVoid();
+        forkp->addNextHere(awaitp->makeStmt());
     }
 
     // `procp` shall be a NodeProcedure/CFunc/Begin and within it vars from `varsp` will be placed.
@@ -914,12 +920,21 @@ class TimingControlVisitor final : public VNVisitor {
         }
     }
     void visit(AstNodeCCall* nodep) override {
-        if (nodep->funcp()->needProcess()) m_hasProcess = true;
-        if (hasFlags(nodep->funcp(), T_SUSPENDEE) && !nodep->user1SetOnce()) {  // If suspendable
-            // Calls to suspendables are always void return type, hence parent must be StmtExpr
-            AstStmtExpr* const stmtp = VN_AS(nodep->backp(), StmtExpr);
-            stmtp->replaceWith(new AstCAwait{nodep->fileline(), nodep->unlinkFrBack()});
-            VL_DO_DANGLING(pushDeletep(stmtp), stmtp);
+        AstCFunc* const funcp = nodep->funcp();
+
+        // Skip automatic covergroup sampling calls
+        if (funcp->isCovergroupSample()) {
+            iterateChildren(nodep);
+            return;
+        }
+
+        if (funcp->needProcess()) m_hasProcess = true;
+        if (hasFlags(funcp, T_SUSPENDEE) && !nodep->user1SetOnce()) {  // If suspendable
+            VNRelinker relinker;
+            nodep->unlinkFrBack(&relinker);
+            AstCAwait* const awaitp = new AstCAwait{nodep->fileline(), nodep};
+            awaitp->dtypeSetVoid();
+            relinker.relink(awaitp);
         }
         iterateChildren(nodep);
     }
@@ -927,76 +942,27 @@ class TimingControlVisitor final : public VNVisitor {
         UASSERT_OBJ(!nodep->isCycleDelay(), nodep,
                     "Cycle delays should have been handled in V3AssertPre");
         FileLine* const flp = nodep->fileline();
-
-        AstNodeExpr* valuep = nodep->lhsp()->unlinkFrBack();
-        if (VN_IS(valuep, Const) && VN_AS(valuep, Const)->num().is1Step()) {
-            // #1step special case
+        AstNodeExpr* valuep = V3Const::constifyEdit(nodep->lhsp()->unlinkFrBack());
+        AstConst* const constp = VN_CAST(valuep, Const);
+        if (!constp || !constp->isZero()) {
+            // Scale the delay
+            const double timescaleFactor = calculateTimescaleFactor(nodep, nodep->timeunit());
+            if (valuep->dtypep()->skipRefp()->isDouble()) {
+                valuep = new AstRToIRoundS{
+                    flp, new AstMulD{flp, valuep,
+                                     new AstConst{flp, AstConst::RealDouble{}, timescaleFactor}}};
+                valuep->dtypeSetBitSized(64, VSigning::UNSIGNED);
+            } else {
+                valuep->dtypeSetBitSized(64, VSigning::UNSIGNED);
+                valuep = new AstMul{flp, valuep,
+                                    new AstConst{flp, AstConst::Unsized64{},
+                                                 static_cast<uint64_t>(timescaleFactor)}};
+            }
+        } else if (constp->num().is1Step()) {
             VL_DO_DANGLING(valuep->deleteTree(), valuep);
             valuep = new AstConst{flp, AstConst::Unsized64{}, 1};
             valuep->dtypeSetBitSized(64, VSigning::UNSIGNED);
-        } else {
-            AstConst* const constp = VN_CAST(valuep, Const);
-            const bool isForkSentinel
-                = constp && (constp->toUQuad() == std::numeric_limits<uint64_t>::max());
-            if (!isForkSentinel && (!constp || !constp->isZero())) {
-                // Scale the delay
-                const double timescaleFactorD = calculateTimescaleFactor(nodep, nodep->timeunit());
-                if (valuep->dtypep()->skipRefp()->isDouble()) {
-                    AstConst* const tsfp
-                        = new AstConst{flp, AstConst::RealDouble{}, timescaleFactorD};
-                    valuep = new AstMulD{flp, valuep, tsfp};
-                    valuep = new AstRToIRoundS{flp, valuep};
-                    valuep->dtypeSetBitSized(64, VSigning::UNSIGNED);
-                } else {
-                    valuep->dtypeSetBitSized(64, VSigning::UNSIGNED);
-                    const uint64_t timescaleFactorU = static_cast<uint64_t>(timescaleFactorD);
-                    AstConst* const tsfp
-                        = new AstConst{flp, AstConst::Unsized64{}, timescaleFactorU};
-                    valuep = new AstMul{flp, valuep, tsfp};
-                }
-                // Simplify
-                valuep = V3Const::constifyEdit(valuep);
-            }
         }
-
-        // Statistics
-        if (valuep->isZero()) {
-            ++m_statZeroDelays;
-        } else if (VN_IS(valuep, Const)) {
-            ++m_statConstDelays;
-        } else {
-            ++m_statVariableDelays;
-        }
-
-        // Decide scheduling support for #0
-        if (v3Global.opt.schedZeroDelay().isSetTrue()) {
-            // User said to schedule for #0 support, nothing else to do
-            v3Global.setUsesZeroDelay();
-        } else if (v3Global.opt.schedZeroDelay().isSetFalse()) {
-            // User said to schedule without #0 support. Still warn if a static #0 delay exists
-            if (valuep->isZero()) {
-                nodep->v3warn(
-                    ZERODLY,
-                    "Static #0 delay exists, but '--no-sched-zero-delay' was given.\n"
-                        << nodep->warnMore()  //
-                        << "... Can proceed, but this will fail at runtime if executed.");
-            }
-        } else {
-            // User did not express preference, decide based on presence of delays
-            if (valuep->isZero()) {
-                // Statically known #0 delay exists, schedule for #0 support
-                v3Global.setUsesZeroDelay();
-                m_hasStaticZeroDelay = true;
-                // Don't warn on variable delays, as no point
-                m_unknownDelayFlps.clear();
-            } else if (!VN_IS(valuep, Const)) {
-                // Delay is not known at compiile time. Conservatively schedule for #0 support,
-                // but warn if no static #0 delays used as performance might be improved
-                v3Global.setUsesZeroDelay();
-                if (!m_hasStaticZeroDelay) m_unknownDelayFlps.push_back(nodep->fileline());
-            }
-        }
-
         // Replace self with a 'co_await dlySched.delay(<valuep>)'
         AstCMethodHard* const delayMethodp = new AstCMethodHard{
             flp, new AstVarRef{flp, getCreateDelayScheduler(), VAccess::WRITE},
@@ -1005,12 +971,15 @@ class TimingControlVisitor final : public VNVisitor {
         addProcessInfo(delayMethodp);
         addDebugInfo(delayMethodp);
         // Create the co_await
-        AstNode* const awaitp = new AstCAwait{flp, delayMethodp, getCreateDelaySenTree()};
+        AstCAwait* const awaitp = new AstCAwait{flp, delayMethodp, getCreateDelaySenTree()};
+        awaitp->dtypeSetVoid();
+        AstStmtExpr* const awaitStmtp = awaitp->makeStmt();
         // Relink child statements after the co_await
-        if (AstNode* const stmtsp = nodep->stmtsp()) {
-            awaitp->addNext(stmtsp->unlinkFrBackWithNext());
+        if (nodep->stmtsp()) {
+            AstNode::addNext<AstNode, AstNode>(awaitStmtp,
+                                               nodep->stmtsp()->unlinkFrBackWithNext());
         }
-        nodep->replaceWith(awaitp);
+        nodep->replaceWith(awaitStmtp);
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
     void visit(AstEventControl* nodep) override {
@@ -1043,6 +1012,7 @@ class TimingControlVisitor final : public VNVisitor {
             // Create the co_await
             AstCAwait* const awaitEvalp
                 = new AstCAwait{flp, evalMethodp, getCreateDynamicTriggerSenTree()};
+            awaitEvalp->dtypeSetVoid();
             // Construct the sen expression for this sentree
             UASSERT_OBJ(m_senExprBuilderp, nodep, "No SenExprBuilder for this scope");
             auto* const assignp = new AstAssign{flp, new AstVarRef{flp, trigvscp, VAccess::WRITE},
@@ -1060,7 +1030,7 @@ class TimingControlVisitor final : public VNVisitor {
                 = new AstLogNot{flp, new AstVarRef{flp, trigvscp, VAccess::READ}};
             AstLoop* const loopp = new AstLoop{flp};
             loopp->addStmtsp(new AstLoopTest{flp, loopp, condp});
-            loopp->addStmtsp(awaitEvalp);
+            loopp->addStmtsp(awaitEvalp->makeStmt());
             // Put pre updates before the trigger check and assignment
             for (AstNodeStmt* const stmtp : senResults.m_preUpdates) loopp->addStmtsp(stmtp);
             // Then the trigger check and assignment
@@ -1077,14 +1047,14 @@ class TimingControlVisitor final : public VNVisitor {
             if (destructivePostUpdate(sentreep)) {
                 AstCAwait* const awaitPostUpdatep = awaitEvalp->cloneTree(false);
                 VN_AS(awaitPostUpdatep->exprp(), CMethodHard)->method(VCMethod::SCHED_POST_UPDATE);
-                loopp->addStmtsp(awaitPostUpdatep);
+                loopp->addStmtsp(awaitPostUpdatep->makeStmt());
             }
             // Put the post updates at the end of the loop
             for (AstNodeStmt* const stmtp : senResults.m_postUpdates) loopp->addStmtsp(stmtp);
             // Finally, await the resumption step in 'act'
             AstCAwait* const awaitResumep = awaitEvalp->cloneTree(false);
             VN_AS(awaitResumep->exprp(), CMethodHard)->method(VCMethod::SCHED_RESUMPTION);
-            AstNode::addNext<AstNodeStmt, AstNodeStmt>(loopp, awaitResumep);
+            AstNode::addNext<AstNodeStmt, AstNodeStmt>(loopp, awaitResumep->makeStmt());
             // Replace the event control with the loop
             nodep->replaceWith(loopp);
         } else {
@@ -1103,7 +1073,8 @@ class TimingControlVisitor final : public VNVisitor {
             addEventDebugInfo(triggerMethodp, sentreep);
             // Create the co_await
             AstCAwait* const awaitp = new AstCAwait{flp, triggerMethodp, sentreep};
-            nodep->replaceWith(awaitp);
+            awaitp->dtypeSetVoid();
+            nodep->replaceWith(awaitp->makeStmt());
         }
         VL_DO_DANGLING(nodep->deleteTree(), nodep);
     }
@@ -1302,7 +1273,8 @@ class TimingControlVisitor final : public VNVisitor {
                 // callstack
                 AstCExpr* const foreverp = new AstCExpr{flp, "VlForever{}"};
                 AstCAwait* const awaitp = new AstCAwait{flp, foreverp};
-                nodep->replaceWith(awaitp);
+                awaitp->dtypeSetVoid();
+                nodep->replaceWith(awaitp->makeStmt());
                 if (stmtsp) VL_DO_DANGLING(stmtsp->deleteTree(), stmtsp);
                 VL_DO_DANGLING(condp->deleteTree(), condp);
             } else {
@@ -1380,28 +1352,8 @@ public:
     explicit TimingControlVisitor(AstNetlist* nodep)
         : m_netlistp{nodep} {
         iterate(nodep);
-
-        // If there is no static #0 in the design, but an unknown delay was found,
-        // and the user did not specify preference, then warn on all unknown delays
-        // as we will be assuming they can be #0, which can cause performance degradation.
-        for (FileLine* const flp : m_unknownDelayFlps) {
-            flp->v3warn(ZERODLY,
-                        "Value of # delay control statically unknown. Assuming it can be #0.\n"
-                            << flp->warnMore()  //
-                            << "... If all # delays are non-zero at runtime,\n"
-                            << flp->warnMore()  //
-                            << "... use '--no-sched-zero-delay' for improved performance.\n"
-                            << flp->warnMore()  //
-                            << "... If a real #0 is expected at runtime,\n"
-                            << flp->warnMore()  //
-                            << "... use '--sched-zero-delay' to suppress this warning.");
-        }
     }
-    ~TimingControlVisitor() override {
-        V3Stats::addStat("Timing, known #0 delays", m_statZeroDelays);
-        V3Stats::addStat("Timing, known #const delays", m_statConstDelays);
-        V3Stats::addStat("Timing, unknown #variable delays", m_statVariableDelays);
-    }
+    ~TimingControlVisitor() override = default;
 };
 
 //######################################################################

@@ -197,9 +197,9 @@ module t (/*AUTOARG*/
    endclass
 
    initial begin
-      automatic cg_empty cov1 = new;
+      cg_empty cov1 = new;
 `ifndef T_COVERGROUP_UNSUP_IGN
-      automatic cgArgs cov2 = new(2);
+      cgArgs cov2 = new(2);
 `endif
    end
 

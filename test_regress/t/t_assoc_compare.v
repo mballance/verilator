@@ -39,8 +39,8 @@ module t;
       begin // check that a class as key is fine
          int assoc1[Cls];
          int assoc2[Cls];
-         automatic Cls a = new;
-         automatic Cls b = new;
+         Cls a = new;
+         Cls b = new;
          int t;
          assoc1[a] = 0;
          `check_ne(assoc1, assoc2)
@@ -53,8 +53,8 @@ module t;
       begin // check that a class as value is fine
          Cls assoc1[int];
          Cls assoc2[int];
-         automatic Cls a = new;
-         automatic Cls b = new;
+         Cls a = new;
+         Cls b = new;
          assoc1[1] = a;
          assoc2[1] = b;
          `check_ne(assoc1, assoc2)

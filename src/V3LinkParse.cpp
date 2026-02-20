@@ -23,6 +23,7 @@
 #include "V3LinkParse.h"
 
 #include "V3Control.h"
+#include "V3MemberMap.h"
 #include "V3Stats.h"
 
 #include <set>
@@ -46,6 +47,7 @@ class LinkParseVisitor final : public VNVisitor {
 
     // STATE - across all visitors
     std::unordered_set<FileLine*> m_filelines;  // Filelines that have been seen
+    VMemberMap m_memberMap;  // for lookup of process class methods
 
     // STATE - for current visit position (use VL_RESTORER)
     // If set, move AstVar->valuep() initial values to this module
@@ -72,6 +74,9 @@ class LinkParseVisitor final : public VNVisitor {
 
     // STATE - Statistic tracking
     VDouble0 m_statModules;  // Number of modules seen
+
+    bool m_unprotectedStdProcess
+        = false;  // Set when std::process internals were unprotected, we only need to do this once
 
     // METHODS
     void cleanFileline(AstNode* nodep) {
@@ -104,6 +109,21 @@ class LinkParseVisitor final : public VNVisitor {
             return above + typedefp->name();
         }
         return "";
+    }
+
+    void unprotectStdProcessHandle() {
+        if (m_unprotectedStdProcess) return;
+        m_unprotectedStdProcess = true;
+        if (!v3Global.opt.protectIds()) return;
+        if (AstPackage* const stdp = v3Global.rootp()->stdPackagep()) {
+            if (AstClass* const processp
+                = VN_CAST(m_memberMap.findMember(stdp, "process"), Class)) {
+                if (AstVar* const handlep
+                    = VN_CAST(m_memberMap.findMember(processp, "m_process"), Var)) {
+                    handlep->protect(false);
+                }
+            }
+        }
     }
 
     void visitIterateNodeDType(AstNodeDType* nodep) {
@@ -179,6 +199,38 @@ class LinkParseVisitor final : public VNVisitor {
                           << nodep->warnOther()
                           << "... Expected indentation matching this earlier statement's line:\n"
                           << nodep->warnContextSecondary());
+    }
+
+    void addForkParentProcess(AstFork* forkp) {
+        FileLine* const fl = forkp->fileline();
+
+        const std::string parentName = "__VforkParent";
+        AstRefDType* const dtypep = new AstRefDType{fl, "process"};
+        AstVar* const parentVar
+            = new AstVar{fl, VVarType::BLOCKTEMP, parentName, VFlagChildDType{}, dtypep};
+        parentVar->lifetime(VLifetime::AUTOMATIC_EXPLICIT);
+
+        AstParseRef* const lhsp = new AstParseRef{fl, parentName, nullptr, nullptr};
+        AstClassOrPackageRef* const processRefp
+            = new AstClassOrPackageRef{fl, "process", nullptr, nullptr};
+        AstParseRef* const selfRefp = new AstParseRef{fl, "self", nullptr, nullptr};
+        AstDot* const processSelfp = new AstDot{fl, true, processRefp, selfRefp};
+        AstMethodCall* const callp = new AstMethodCall{fl, processSelfp, "self", nullptr};
+        AstAssign* const initp = new AstAssign{fl, lhsp, callp};
+
+        AstVarRef* const parentRefp = new AstVarRef{fl, parentVar, VAccess::READ};
+        forkp->parentProcessp(parentRefp);
+
+        VNRelinker relinker;
+        forkp->unlinkFrBack(&relinker);
+
+        parentVar->addNextHere(initp);
+        initp->addNextHere(forkp);
+
+        AstBegin* const beginp = new AstBegin{
+            fl, forkp->name() == "" ? "" : forkp->name() + "__VgetForkParent", parentVar, true};
+
+        relinker.relink(beginp);
     }
 
     // VISITORS
@@ -265,12 +317,6 @@ class LinkParseVisitor final : public VNVisitor {
 
     void visit(AstVar* nodep) override {
         cleanFileline(nodep);
-        UINFO(9, "VAR " << nodep);
-        if (nodep->valuep()) nodep->hasUserInit(true);
-        if (m_insideLoop && nodep->lifetime().isNone() && nodep->varType() == VVarType::VAR
-            && !nodep->direction().isAny()) {
-            nodep->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
-        }
         if (nodep->lifetime().isStatic() && m_insideLoop && nodep->valuep()) {
             nodep->lifetime(VLifetime::AUTOMATIC_IMPLICIT);
             nodep->v3warn(STATICVAR, "Static variable with assignment declaration declared in a "
@@ -279,12 +325,13 @@ class LinkParseVisitor final : public VNVisitor {
                    && !nodep->isIO()
                    && !nodep->isParam()
                    // In task, or a procedure but not Initial/Final as executed only once
-                   && ((m_ftaskp && !m_ftaskp->lifetime().isStaticExplicit()) || m_procedurep)) {
+                   && ((m_ftaskp && !m_ftaskp->lifetime().isStaticExplicit())
+                       || (m_procedurep && !VN_IS(m_procedurep, Initial)
+                           && !VN_IS(m_procedurep, Final)))) {
             if (VN_IS(m_modp, Module) && m_ftaskp) {
                 m_ftaskp->v3warn(
                     IMPLICITSTATIC,
-                    "Function/task's lifetime implicitly set to static;"
-                    " variables made static (IEEE 1800-2023 6.21)\n"
+                    "Function/task's lifetime implicitly set to static\n"
                         << m_ftaskp->warnMore() << "... Suggest use '" << m_ftaskp->verilogKwd()
                         << " automatic' or '" << m_ftaskp->verilogKwd() << " static'\n"
                         << m_ftaskp->warnContextPrimary() << '\n'
@@ -292,12 +339,12 @@ class LinkParseVisitor final : public VNVisitor {
                         << nodep->warnMore() << "... The initializer value will only be set once\n"
                         << nodep->warnContextSecondary());
             } else {
-                nodep->v3warn(
-                    IMPLICITSTATIC,
-                    "Variable's lifetime implicitly set to static (IEEE 1800-2023 6.21)\n"
-                        << nodep->warnMore() << "... The initializer value will only be set once\n"
-                        << nodep->warnMore()
-                        << "... Suggest use 'static' before variable declaration'");
+                nodep->v3warn(IMPLICITSTATIC,
+                              "Variable's lifetime implicitly set to static\n"
+                                  << nodep->warnMore()
+                                  << "... The initializer value will only be set once\n"
+                                  << nodep->warnMore()
+                                  << "... Suggest use 'static' before variable declaration'");
             }
         }
         if (!m_lifetimeAllowed && nodep->lifetime().isAutomatic()) {
@@ -806,7 +853,11 @@ class LinkParseVisitor final : public VNVisitor {
         }
         cleanFileline(nodep);
         iterateAndNextNull(nodep->stmtsp());
-        if (AstFork* const forkp = VN_CAST(nodep, Fork)) iterateAndNextNull(forkp->forksp());
+        if (AstFork* const forkp = VN_CAST(nodep, Fork)) {
+            iterateAndNextNull(forkp->forksp());
+            if (!forkp->parentProcessp() && forkp->joinType().joinNone() && forkp->forksp())
+                addForkParentProcess(forkp);
+        }
     }
     void visit(AstCase* nodep) override {
         V3Control::applyCase(nodep);
@@ -1014,7 +1065,10 @@ class LinkParseVisitor final : public VNVisitor {
 
 public:
     // CONSTRUCTORS
-    explicit LinkParseVisitor(AstNetlist* rootp) { iterate(rootp); }
+    explicit LinkParseVisitor(AstNetlist* rootp) {
+        unprotectStdProcessHandle();
+        iterate(rootp);
+    }
     ~LinkParseVisitor() override {
         V3Stats::addStatSum(V3Stats::STAT_SOURCE_MODULES, m_statModules);
     }

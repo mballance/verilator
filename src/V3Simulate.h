@@ -458,7 +458,7 @@ private:
         if (const AstBasicDType* const basicp = nodep->dtypeSkipRefp()->basicp()) {
             AstConst cnst{nodep->fileline(), AstConst::WidthedValue{}, basicp->widthMin(), 0};
             if (basicp->isZeroInit()) {
-                cnst.num() = V3Number{nodep, basicp};
+                cnst.num().setAllBits0();
             } else {
                 cnst.num().setAllBitsX();
             }
@@ -1368,7 +1368,6 @@ private:
         if (jumpingOver()) return;
         knownBadNodeType(nodep);
     }
-    void visit(AstGetInitialRandomSeed* nodep) override { badNodeType(nodep); }
     // ====
     // default
     // These types are definitely not reducible

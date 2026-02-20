@@ -77,7 +77,7 @@ module t;
       `checkp(q, "'{\"a\", \"b\", \"a\", \"b\"}");
 
       begin
-         static string ai[$] = '{ "Foo", "Bar" };
+         string ai[$] = '{ "Foo", "Bar" };
          q = ai;  // Copy
          i = q.size(); `checkh(i, 2);
          v = q.pop_front(); `checks(v, "Foo");

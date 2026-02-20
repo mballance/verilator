@@ -7,8 +7,7 @@
 module t;
 
    initial begin
-      automatic int q[$] = {1, 2};
-
+      int q[$] = {1, 2};
       if (!(1 inside {q[0], q[1]})) $stop;
       if (3 inside {q[0], q[1]}) $stop;
 

@@ -253,26 +253,6 @@ public:
     string verilogKwd() const override { return "break"; }
     bool isBrancher() const override { V3ERROR_NA_RETURN(true); }  // Node removed early
 };
-class AstCAwait final : public AstNodeStmt {
-    // C++'s co_await. While this is an expression in C++, in Verilator it is only used
-    // with void result types and always appears in statement position. There must never
-    // be a suspendable process that returns a value, so modeling as a statement instead.
-    // @astgen op1 := exprp : AstNodeExpr
-    //
-    // @astgen ptr := m_sentreep : Optional[AstSenTree]  // Sentree related to this await
-public:
-    AstCAwait(FileLine* fl, AstNodeExpr* exprp, AstSenTree* sentreep = nullptr)
-        : ASTGEN_SUPER_CAwait(fl)
-        , m_sentreep{sentreep} {
-        this->exprp(exprp);
-    }
-    ASTGEN_MEMBERS_AstCAwait;
-    void dump(std::ostream& str) const override;
-    void dumpJson(std::ostream& str) const override;
-    bool isTimingControl() const override { return true; }
-    AstSenTree* sentreep() const { return m_sentreep; }
-    void clearSentreep() { m_sentreep = nullptr; }
-};
 class AstCReturn final : public AstNodeStmt {
     // C++ return from a function
     // @astgen op1 := lhsp : AstNodeExpr
@@ -1421,6 +1401,7 @@ class AstFork final : public AstNodeBlock {
     // be executed sequentially within each fork branch.
     //
     // @astgen op3 := forksp : List[AstBegin]
+    // @astgen op4 := parentProcessp : Optional[AstVarRef]
     const VJoinType m_joinType;  // Join keyword type
 public:
     AstFork(FileLine* fl, VJoinType joinType, const string& name = "")

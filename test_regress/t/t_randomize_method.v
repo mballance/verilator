@@ -6,8 +6,8 @@
 
 `define check_rand(cl, field) \
 begin \
-   automatic longint prev_result; \
-   automatic int ok; \
+   longint prev_result; \
+   int ok = 0; \
    void'(cl.randomize()); \
    prev_result = longint'(field); \
    repeat(9) begin \

@@ -273,7 +273,6 @@ Laroche
 Laurens
 Lavino
 Leber
-Leela
 Leendert
 Lem
 Lesik
@@ -362,7 +361,6 @@ Ondrej
 Oron
 Oyvind
 PLI
-Pakanati
 Palaniappan
 Patricio
 Peltonen
@@ -625,7 +623,6 @@ bitstoreal
 blackbox
 bokke
 bool
-booleans
 brancoliticus
 buf
 bufif
@@ -1088,7 +1085,6 @@ sc
 scalared
 sccache
 sccanf
-sched
 seg
 setuphold
 sformat

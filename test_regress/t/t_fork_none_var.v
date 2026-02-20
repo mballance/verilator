@@ -10,7 +10,7 @@ module t;
 
    initial begin
       int i;
-      automatic int n = 4;
+      int n = 4;
       m_mask = 0;
       fork
          begin

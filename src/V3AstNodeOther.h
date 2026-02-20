@@ -285,7 +285,6 @@ class AstNodeModule VL_NOT_FINAL : public AstNode {
     bool m_internal : 1;  // Internally created
     bool m_recursive : 1;  // Recursive module
     bool m_recursiveClone : 1;  // If recursive, what module it clones, otherwise nullptr
-    bool m_verilatorLib : 1;  // Module is a stub for a Verilator produced --lib-create
 protected:
     AstNodeModule(VNType t, FileLine* fl, const string& name, const string& libname)
         : AstNode{t, fl}
@@ -302,8 +301,7 @@ protected:
         , m_hierParams{false}
         , m_internal{false}
         , m_recursive{false}
-        , m_recursiveClone{false}
-        , m_verilatorLib{false} {}
+        , m_recursiveClone{false} {}
 
 public:
     ASTGEN_MEMBERS_AstNodeModule;
@@ -345,8 +343,6 @@ public:
     void recursive(bool flag) { m_recursive = flag; }
     void recursiveClone(bool flag) { m_recursiveClone = flag; }
     bool recursiveClone() const { return m_recursiveClone; }
-    void verilatorLib(bool flag) { m_verilatorLib = flag; }
-    bool verilatorLib() const { return m_verilatorLib; }
     VLifetime lifetime() const { return m_lifetime; }
     void lifetime(const VLifetime& flag) { m_lifetime = flag; }
     VTimescale timeunit() const { return m_timeunit; }
@@ -488,7 +484,6 @@ class AstCFunc final : public AstNode {
                          // an explicitly passed 'self' pointer as the first argument.  This can
                          // be slightly faster due to __restrict, and we do not declare in header
                          // so adding/removing loose functions doesn't recompile everything.
-    bool m_isOverride : 1;  // Override virtual function
     bool m_isVirtual : 1;  // Virtual function
     bool m_entryPoint : 1;  // User may call into this top level function
     bool m_dpiPure : 1;  // Pure DPI function
@@ -499,8 +494,7 @@ class AstCFunc final : public AstNode {
     bool m_dpiImportWrapper : 1;  // Wrapper for invoking DPI import prototype from generated code
     bool m_needProcess : 1;  // Needs access to VlProcess of the caller
     bool m_recursive : 1;  // Recursive or part of recursion
-    bool m_noLife : 1;  // Disable V3Life on this function - has multiple calls, and reads Syms
-                        // state
+    bool m_isCovergroupSample : 1;  // Automatic covergroup sample() function
     int m_cost;  // Function call cost
 public:
     AstCFunc(FileLine* fl, const string& name, AstScope* scopep, const string& rtnType = "")
@@ -520,7 +514,6 @@ public:
         m_isDestructor = false;
         m_isMethod = true;
         m_isLoose = false;
-        m_isOverride = false;
         m_isVirtual = false;
         m_needProcess = false;
         m_entryPoint = false;
@@ -531,7 +524,7 @@ public:
         m_dpiImportPrototype = false;
         m_dpiImportWrapper = false;
         m_recursive = false;
-        m_noLife = false;
+        m_isCovergroupSample = false;
         m_cost = v3Global.opt.instrCountDpi();  // As proxy for unknown general DPI cost
     }
     ASTGEN_MEMBERS_AstCFunc;
@@ -584,11 +577,6 @@ public:
     bool isLoose() const { return m_isLoose; }
     void isLoose(bool flag) { m_isLoose = flag; }
     bool isProperMethod() const { return isMethod() && !isLoose(); }
-    bool isOverride() const { return m_isOverride; }
-    void isOverride(bool flag) {
-        m_isOverride = flag;
-        if (flag) isVirtual(true);
-    }
     bool isVirtual() const { return m_isVirtual; }
     void isVirtual(bool flag) { m_isVirtual = flag; }
     bool needProcess() const { return m_needProcess; }
@@ -610,9 +598,9 @@ public:
     bool isCoroutine() const { return m_rtnType == "VlCoroutine"; }
     void recursive(bool flag) { m_recursive = flag; }
     bool recursive() const { return m_recursive; }
-    void noLife(bool flag) { m_noLife = flag; }
-    bool noLife() const { return m_noLife; }
     void cost(int cost) { m_cost = cost; }
+    bool isCovergroupSample() const { return m_isCovergroupSample; }
+    void isCovergroupSample(bool flag) { m_isCovergroupSample = flag; }
     // Special methods
     bool emptyBody() const {
         return !keepIfEmpty() && !argsp() && !varsp() && !stmtsp() && !isVirtual()
@@ -1014,6 +1002,9 @@ public:
     bool isPredictOptimizable() const override { return false; }
     bool sameNode(const AstNode* /*samep*/) const override { return true; }
 };
+// NOTE: AstCoverBin and AstCoverpoint moved to V3AstNodeFuncCov.h
+// These were placeholder implementations that are now replaced with full
+// functional coverage support (IEEE 1800-2023 Section 19)
 class AstDefParam final : public AstNode {
     // A defparam assignment
     // Parents: MODULE
@@ -1267,7 +1258,6 @@ class AstNetlist final : public AstNode {
     VTimescale m_timeunit;  // Global time unit
     VTimescale m_timeprecision;  // Global time precision
     bool m_timescaleSpecified = false;  // Input HDL specified timescale
-    uint32_t m_nTraceCodes = 0;  // Number of trace codes used by design
 public:
     AstNetlist();
     ASTGEN_MEMBERS_AstNetlist;
@@ -1309,8 +1299,6 @@ public:
     void timeprecisionMerge(FileLine*, const VTimescale& value);
     void timescaleSpecified(bool specified) { m_timescaleSpecified = specified; }
     bool timescaleSpecified() const { return m_timescaleSpecified; }
-    uint32_t nTraceCodes() const { return m_nTraceCodes; }
-    void nTraceCodes(uint32_t value) { m_nTraceCodes = value; }
     AstVarScope* stlFirstIterationp();
     void clearStlFirstIterationp() { m_stlFirstIterationp = nullptr; }
 };
@@ -1921,7 +1909,6 @@ class AstVar final : public AstNode {
     bool m_isConst : 1;  // Table contains constant data
     bool m_isContinuously : 1;  // Ever assigned continuously (for force/release)
     bool m_hasStrengthAssignment : 1;  // Is on LHS of assignment with strength specifier
-    bool m_hasUserInit : 1;  // Has initial assignment by user at parse time
     bool m_isStatic : 1;  // Static C variable (for Verilog see instead lifetime())
     bool m_isPulldown : 1;  // Tri0
     bool m_isPullup : 1;  // Tri1
@@ -1975,7 +1962,6 @@ class AstVar final : public AstNode {
         m_isConst = false;
         m_isContinuously = false;
         m_hasStrengthAssignment = false;
-        m_hasUserInit = false;
         m_isStatic = false;
         m_isPulldown = false;
         m_isPullup = false;
@@ -2131,28 +2117,26 @@ public:
         if (flag) m_funcLocalSticky = true;
     }
     void funcReturn(bool flag) { m_funcReturn = flag; }
-    bool gotNansiType() const { return m_gotNansiType; }
     void gotNansiType(bool flag) { m_gotNansiType = flag; }
-    bool hasStrengthAssignment() const { return m_hasStrengthAssignment; }
+    bool gotNansiType() { return m_gotNansiType; }
     void hasStrengthAssignment(bool flag) { m_hasStrengthAssignment = flag; }
-    bool hasUserInit() const { return m_hasUserInit; }
-    void hasUserInit(bool flag) { m_hasUserInit = flag; }
-    bool isDpiOpenArray() const VL_MT_SAFE { return m_isDpiOpenArray; }
+    bool hasStrengthAssignment() { return m_hasStrengthAssignment; }
     void isDpiOpenArray(bool flag) { m_isDpiOpenArray = flag; }
+    bool isDpiOpenArray() const VL_MT_SAFE { return m_isDpiOpenArray; }
     bool isHideLocal() const { return m_isHideLocal; }
     void isHideLocal(bool flag) { m_isHideLocal = flag; }
     bool isHideProtected() const { return m_isHideProtected; }
     void isHideProtected(bool flag) { m_isHideProtected = flag; }
-    bool noCReset() const { return m_noCReset; }
     void noCReset(bool flag) { m_noCReset = flag; }
-    bool noReset() const { return m_noReset; }
+    bool noCReset() const { return m_noCReset; }
     void noReset(bool flag) { m_noReset = flag; }
-    bool noSubst() const { return m_noSubst; }
+    bool noReset() const { return m_noReset; }
     void noSubst(bool flag) { m_noSubst = flag; }
-    bool substConstOnly() const { return m_substConstOnly; }
+    bool noSubst() const { return m_noSubst; }
     void substConstOnly(bool flag) { m_substConstOnly = flag; }
-    bool overriddenParam() const { return m_overridenParam; }
+    bool substConstOnly() const { return m_substConstOnly; }
     void overriddenParam(bool flag) { m_overridenParam = flag; }
+    bool overriddenParam() const { return m_overridenParam; }
     void trace(bool flag) { m_trace = flag; }
     void isLatched(bool flag) { m_isLatched = flag; }
     bool isForceable() const { return m_isForceable; }
@@ -2574,6 +2558,8 @@ class AstClass final : public AstNodeModule {
     bool m_needRNG = false;  // Need RNG, uses srandom/randomize
     bool m_useVirtualPublic = false;  // Subclasses need virtual public as uses interface class
     bool m_virtual = false;  // Virtual class
+    // Covergroup options (when m_covergroup is true)
+    int m_cgAutoBinMax = -1;  // option.auto_bin_max value (-1 = not set, use default 64)
 
 public:
     AstClass(FileLine* fl, const string& name, const string& libname)
@@ -2601,6 +2587,9 @@ public:
     void needRNG(bool flag) { m_needRNG = flag; }
     bool useVirtualPublic() const { return m_useVirtualPublic; }
     void useVirtualPublic(bool flag) { m_useVirtualPublic = flag; }
+    // Covergroup options accessors
+    int cgAutoBinMax() const { return m_cgAutoBinMax; }
+    void cgAutoBinMax(int value) { m_cgAutoBinMax = value; }
     // Return true if this class is an extension of base class (SLOW)
     // Accepts nullptrs
     static bool isClassExtendedFrom(const AstClass* refClassp, const AstClass* baseClassp);

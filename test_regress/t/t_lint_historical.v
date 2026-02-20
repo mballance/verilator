@@ -56,7 +56,6 @@ module t;
    // verilator lint_off INFINITELOOP
    // verilator lint_off INITIALDLY
    // verilator lint_off INSECURE
-   // verilator lint_off INSIDETRUE
    // verilator lint_off LATCH
    // verilator lint_off LITENDIAN
    // verilator lint_off MINTYPMAXDLY
@@ -104,7 +103,6 @@ module t;
    // verilator lint_off UNOPTFLAT
    // verilator lint_off UNOPTTHREADS
    // verilator lint_off UNPACKED
-   // verilator lint_off UNSATCONSTR
    // verilator lint_off UNSIGNED
    // verilator lint_off UNUSED
    // verilator lint_off UNUSEDGENVAR

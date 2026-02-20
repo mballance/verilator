@@ -12,8 +12,8 @@
 module t;
 
    initial begin
-      automatic int res[];
-      automatic int a[3] = '{100, 200, 300};
+      int res[];
+      int a[3] = '{100, 200, 300};
 
       // TODO results not known to be correct
       res = a.map(el) with (el == 200);

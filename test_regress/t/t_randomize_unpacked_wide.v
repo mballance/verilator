@@ -22,7 +22,7 @@ endclass
 module t;
   int success;
   initial begin
-    automatic Foo foo = new;
+    Foo foo = new;
     success = foo.randomize();
     if (success != 1) $stop;
     foo.self_check();

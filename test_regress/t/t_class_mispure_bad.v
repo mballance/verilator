@@ -14,7 +14,7 @@ endclass
 
 module t;
    initial begin
-      automatic Bar obj = new();
+      Bar obj = new();
       obj.pvfunc();
       $stop;
    end

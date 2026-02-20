@@ -10,10 +10,10 @@ endclass
 
 module t;
    initial begin
-      int i;
+      int i = 0;
       Class1 q[$];
       repeat(15) begin
-         automatic Class1 x = new;
+         Class1 x = new;
          q = { q, x };
       end
       while (i < q.size()) begin

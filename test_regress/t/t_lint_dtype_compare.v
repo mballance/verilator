@@ -14,42 +14,42 @@ module t;
 
   initial begin
     // Scalar
-    automatic int a = 1, b = 1;
+    int a = 1, b = 1;
 
     // Unpacked array
-    automatic int u1[2] = '{1, 2};
-    automatic int u2[2] = '{1, 2};
+    int u1[2] = '{1, 2};
+    int u2[2] = '{1, 2};
 
-    automatic int m1[2][2] = '{{1, 2}, {3, 4}};
-    automatic int m2[2][2] = '{{1, 2}, {3, 4}};
+    int m1[2][2] = '{{1, 2}, {3, 4}};
+    int m2[2][2] = '{{1, 2}, {3, 4}};
 
     // Dynamic array
-    automatic int d1[] = new[2];
-    automatic int d2[] = new[2];
+    int d1[] = new[2];
+    int d2[] = new[2];
 
     // Queue
-    automatic int q1[$] = '{10, 20};
-    automatic int q2[$] = '{10, 20};
+    int q1[$] = '{10, 20};
+    int q2[$] = '{10, 20};
 
     // Associative array
-    automatic int aa1[string];
-    automatic int aa2[string];
+    int aa1[string];
+    int aa2[string];
 
     // Typedef array
-    automatic myint_t t1[2] = '{1, 2};
-    automatic myint2_t t2[2] = '{1, 2};
+    myint_t t1[2] = '{1, 2};
+    myint2_t t2[2] = '{1, 2};
 
     // Typedef queue
-    automatic myq_t tq1 = '{1, 2};
-    automatic int tq2[$] = '{1, 2};
+    myq_t tq1 = '{1, 2};
+    int   tq2[$] = '{1, 2};
 
     // Typedef associative array
-    automatic myval_t aa_typedef1[mykey_t];
-    automatic int aa_typedef2[string];
+    myval_t aa_typedef1[mykey_t];
+    int     aa_typedef2[string];
 
     // Typedef scalar
-    automatic bit signed [31:0] b1 = 1;
-    automatic int i1 = 1;
+    bit signed [31:0] b1 = 1;
+    int               i1 = 1;
 
     d1[0] = 5; d1[1] = 6;
     d2[0] = 5; d2[1] = 6;

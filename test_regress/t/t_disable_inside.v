@@ -6,7 +6,7 @@
 
 module t;
   initial begin
-    static int x = 0;
+    int x = 0;
     fork : fork_blk
       begin
         #1;
@@ -28,7 +28,7 @@ module t;
   end
 
   initial begin
-    static int y = 0;
+    int y = 0;
     fork
       begin : fork_branch
         #1;

@@ -18,9 +18,9 @@ typedef enum {
 module t;
 
    initial begin
-      automatic bit array[] = new [8];
-      automatic int unsigned m_length;
-      automatic uvm_tlm_command_e m_command;
+      bit array[] = new [8];
+      int unsigned m_length;
+      uvm_tlm_command_e m_command;
 
       m_length = 2;
       array = '{0, 0, 0, 0, 0, 0, 1, 0};

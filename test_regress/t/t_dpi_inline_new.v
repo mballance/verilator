@@ -41,7 +41,7 @@ module t (
   import pyhdl_if::*;
 
   initial begin
-    automatic py_tuple t0 = new;
+    py_tuple t0 = new;
     py_object o;
     o = t0.get_item(1);
     $write("*-* All Finished *-*\n");

@@ -469,8 +469,7 @@ public:
     // Convert AstAssign to Dfg, return true if successful.
     // Fills 'updates' with bindings for assigned variables.
     bool convert(std::vector<std::pair<Variable*, DfgVertexVar*>>& updates, DfgLogic& vtx,
-                 AstNodeAssign* nodep) {
-        UASSERT_OBJ(VN_IS(nodep, Assign) || VN_IS(nodep, AssignW), nodep, "Bad NodeAssign");
+                 AstAssign* nodep) {
         UASSERT_OBJ(updates.empty(), nodep, "'updates' should be empty");
         VL_RESTORER(m_updatesp);
         VL_RESTORER(m_logicp);
@@ -1035,20 +1034,20 @@ class AstToDfgSynthesize final {
 
     // Merge 'thenSymTab' into 'elseSymTab' using the given predicate to join values
     bool joinSymbolTables(SymTab& elseSymTab, DfgVertexVar* predicatep, const SymTab& thenSymTab) {
-        // Any variable that does not have a binding on both paths will be removed. These might be
-        // temporaries, loop vars, etc used only in one branch. Conversion will fail if the
-        // variable is actually referenced later.
-        std::vector<Variable*> toRemove;
-
+        // Give up if something is not assigned on all paths ... Latch?
+        if (thenSymTab.size() != elseSymTab.size()) {
+            ++m_ctx.m_synt.nonSynLatch;
+            return false;
+        }
         // Join each symbol
         for (std::pair<Variable* const, DfgVertexVar*>& pair : elseSymTab) {
             Variable* const varp = pair.first;
             // Find same variable on the else path
-            const auto it = thenSymTab.find(varp);
-            // Record for removal if not assigned on both paths
+            auto it = thenSymTab.find(varp);
+            // Give up if something is not assigned on all paths ... Latch?
             if (it == thenSymTab.end()) {
-                toRemove.emplace_back(varp);
-                continue;
+                ++m_ctx.m_synt.nonSynLatch;
+                return false;
             }
             // Join paths with the predicate
             DfgVertexVar* const thenp = it->second;
@@ -1057,10 +1056,6 @@ class AstToDfgSynthesize final {
             if (!newp) return false;
             pair.second = newp;
         }
-
-        // Remove variables not assigned on both paths
-        for (Variable* const varp : toRemove) elseSymTab.erase(varp);
-
         // Done
         return true;
     }
@@ -1316,8 +1311,7 @@ class AstToDfgSynthesize final {
         std::vector<std::pair<Variable*, DfgVertexVar*>> updates;
         for (AstNodeStmt* const stmtp : stmtps) {
             // Regular statements
-            AstNodeAssign* const ap = VN_CAST(stmtp, NodeAssign);
-            if (ap && (VN_IS(ap, Assign) || VN_IS(ap, AssignW))) {
+            if (AstAssign* const ap = VN_CAST(stmtp, Assign)) {
                 // Convert this assignment
                 if (!m_converter.convert(updates, *m_logicp, ap)) {
                     ++m_ctx.m_synt.nonSynConv;
@@ -1928,22 +1922,16 @@ static void dfgSelectLogicForSynthesis(DfgGraph& dfg) {
         });
     }
 
-    // Choose some simple special cases to always synthesize
+    // Synthesize all continuous assignments and simple blocks driving exactly
+    // one variable. This is approximately the old default behaviour of Dfg.
     for (DfgVertex& vtx : dfg.opVertices()) {
         DfgLogic* const logicp = vtx.cast<DfgLogic>();
         if (!logicp) continue;
-        // Blocks corresponding to continuous assignments
         if (logicp->nodep()->keyword() == VAlwaysKwd::CONT_ASSIGN) {
             worklist.push_front(*logicp);
             continue;
         }
         const CfgGraph& cfg = logicp->cfg();
-        // Straight line code with no branches
-        if (cfg.nBlocks() == 1) {
-            worklist.push_front(*logicp);
-            continue;
-        }
-        // Simple blocks driving exactly 1 variable, e.g if (rst) a = b else a = c;
         if (!logicp->hasMultipleSinks() && cfg.nBlocks() <= 4 && cfg.nEdges() <= 4) {
             worklist.push_front(*logicp);
         }

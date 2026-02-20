@@ -56,8 +56,7 @@ string V3LinkDotIfaceCapture::extractIfacePortName(const string& dotText) {
 void V3LinkDotIfaceCapture::add(AstRefDType* refp, AstCell* cellp, AstNodeModule* ownerModp,
                                 AstTypedef* typedefp, AstNodeModule* typedefOwnerModp,
                                 AstVar* ifacePortVarp) {
-    // TODO -- probably classes too
-    if (!refp || cellp->modp() == ownerModp) return;
+    if (!refp) return;
     if (!typedefp) typedefp = refp->typedefp();
     if (!typedefOwnerModp && typedefp) typedefOwnerModp = findOwnerModule(typedefp);
     s_map[refp] = CapturedIfaceTypedef{

@@ -6,8 +6,8 @@
 
 `define check_rand(cl, field) \
 begin \
-   automatic longint prev_result; \
-   automatic int ok; \
+   longint prev_result; \
+   int ok = 0; \
    void'(cl.randomize()); \
    prev_result = longint'(field); \
    repeat(9) begin \
@@ -106,16 +106,15 @@ module mwith();
   endfunction
 
   initial begin
-    automatic int c = 30;
-    automatic Foo foo = new(c);
-    automatic Baz baz = new;
+    int c = 30;
+    Foo foo = new(c);
+    Baz baz = new;
     typedef Baz baz_t;
-    automatic baz_t baz1 = new;
-    automatic Baz2 baz2 = new;
-    automatic Bar bar = new;
-    automatic Cls2 cls2 = new;
-    automatic Cls cls = cls2;
-
+    baz_t baz1 = new;
+    Baz2 baz2 = new;
+    Bar bar = new;
+    Cls2 cls2 = new;
+    Cls cls = cls2;
     $display("foo.x = %d", foo.x);
     $display("-----------------");
 

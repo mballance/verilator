@@ -210,11 +210,9 @@ private:
         // Find all var->varscope mappings, for later cleanup
         for (AstNode* stmtp = nodep->varsp(); stmtp; stmtp = stmtp->nextp()) {
             if (AstVarScope* const vscp = VN_CAST(stmtp, VarScope)) {
-                AstVar* const varp = vscp->varp();
-                if (varp->isFuncLocal() || varp->isUsedLoopIdx()
-                    || varp->lifetime().isAutomatic()) {
+                if (vscp->varp()->isFuncLocal() || vscp->varp()->isUsedLoopIdx()) {
                     UINFO(9, "   funcvsc " << vscp);
-                    m_varToScopeMap.emplace(std::make_pair(nodep, varp), vscp);
+                    m_varToScopeMap.emplace(std::make_pair(nodep, vscp->varp()), vscp);
                 }
             }
         }
@@ -406,7 +404,6 @@ class TaskVisitor final : public VNVisitor {
     bool m_inSensesp = false;  // Are we under a senitem?
     bool m_inNew = false;  // Are we under a constructor?
     int m_modNCalls = 0;  // Incrementing func # for making symbols
-    int m_unconVarNum = 0;  // Unique bad connection variable
 
     // STATE - across all visitors
     DpiCFuncs m_dpiNames;  // Map of all created DPI functions
@@ -511,19 +508,9 @@ class TaskVisitor final : public VNVisitor {
         return assp;
     }
 
-    void changeAtWriteRecurse(AstNodeExpr* const exprp) {
-        // Change nested at methods to writable variant
-        if (AstCMethodHard* const cMethodp = VN_CAST(exprp, CMethodHard)) {
-            if (cMethodp->method() == VCMethod::ARRAY_AT) {
-                cMethodp->method(VCMethod::ARRAY_AT_WRITE);
-            }
-            changeAtWriteRecurse(cMethodp->fromp());
-        }
-    }
-
     void connectPort(AstVar* portp, AstArg* argp, const string& namePrefix, AstNode* beginp,
                      bool inlineTask) {
-        AstNodeExpr* pinp = argp->exprp();
+        AstNodeExpr* const pinp = argp->exprp();
         if (inlineTask) {
             portp->unlinkFrBack();
             pushDeletep(portp);  // Remove it from the clone (not original)
@@ -533,28 +520,15 @@ class TaskVisitor final : public VNVisitor {
         } else {
             UINFO(9, "     Port " << portp);
             UINFO(9, "      pin " << pinp);
-            if (portp->isWritable() && VN_IS(pinp, Const)) {
-                pinp->v3error("Function/task " + portp->direction().prettyName()  // e.g. "output"
-                              + " connected to constant instead of variable: "
-                              + portp->prettyNameQ());
-                // Make temp pin to tie it off
-                AstVar* const varp = new AstVar{pinp->fileline(), VVarType::STMTTEMP,
-                                                "__VfuncUnconn_" + portp->name() + "__"
-                                                    + std::to_string(m_unconVarNum++),
-                                                portp->dtypep()};
-                m_modp->addStmtsp(varp);
-                AstVarScope* const newvscp = new AstVarScope{pinp->fileline(), m_scopep, varp};
-                m_scopep->addVarsp(newvscp);
-                AstVarRef* const repp = new AstVarRef{pinp->fileline(), newvscp, VAccess::WRITE};
-                pinp->replaceWith(repp);
-                pushDeletep(pinp);
-                pinp = repp;
-            }
             if (inlineTask) {
                 pushDeletep(pinp->unlinkFrBack());  // Cloned in assignment below
                 VL_DO_DANGLING(argp->unlinkFrBack()->deleteTree(), argp);  // Args no longer needed
             }
-            if (portp->isRef() || portp->isConstRef()) {
+            if (portp->isWritable() && VN_IS(pinp, Const)) {
+                pinp->v3error("Function/task " + portp->direction().prettyName()  // e.g. "output"
+                              + " connected to constant instead of variable: "
+                              + portp->prettyNameQ());
+            } else if (portp->isRef() || portp->isConstRef()) {
                 bool refArgOk = false;
                 if (VN_IS(pinp, VarRef) || VN_IS(pinp, MemberSel) || VN_IS(pinp, StructSel)
                     || VN_IS(pinp, ArraySel)) {
@@ -564,7 +538,10 @@ class TaskVisitor final : public VNVisitor {
                         refArgOk = cMethodp->method() == VCMethod::DYN_AT_WRITE_APPEND
                                    || cMethodp->method() == VCMethod::DYN_AT_WRITE_APPEND_BACK;
                     } else {
-                        changeAtWriteRecurse(cMethodp);
+                        if (cMethodp->method() == VCMethod::ARRAY_AT) {
+                            // Change the method to writable variant
+                            cMethodp->method(VCMethod::ARRAY_AT_WRITE);
+                        }
                         refArgOk = cMethodp->method() == VCMethod::ARRAY_AT_WRITE;
                     }
                 }

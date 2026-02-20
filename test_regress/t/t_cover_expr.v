@@ -128,10 +128,10 @@ module t (/*AUTOARG*/
 
     logic ta, tb, tc;
     initial begin
-        automatic cls obj = new;
-        automatic cls null_obj = null;
-        automatic int q[5];
-        automatic int qv[$];
+        cls obj = new;
+        cls null_obj = null;
+        int q[5];
+        int qv[$];
 
         q = '{1, 2, 2, 4, 3};
         // lambas not handled

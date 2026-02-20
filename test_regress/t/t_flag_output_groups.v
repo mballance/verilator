@@ -27,7 +27,7 @@ module t (/*AUTOARG*/
       genvar i;
       for (i = 0; i < MAX; i++)
          initial begin
-            automatic Foo#(i) item = new;
+            Foo#(i) item = new;
             q.push_back(item);
          end
    endgenerate

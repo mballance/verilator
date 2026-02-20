@@ -63,7 +63,7 @@ module t;
       ClsArg   c2;
       Cls2Arg  c3;
       Cls2Arg  c4;
-      automatic ClsNoArg::InnerNoArg c5 = new;
+      ClsNoArg::InnerNoArg c5 = new;
 
       c1 = new;
       if (c1.imembera != 5) $stop;

@@ -99,11 +99,11 @@ endclass
 
 module t;
   initial begin
-    automatic logic ok = 0;
-    automatic int res;
-    automatic Baz baz = new;
-    automatic Qux qux = new;
-    automatic Quux quux = new;
+    logic ok = 0;
+    int res;
+    Baz baz = new;
+    Qux qux = new;
+    Quux quux = new;
 
     baz.test;
     qux.test;

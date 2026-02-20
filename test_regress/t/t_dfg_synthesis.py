@@ -34,8 +34,6 @@ with open(rdFile, 'r', encoding="utf8") as rdFh, \
             nAlwaysReverted += 1
         elif re.search(r'^\s*always', line):
             nAlwaysSynthesized += 1
-        elif re.search(r'^\s*wire.*=', line):
-            nAlwaysSynthesized += 1
         line = line.split("//")[0]
         m = re.search(r'`signal\((\w+),', line)
         if not m:

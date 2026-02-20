@@ -134,8 +134,7 @@ void VerilatedFst::declDTypeEnum(int dtypenum, const char* name, uint32_t elemen
                                  const char** itemValuesp) {
     const fstEnumHandle enumNum
         = fstWriterCreateEnumTable(m_fst, name, elements, minValbits, itemNamesp, itemValuesp);
-    const bool newEntry = m_local2fstdtype[initUserp()].emplace(dtypenum, enumNum).second;
-    assert(newEntry);
+    m_local2fstdtype[dtypenum] = enumNum;
 }
 
 // TODO: should return std::optional<fstScopeType>, but I can't have C++17
@@ -206,9 +205,7 @@ void VerilatedFst::declare(uint32_t code, const char* name, int dtypenum,
     if (bussed) name_ss << " [" << msb << ":" << lsb << "]";
     const std::string name_str = name_ss.str();
 
-    if (dtypenum > 0) {
-        fstWriterEmitEnumTableRef(m_fst, m_local2fstdtype.at(initUserp()).at(dtypenum));
-    }
+    if (dtypenum > 0) fstWriterEmitEnumTableRef(m_fst, m_local2fstdtype[dtypenum]);
 
     fstVarDir varDir = FST_VD_IMPLICIT;
     switch (direction) {

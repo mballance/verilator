@@ -9,6 +9,6 @@ endclass
 
 module t;
    initial begin
-      automatic VBase b = new;  // Error
+      VBase b = new;  // Error
    end
 endmodule

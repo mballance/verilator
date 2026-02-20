@@ -28,7 +28,7 @@ module t_scope_std_randomize;
   endfunction
 
   initial begin
-    automatic bit ok = 0;
+    bit ok = 0;
     int success;
 
     ok = 0;

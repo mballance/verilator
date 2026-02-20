@@ -6,26 +6,24 @@
 
 module t;
 
-  function int unsigned nth_power_of_2(input int unsigned n);
-    nth_power_of_2 = 1;
-    while (n != 0) begin
-      n = n - 1;
-      nth_power_of_2 = nth_power_of_2 << 1;
-    end
-  endfunction
+    function int unsigned nth_power_of_2(input int unsigned n);
+        nth_power_of_2 = 1;
+        while (n != 0) begin
+            n = n - 1;
+            nth_power_of_2 = nth_power_of_2 << 1;
+        end
+    endfunction
 
-  initial begin
-    // Evaluating the function call in the loop condition used
-    // to cause an infinite loop at run-time
-    while (nth_power_of_2(
-        8
-    ) != 256) begin
-      $display("2**8 != 256 ?!");
-      $stop;
-    end
+    initial begin
+        // Evaluating the function call in the loop condition used
+        // to cause an infinite loop at run-time
+        while (nth_power_of_2(8) != 256) begin
+            $display("2**8 != 256 ?!");
+            $stop;
+        end
 
-    $write("*-* All Finished *-*\n");
-    $finish;
-  end
+        $write("*-* All Finished *-*\n");
+        $finish;
+    end
 
 endmodule

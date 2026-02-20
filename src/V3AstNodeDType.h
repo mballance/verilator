@@ -291,7 +291,7 @@ public:
     VNumRange declRange() const VL_MT_STABLE { return VNumRange{hi(), lo()}; }
     AstNodeModule* classOrPackagep() const { return m_classOrPackagep; }
     void classOrPackagep(AstNodeModule* classpackagep) { m_classOrPackagep = classpackagep; }
-    bool isConstrainedRand() const { return m_constrainedRand; }
+    bool isConstrainedRand() { return m_constrainedRand; }
     void markConstrainedRand(bool flag) { m_constrainedRand = flag; }
 };
 
@@ -458,7 +458,6 @@ public:
         return m.m_keyword;
     }
     bool isBitLogic() const { return keyword().isBitLogic(); }
-    bool isCHandle() const VL_MT_STABLE { return keyword().isCHandle(); }
     bool isDouble() const VL_MT_STABLE { return keyword().isDouble(); }
     bool isEvent() const VL_MT_STABLE { return keyword() == VBasicDTypeKwd::EVENT; }
     bool isForkSync() const VL_MT_SAFE { return keyword() == VBasicDTypeKwd::FORK_SYNC; }

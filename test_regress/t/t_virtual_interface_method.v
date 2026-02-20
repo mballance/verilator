@@ -122,8 +122,8 @@ module t;
 
 
   initial begin: main
-    static DriverStim driverStim = new();
-    static MonitorCheck monitorCheck = new();
+    DriverStim   driverStim = new();
+    MonitorCheck monitorCheck = new();
 
     driverStim.bind_if(example_if_inst);
     monitorCheck.bind_if(example_if_inst);

@@ -107,7 +107,7 @@ module t;
   endclass
 
   initial begin
-    automatic Cls c = new();
+    Cls c = new();
     $finish;
   end
 endmodule

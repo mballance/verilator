@@ -1367,7 +1367,7 @@ public:
         return resultp()->isPure();
     }
     bool sameNode(const AstNode*) const override { return true; }
-    bool hasResult() const { return m_hasResult; }
+    bool hasResult() { return m_hasResult; }
     void hasResult(bool flag) { m_hasResult = flag; }
 };
 class AstFError final : public AstNodeExpr {
@@ -1615,24 +1615,6 @@ public:
     string emitVerilog() override { return "%l"; }
     string emitC() override { V3ERROR_NA_RETURN(""); }
     bool cleanOut() const override { return true; }
-};
-class AstGetInitialRandomSeed final : public AstNodeExpr {
-    // Verilog $get_initial_random_seed()
-public:
-    explicit AstGetInitialRandomSeed(FileLine* fl)
-        : ASTGEN_SUPER_GetInitialRandomSeed(fl) {
-        dtypeSetSigned32();
-    }
-    ASTGEN_MEMBERS_AstGetInitialRandomSeed;
-    string emitVerilog() override { return "$get_initial_random_seed()"; }
-    string emitC() final override { V3ERROR_NA_RETURN(""); }
-    bool cleanOut() const override { return true; }
-    bool isGateOptimizable() const override { return false; }
-    bool isPredictOptimizable() const override { return true; }
-    bool isPure() override { return true; }
-    bool isSystemFunc() const override { return true; }
-    int instrCount() const override { return INSTR_COUNT_PLI; }
-    bool sameNode(const AstNode* /*samep*/) const override { return true; }
 };
 class AstImplication final : public AstNodeExpr {
     // Verilog Implication Operator
@@ -4977,6 +4959,28 @@ public:
     int instrCount() const override { return INSTR_COUNT_DBL; }
     bool isSystemFunc() const override { return true; }
 };
+class AstCAwait final : public AstNodeUniop {
+    // Emit C++'s co_await expression
+    // @astgen alias op1 := exprp
+    //
+    // @astgen ptr := m_sentreep : Optional[AstSenTree]  // Sentree related to this await
+public:
+    AstCAwait(FileLine* fl, AstNodeExpr* exprp, AstSenTree* sentreep = nullptr)
+        : ASTGEN_SUPER_CAwait(fl, exprp)
+        , m_sentreep{sentreep} {}
+    ASTGEN_MEMBERS_AstCAwait;
+    bool isTimingControl() const override { return true; }
+    void dump(std::ostream& str) const override;
+    void dumpJson(std::ostream& str) const override;
+    AstSenTree* sentreep() const { return m_sentreep; }
+    void clearSentreep() { m_sentreep = nullptr; }
+    void numberOperate(V3Number& out, const V3Number& lhs) override { V3ERROR_NA; }
+    string emitVerilog() override { V3ERROR_NA_RETURN(""); }
+    string emitC() override { V3ERROR_NA_RETURN(""); }
+    bool cleanOut() const override { return true; }
+    bool cleanLhs() const override { return true; }
+    bool sizeMattersLhs() const override { return false; }
+};
 class AstCCast final : public AstNodeUniop {
     // Cast to C-based data type
     int m_size;
@@ -5553,9 +5557,7 @@ public:
     ASTGEN_MEMBERS_AstToStringN;
     void numberOperate(V3Number& out, const V3Number& lhs) override { V3ERROR_NA; }
     string emitVerilog() override { return "$sformatf(\"%p\", %l)"; }
-    string emitC() override {
-        return isWide() ? "VL_TO_STRING_W(%nw, %li)" : "VL_TO_STRING_DEREF(%li)";
-    }
+    string emitC() override { return isWide() ? "VL_TO_STRING_W(%nw, %li)" : "VL_TO_STRING(%li)"; }
     bool cleanOut() const override { return true; }
     bool cleanLhs() const override { return true; }
     bool sizeMattersLhs() const override { return false; }

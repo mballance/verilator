@@ -89,7 +89,7 @@ AstNodeStmt* checkIterationLimit(AstNetlist* netlistp, const string& name, AstVa
     AstNodeExpr* const condp = new AstGt{flp, counterRefp, constp};
     AstIf* const ifp = new AstIf{flp, condp};
     ifp->branchPred(VBranchPred::BP_UNLIKELY);
-    if (dumpCallp) ifp->addThensp(dumpCallp);
+    ifp->addThensp(dumpCallp);
     AstCStmt* const stmtp = new AstCStmt{flp};
     ifp->addThensp(stmtp);
     const FileLine* const locp = netlistp->topModulep()->fileline();
@@ -137,11 +137,11 @@ void splitCheckFinishSubFunc(AstCFunc* ofuncp, AstCFunc* subFuncp,
     }
 
     bool containsAwait = false;
-    subFuncp->foreach([&](AstNode* nodep) {
+    subFuncp->foreach([&](AstNodeExpr* exprp) {
         // Record if it has a CAwait
-        if (VN_IS(nodep, CAwait)) containsAwait = true;
+        if (VN_IS(exprp, CAwait)) containsAwait = true;
         // Redirect references to arguments to the clone in the sub-function
-        if (AstVarRef* const refp = VN_CAST(nodep, VarRef)) {
+        if (AstVarRef* const refp = VN_CAST(exprp, VarRef)) {
             if (AstVarScope* const vscp = VN_AS(refp->varp()->user3p(), VarScope)) {
                 refp->varp(vscp->varp());
                 refp->varScopep(vscp);
@@ -151,7 +151,9 @@ void splitCheckFinishSubFunc(AstCFunc* ofuncp, AstCFunc* subFuncp,
 
     if (ofuncp->isCoroutine() && containsAwait) {  // Wrap call with co_await
         subFuncp->rtnType("VlCoroutine");
-        ofuncp->addStmtsp(new AstCAwait{flp, callp});
+        AstCAwait* const awaitp = new AstCAwait{flp, callp};
+        awaitp->dtypeSetVoid();
+        ofuncp->addStmtsp(awaitp->makeStmt());
     } else {
         ofuncp->addStmtsp(callp->makeStmt());
     }

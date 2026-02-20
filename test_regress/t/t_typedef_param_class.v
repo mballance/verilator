@@ -16,9 +16,9 @@ endclass
 
 module t;
   initial begin
-    automatic int value0 = 7;
-    automatic Class1#(Class2)::Some_type1 value1 = value0;
-    automatic int value2 = value1;
+    int value0 = 7;
+    Class1#(Class2)::Some_type1 value1 = value0;
+    int value2 = value1;
     $write("*-* All Finished *-*\n");
     $finish;
   end

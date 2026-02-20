@@ -153,10 +153,9 @@ void EmitCBaseVisitorConst::emitCFuncDecl(const AstCFunc* funcp, const AstNodeMo
     if (funcp->isStatic() && funcp->isProperMethod()) putns(funcp, "static ");
     if (funcp->isVirtual()) {
         UASSERT_OBJ(funcp->isProperMethod(), funcp, "Virtual function is not a proper method");
-        if (!funcp->isOverride()) putns(funcp, "virtual ");
+        putns(funcp, "virtual ");
     }
     emitCFuncHeader(funcp, modp, /* withScope: */ false);
-    if (funcp->isOverride()) putns(funcp, " override");
     if (funcp->emptyBody() && !funcp->isLoose() && !cLinkage) {
         putns(funcp, " {}\n");
     } else {

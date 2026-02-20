@@ -23,7 +23,7 @@ endclass
 
 module t();
   initial begin
-    automatic int desired_counts[10] = '{10{1}};
+    int desired_counts[10] = '{10{1}};
     counts = '{10{0}};
 
     Foo::do_something();

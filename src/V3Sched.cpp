@@ -132,8 +132,7 @@ EvalLoop createEvalLoop(
     const string& name,  // Name of current phase
     bool slow,  // Should create slow functions
     const TriggerKit& trigKit,  // The trigger kit
-    AstVarScope* trigp,  // The trigger vector - may be nullptr if no triggers or using 'condp'
-    AstNodeExpr* condp,  // Explicit condition that must be true to run 'phaseWorkp'
+    AstVarScope* trigp,  // The trigger vector - may be nullptr if no triggers
     AstNodeStmt* innerp,  // The inner loop, if any
     AstNodeStmt* phasePrepp,  // Prep statements run before checking triggers
     AstNodeStmt* phaseWorkp,  // The work to do if anything triggered
@@ -142,11 +141,9 @@ EvalLoop createEvalLoop(
     // and must be unmodified otherwise.
     std::function<AstNodeStmt*(AstVarScope*)> phaseExtra = [](AstVarScope*) { return nullptr; }  //
 ) {
-    UASSERT(!trigp || !condp, "Cannot use both 'trigp' and 'condp' in 'createEvalLoop'");
-
-    // All work is under a trigger or condition, so if there are none,
-    // there is nothing to do besides executing the inner loop.
-    if (!trigp && !condp) return {nullptr, innerp};
+    // All work is under a trigger, so if there are no triggers, there is
+    // nothing to do besides executing the inner loop.
+    if (!trigp) return {nullptr, innerp};
 
     const std::string varPrefix = "__V" + tag;
     AstScope* const scopeTopp = netlistp->topScopep()->scopep();
@@ -164,10 +161,9 @@ EvalLoop createEvalLoop(
 
         // If there is work in this phase, execute it if any triggers fired
         if (phaseWorkp) {
+            // Check if any triggers are fired, save the result
             AstNodeExpr* const lhsp = new AstVarRef{flp, executeFlagp, VAccess::WRITE};
-            // If using explicit condition, that directly determines whether to execute,
-            // otherwise check if any triggers are fired
-            AstNodeExpr* const rhsp = condp ? condp : trigKit.newAnySetCall(trigp);
+            AstNodeExpr* const rhsp = trigKit.newAnySetCall(trigp);
             phaseFuncp->addStmtsp(new AstAssign{flp, lhsp, rhsp});
 
             // Add the work
@@ -220,8 +216,8 @@ EvalLoop createEvalLoop(
         AstLoop* const loopp = new AstLoop{flp};
         stmtps->addNext(loopp);
 
-        // Check the iteration limit (aborts if exceeded). Dump triggers if using triggers.
-        AstNodeStmt* dumpCallp = trigp ? trigKit.newDumpCall(trigp, tag, false) : nullptr;
+        // Check the iteration limit (aborts if exceeded)
+        AstNodeStmt* const dumpCallp = trigKit.newDumpCall(trigp, tag, false);
         loopp->addStmtsp(util::checkIterationLimit(netlistp, name, counterp, dumpCallp));
         // Increment the iteration counter
         loopp->addStmtsp(util::incrementVar(counterp));
@@ -425,7 +421,7 @@ void createSettle(AstNetlist* netlistp, AstCFunc* const initFuncp, SenExprBuilde
     // Gather the relevant sensitivity expressions and create the trigger kit
     const auto& senTreeps = getSenTreesUsedBy({&comb, &hybrid});
     const TriggerKit trigKit = TriggerKit::create(netlistp, initFuncp, senExprBulider, {},
-                                                  senTreeps, "stl", extraTriggers, true, false);
+                                                  senTreeps, "stl", extraTriggers, true);
 
     // Remap sensitivities (comb has none, so only do the hybrid)
     remapSensitivities(hybrid, trigKit.mapVec());
@@ -446,18 +442,11 @@ void createSettle(AstNetlist* netlistp, AstCFunc* const initFuncp, SenExprBuilde
 
     // Create the eval loop
     const EvalLoop stlLoop = createEvalLoop(  //
-        netlistp, "stl", "Settle", /* slow: */ true, trigKit,
-        // Use trigger
-        trigKit.vscp(), nullptr,
-        // Explicit condition
+        netlistp, "stl", "Settle", /* slow: */ true, trigKit, trigKit.vscp(),
         // Inner loop statements
         nullptr,
         // Prep statements: Compute the current 'stl' triggers
-        [&trigKit] {
-            AstNodeStmt* const stmtp = trigKit.newCompBaseCall();
-            if (stmtp) stmtp->addNext(trigKit.newDumpCall(trigKit.vscp(), trigKit.name(), true));
-            return stmtp;
-        }(),
+        trigKit.newCompCall(),
         // Work statements: Invoke the 'stl' function
         util::callVoidFunc(stlFuncp));
 
@@ -510,8 +499,7 @@ AstNode* createInputCombLoop(AstNetlist* netlistp, AstCFunc* const initFuncp,
     // Gather the relevant sensitivity expressions and create the trigger kit
     const auto& senTreeps = getSenTreesUsedBy({&logic});
     const TriggerKit trigKit = TriggerKit::create(netlistp, initFuncp, senExprBuilder, {},
-                                                  senTreeps, "ico", extraTriggers, false, false);
-    std::ignore = senExprBuilder.getAndClearResults();
+                                                  senTreeps, "ico", extraTriggers, false);
 
     if (dpiExportTriggerVscp) {
         trigKit.addExtraTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
@@ -557,17 +545,11 @@ AstNode* createInputCombLoop(AstNetlist* netlistp, AstCFunc* const initFuncp,
 
     // Create the eval loop
     const EvalLoop icoLoop = createEvalLoop(  //
-        netlistp, "ico", "Input combinational", /* slow: */ false, trigKit,
-        // Use trigger
-        trigKit.vscp(), nullptr,
+        netlistp, "ico", "Input combinational", /* slow: */ false, trigKit, trigKit.vscp(),
         // Inner loop statements
         nullptr,
         // Prep statements: Compute the current 'ico' triggers
-        [&trigKit] {
-            AstNodeStmt* const stmtp = trigKit.newCompBaseCall();
-            if (stmtp) stmtp->addNext(trigKit.newDumpCall(trigKit.vscp(), trigKit.name(), true));
-            return stmtp;
-        }(),
+        trigKit.newCompCall(),
         // Work statements: Invoke the 'ico' function
         util::callVoidFunc(icoFuncp));
 
@@ -604,33 +586,21 @@ void createEval(AstNetlist* netlistp,  //
 ) {
     FileLine* const flp = netlistp->fileline();
 
-    // Grab the delay scheduler variable, if any
-    AstVarScope* const delaySchedVscp = timingKit.getDelayScheduler(netlistp);
-
-    // 'createResume' consumes the contents that 'createReady' needs, so do the right order
-    AstCCall* const timingReadyp = timingKit.createReady(netlistp);
+    // 'createResume' consumes the contents that 'createCommit' needs, so do the right order
+    AstCCall* const timingCommitp = timingKit.createCommit(netlistp);
     AstCCall* const timingResumep = timingKit.createResume(netlistp);
 
     // Create the active eval loop
     EvalLoop topLoop = createEvalLoop(  //
-        netlistp, "act", "Active", /* slow: */ false, trigKit,
-        // Use trigger
-        actKit.m_vscp, nullptr,
+        netlistp, "act", "Active", /* slow: */ false, trigKit, actKit.m_vscp,
         // Inner loop statements
         nullptr,
         // Prep statements
         [&]() {
             // Compute the current 'act' triggers - the NBA triggers are the latched value
-            AstNodeStmt* stmtsp = trigKit.newCompBaseCall();
-            AstNodeStmt* const dumpp
-                = stmtsp ? trigKit.newDumpCall(trigKit.vscp(), trigKit.name(), true) : nullptr;
-            // Mark as ready for triggered awaits
-            if (timingReadyp) stmtsp = AstNode::addNext(stmtsp, timingReadyp->makeStmt());
-            if (AstVarScope* const vscAccp = trigKit.vscAccp()) {
-                stmtsp = AstNode::addNext(stmtsp, trigKit.newOrIntoCall(actKit.m_vscp, vscAccp));
-            }
-            stmtsp = AstNode::addNext(stmtsp, trigKit.newCompExtCall(nbaKit.m_vscp));
-            stmtsp = AstNode::addNext(stmtsp, dumpp);
+            AstNodeStmt* stmtsp = trigKit.newCompCall(nbaKit.m_vscp);
+            // Commit trigger awaits from the previous iteration
+            if (timingCommitp) stmtsp = AstNode::addNext(stmtsp, timingCommitp->makeStmt());
             // Latch the 'act' triggers under the 'nba' triggers
             stmtsp = AstNode::addNext(stmtsp, trigKit.newOrIntoCall(nbaKit.m_vscp, actKit.m_vscp));
             //
@@ -639,69 +609,17 @@ void createEval(AstNetlist* netlistp,  //
         // Work statements
         [&]() {
             AstNodeStmt* workp = nullptr;
-            if (AstVarScope* const actAccp = trigKit.vscAccp()) {
-                AstCMethodHard* const cCallp = new AstCMethodHard{
-                    flp, new AstVarRef{flp, actAccp, VAccess::WRITE}, VCMethod::UNPACKED_FILL,
-                    new AstConst{flp, AstConst::Unsized64{}, 0}};
-                cCallp->dtypeSetVoid();
-                workp = AstNode::addNext(workp, cCallp->makeStmt());
-            }
             // Resume triggered timing schedulers
-            if (timingResumep) workp = AstNode::addNext(workp, timingResumep->makeStmt());
+            if (timingResumep) workp = timingResumep->makeStmt();
             // Invoke the 'act' function
             workp = AstNode::addNext(workp, util::callVoidFunc(actKit.m_funcp));
             //
             return workp;
         }());
 
-    // Create if there are any delays, so we can check at runtime if a #0 is unexpected
-    if (delaySchedVscp) {
-        topLoop = createEvalLoop(  //
-            netlistp, "inact", "Inactive", /* slow: */ false, trigKit,
-            // Use explicit condition
-            nullptr,
-            [&]() {
-                // Run if any zero delays are pending
-                AstNodeExpr* const callp
-                    = new AstCMethodHard{flp, new AstVarRef{flp, delaySchedVscp, VAccess::READ},
-                                         VCMethod::SCHED_AWAITING_ZERO_DELAY};
-                callp->dtypeSetBit();
-                return callp;
-            }(),
-            // Inner loop statements
-            topLoop.stmtsp,
-            // Prep statements
-            nullptr,
-            // Work statements
-            [&]() -> AstNodeStmt* {
-                if (v3Global.usesZeroDelay()) {
-                    // Resume processes watiting for #0 delay
-                    AstCMethodHard* const callp = new AstCMethodHard{
-                        flp, new AstVarRef{flp, delaySchedVscp, VAccess::READWRITE},
-                        VCMethod::SCHED_RESUME_ZERO_DELAY};
-                    callp->dtypeSetVoid();
-                    return callp->makeStmt();
-                } else {
-                    // Assumption was that the design doesn't use #0 delays.
-                    // Die at run-time if it does.
-                    AstCStmt* const stmtp = new AstCStmt{flp};
-                    const FileLine* const locp = netlistp->topModulep()->fileline();
-                    const std::string& file = VIdProtect::protect(locp->filename());
-                    const std::string& line = std::to_string(locp->lineno());
-                    stmtp->add(
-                        "VL_FATAL_MT(\"" + V3OutFormatter::quoteNameControls(file) + "\", " + line
-                        + ", \"\", \"ZERODLY: Design Verilated with '--no-sched-zero-delay', "
-                        + "but #0 delay executed at runtime\");");
-                    return stmtp;
-                }
-            }());
-    }
-
     // Create the NBA eval loop, which is the default top level loop.
     topLoop = createEvalLoop(  //
-        netlistp, "nba", "NBA", /* slow: */ false, trigKit,
-        // Use trigger
-        nbaKit.m_vscp, nullptr,
+        netlistp, "nba", "NBA", /* slow: */ false, trigKit, nbaKit.m_vscp,
         // Inner loop statements
         topLoop.stmtsp,
         // Prep statements
@@ -732,7 +650,7 @@ void createEval(AstNetlist* netlistp,  //
             netlistp->nbaEventp(nullptr);
             netlistp->nbaEventTriggerp(nullptr);
 
-            // If a dynamic NBA is pending, clear the pending flag and fire the ready event
+            // If a dynamic NBA is pending, clear the pending flag and fire the commit event
             AstIf* const ifp = new AstIf{flp, new AstVarRef{flp, nbaEventTriggerp, VAccess::READ}};
             ifp->addThensp(util::setVar(continuep, 1));
             ifp->addThensp(util::setVar(nbaEventTriggerp, 0));
@@ -746,9 +664,7 @@ void createEval(AstNetlist* netlistp,  //
     if (!obsKit.empty()) {
         // Create the Observed eval loop, which becomes the top level loop.
         topLoop = createEvalLoop(  //
-            netlistp, "obs", "Observed", /* slow: */ false, trigKit,
-            // Use trigger
-            obsKit.m_vscp, nullptr,
+            netlistp, "obs", "Observed", /* slow: */ false, trigKit, obsKit.m_vscp,
             // Inner loop statements
             topLoop.stmtsp,
             // Prep statements
@@ -772,9 +688,7 @@ void createEval(AstNetlist* netlistp,  //
     if (!reactKit.empty()) {
         // Create the Reactive eval loop, which becomes the top level loop.
         topLoop = createEvalLoop(  //
-            netlistp, "react", "Reactive", /* slow: */ false, trigKit,
-            // Use trigger
-            reactKit.m_vscp, nullptr,
+            netlistp, "react", "Reactive", /* slow: */ false, trigKit, reactKit.m_vscp,
             // Inner loop statements
             topLoop.stmtsp,
             // Prep statements
@@ -953,12 +867,11 @@ void schedule(AstNetlist* netlistp) {
                                                &logicRegions.m_obs,  //
                                                &logicRegions.m_react,  //
                                                &timingKit.m_lbs});
-    const TriggerKit trigKit
-        = TriggerKit::create(netlistp, staticp, senExprBuilder, preTreeps, senTreeps, "act",
-                             extraTriggers, false, v3Global.usesTiming());
+    const TriggerKit trigKit = TriggerKit::create(netlistp, staticp, senExprBuilder, preTreeps,
+                                                  senTreeps, "act", extraTriggers, false);
 
     // Add post updates from the timing kit
-    if (timingKit.m_postUpdates) trigKit.compBasep()->addStmtsp(timingKit.m_postUpdates);
+    if (timingKit.m_postUpdates) trigKit.compp()->addStmtsp(timingKit.m_postUpdates);
 
     if (dpiExportTriggerVscp) {
         trigKit.addExtraTriggerAssignment(dpiExportTriggerVscp, dpiExportTriggerIndex);
@@ -1083,44 +996,7 @@ void schedule(AstNetlist* netlistp) {
     createEval(netlistp, icoLoopp, trigKit, actKit, nbaKit, obsKit, reactKit, postponedFuncp,
                timingKit);
 
-    // Step 15: Add neccessary evaluation before awaits
-    if (AstCCall* const readyp = timingKit.createReady(netlistp)) {
-        staticp->addStmtsp(readyp->makeStmt());
-        beforeTrigVisitor(netlistp, senExprBuilder, trigKit);
-    } else {
-        // beforeTrigVisitor clears Sentree pointers in AstCAwaits (as these sentrees will get
-        // deleted later) if there was no need to call it, SenTrees have to be cleaned manually
-        netlistp->foreach([](AstCAwait* const cAwaitp) { cAwaitp->clearSentreep(); });
-    }
-    if (AstVarScope* const trigAccp = trigKit.vscAccp()) {
-        // Copy trigger vector to accumulator at the end of static initialziation so,
-        // triggers fired during initialization persist to the first resume.
-        const AstUnpackArrayDType* const trigAccDTypep
-            = VN_AS(trigAccp->dtypep(), UnpackArrayDType);
-        UASSERT_OBJ(
-            trigAccDTypep->right() == 0, trigAccp,
-            "Expected that trigger vector and accumulator start elements enumeration from 0");
-        UASSERT_OBJ(trigAccDTypep->left() >= 0, trigAccp,
-                    "Expected that trigger vector and accumulator has no negative indexes");
-        FileLine* const flp = trigAccp->fileline();
-        AstVarScope* const vscp = netlistp->topScopep()->scopep()->createTemp("__Vi", 32);
-        AstLoop* const loopp = new AstLoop{flp};
-        loopp->addStmtsp(
-            new AstAssign{flp,
-                          new AstArraySel{flp, new AstVarRef{flp, trigAccp, VAccess::WRITE},
-                                          new AstVarRef{flp, vscp, VAccess::READ}},
-                          new AstArraySel{flp, new AstVarRef{flp, actKit.m_vscp, VAccess::READ},
-                                          new AstVarRef{flp, vscp, VAccess::READ}}});
-        loopp->addStmtsp(util::incrementVar(vscp));
-        loopp->addStmtsp(new AstLoopTest{
-            flp, loopp,
-            new AstLte{flp, new AstVarRef{flp, vscp, VAccess::READ},
-                       new AstConst{flp, AstConst::WidthedValue{}, 32,
-                                    static_cast<uint32_t>(trigAccDTypep->left())}}});
-        staticp->addStmtsp(loopp);
-    }
-
-    // Step 16: Clean up
+    // Step 15: Clean up
     netlistp->clearStlFirstIterationp();
 
     // Haven't split static initializer yet

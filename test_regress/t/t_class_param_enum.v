@@ -14,9 +14,8 @@ endclass
 
 module t;
    initial begin
-      automatic Converter#(enum_t) conv1 = new;
-      automatic Converter#(bit) conv2 = new;
-
+      Converter#(enum_t) conv1 = new;
+      Converter#(bit) conv2 = new;
       if (conv1.toInt(A) != 0) $stop;
       if (conv2.toInt(1) != 1) $stop;
 

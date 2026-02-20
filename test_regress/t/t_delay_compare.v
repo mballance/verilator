@@ -10,7 +10,6 @@ module t;
    real rtim1;
    real rtim2;
 
-   // verilator lint_off ZERODLY
    initial begin
       tim1 = 2;
       tim2 = 3;
@@ -32,6 +31,5 @@ module t;
       $write("*-* All Finished *-*\n");
       $finish;
    end
-   // verilator lint_on ZERODLY
 
 endmodule

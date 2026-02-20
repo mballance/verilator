@@ -24,9 +24,9 @@ module t;
 
   initial begin
     int x;
-    automatic bit flag = 1;
-    automatic int switch = 1;
-    automatic int break_on = 1;
+    bit flag = 1;
+    int switch = 1;
+    int break_on = 1;
     static int return_on = 1;
 
     x = 0;

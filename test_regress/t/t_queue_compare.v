@@ -42,8 +42,8 @@ module t;
       end
 
       begin // classes
-         automatic Cls a = new;
-         automatic Cls b = new;
+         Cls a = new;
+         Cls b = new;
          Cls q1[$];
          Cls q2[$];
          q1.push_back(a);
