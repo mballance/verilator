@@ -18,7 +18,7 @@ module t;
     endgroup
 
     initial begin
-        cg cg_inst = new;
+        automatic cg cg_inst = new;
 
         // Sample legal values only
         data = 0;

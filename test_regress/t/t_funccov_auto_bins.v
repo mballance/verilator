@@ -17,7 +17,7 @@ module t;
     /* verilator lint_on CMPCONST */
 
     initial begin
-        cg cg_inst = new;
+        automatic cg cg_inst = new;
 
         // Initial coverage should be 0%
         $display("Coverage initial: %f%% (expected ~0.00%%)", cg_inst.get_inst_coverage());

@@ -69,9 +69,9 @@ module t;
    cg_perf cg_inst = new;
 
    initial begin
-      longint start_time, end_time, elapsed;
-      int iterations = 100000;
-      real avg_time_ns;
+      automatic longint start_time, end_time, elapsed;
+      automatic int iterations = 100000;
+      automatic real avg_time_ns;
 
       $display("=== Functional Coverage Performance Test ===");
       $display("Iterations: %0d", iterations);

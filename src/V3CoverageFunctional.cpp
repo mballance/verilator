@@ -466,7 +466,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
         if (!m_sampleFuncp || !m_constructorp) {
-            coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without sample() or constructor");  // LCOV_EXCL_LINE
+            coverpointp->v3warn(E_UNSUPPORTED,
+                                "Coverpoint without sample() or constructor");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -686,8 +687,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // Create if statement
         AstIf* const ifp = new AstIf{defBinp->fileline(), defaultCondp, stmtp, nullptr};
 
-        if (!m_sampleFuncp)
-            defBinp->v3fatalSrc("m_sampleFuncp is null for default bin");
+        if (!m_sampleFuncp) defBinp->v3fatalSrc("m_sampleFuncp is null for default bin");
         m_sampleFuncp->addStmtsp(ifp);
         UINFO(4, "      Successfully added default bin if statement" << endl);
     }
@@ -1072,8 +1072,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // Create if statement
         AstIf* const ifp = new AstIf{binp->fileline(), condp, stmtp, nullptr};
 
-        if (!m_sampleFuncp)
-            binp->v3fatalSrc("m_sampleFuncp is null for array bin");
+        if (!m_sampleFuncp) binp->v3fatalSrc("m_sampleFuncp is null for array bin");
         m_sampleFuncp->addStmtsp(ifp);
     }
 
@@ -1315,7 +1314,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
     void generateCrossCode(AstCoverCross* crossp) {
         if (!m_sampleFuncp || !m_constructorp) {
-            crossp->v3warn(E_UNSUPPORTED, "Cross coverage without sample() or constructor");  // LCOV_EXCL_LINE
+            crossp->v3warn(E_UNSUPPORTED,
+                           "Cross coverage without sample() or constructor");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -1355,7 +1355,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
 
         if (coverpointRefs.size() < 2) {
-            crossp->v3warn(E_UNSUPPORTED, "Cross coverage requires at least 2 coverpoints");  // LCOV_EXCL_LINE
+            crossp->v3warn(E_UNSUPPORTED,
+                           "Cross coverage requires at least 2 coverpoints");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -1703,8 +1704,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // We need to add the registration code to the constructor
         // The registration should happen after member variables are initialized
         if (!m_constructorp) {
-            m_covergroupp->v3warn(E_UNSUPPORTED,
-                                  "Cannot generate coverage registration without constructor");  // LCOV_EXCL_LINE
+            m_covergroupp->v3warn(
+                E_UNSUPPORTED,
+                "Cannot generate coverage registration without constructor");  // LCOV_EXCL_LINE
             return;
         }
 
