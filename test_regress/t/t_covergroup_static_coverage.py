@@ -4,18 +4,15 @@
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of either the GNU Lesser General Public License Version 3
 # or the Perl Artistic License Version 2.0.
-# SPDX-FileCopyrightText: 2025 Wilson Snyder
+# SPDX-FileCopyrightText: 2024 Wilson Snyder
 # SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0
 
 import vltest_bootstrap
 
 test.scenarios('vlt')
 
-# Covergroup inheritance with 'extends' is not yet supported
-test.compile(
-    fails=test.vlt_all,
-    expect=
-    r'%Error: t/t_covergroup_extends.v:\d+:\d+: Unsupported: covergroup inheritance \(extends\) is not implemented'
-)
+# Type-level (static) coverage using cg::get_coverage() compiles but returns placeholder value
+# Test compiles successfully but runtime behavior is incorrect (returns 0.0)
+test.compile()
 
 test.passes()

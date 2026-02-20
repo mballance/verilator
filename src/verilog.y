@@ -6972,7 +6972,7 @@ covergroup_declaration<nodep>:  // ==IEEE: covergroup_declaration
         |        yCOVERGROUP yEXTENDS idAny ';'
         /*cont*/     coverage_spec_or_optionListE
         /*cont*/ yENDGROUP endLabelE
-                        { BBCOVERIGN($1, "Ignoring unsupported: covergroup inheritance (extends)");
+                        { BBUNSUP($1, "Unsupported: covergroup inheritance (extends) is not implemented");
                           AstClass *cgClassp = new AstClass{$<fl>3, *$3, PARSEP->libname()};
                           cgClassp->isCovergroup(true);
                           AstFunc* const newp = new AstFunc{$<fl>1, "new", nullptr, nullptr};
