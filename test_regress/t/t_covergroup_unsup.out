@@ -186,7 +186,7 @@
 %Warning-COVERIGN: t/t_covergroup_unsup.v:174:10: Ignoring unsupported: explicit coverage cross bins
   174 |          bins bin_multiple_fields = binsof(p.inner_packet.field);
       |          ^~~~
-%Warning-COVERIGN: t/t_covergroup_unsup.v:195:7: Ignoring unsupported: covergroup inheritance (extends)
-  195 |       covergroup extends cg_empty;
+%Warning-COVERIGN: t/t_covergroup_unsup.v:196:7: Ignoring unsupported: covergroup inheritance (extends)
+  196 |       covergroup extends cg_empty;
       |       ^~~~~~~~~~
 %Error: Exiting due to
