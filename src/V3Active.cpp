@@ -629,7 +629,8 @@ class CovergroupSamplingVisitor final : public VNVisitor {
     ActiveNamer m_namer;  // Reuse active naming infrastructure
     AstScope* m_scopep = nullptr;  // Current scope
     bool m_inFirstPass = true;  // First pass collects CFuncs, second pass adds sampling
-    std::unordered_map<const AstClass*, AstCFunc*> m_covergroupSampleFuncs;  // Class -> sample CFunc
+    std::unordered_map<const AstClass*, AstCFunc*>
+        m_covergroupSampleFuncs;  // Class -> sample CFunc
 
     // Helper to get the clocking event from a covergroup class
     AstSenTree* getCovergroupEvent(AstClass* classp) {
