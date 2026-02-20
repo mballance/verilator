@@ -19,10 +19,8 @@
 //              Generate member variable for VerilatedCoverpoint
 //              Generate initialization in constructor
 //              Generate sample code in sample() method
-//
-// Not yet implemented (future PRs):
-//   - Cross coverage (PR-5): generateCrossBinsRecursive, generateOneCrossBin,
-//     generateNWayCrossBinMatchCode, generateCrossCode
+//              N-way cross coverage via generateCrossBinsRecursive, generateOneCrossBin,
+//              generateNWayCrossBinMatchCode, generateCrossCode
 //
 //*************************************************************************
 
@@ -91,7 +89,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // For each coverpoint, generate sampling code
         for (AstCoverpoint* cpp : m_coverpoints) { generateCoverpointCode(cpp); }
 
-        // Cross coverage is not yet supported (PR-5); nodes were already deleted in visit()
+        // For each cross, generate sampling code
+        for (AstCoverCross* crossp : m_coverCrosses) { generateCrossCode(crossp); }
 
         // Generate coverage computation code (even for empty covergroups)
         generateCoverageComputationCode();
@@ -692,6 +691,169 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         if (!m_sampleFuncp) defBinp->v3fatalSrc("m_sampleFuncp is null for default bin");
         m_sampleFuncp->addStmtsp(ifp);
         UINFO(4, "      Successfully added default bin if statement" << endl);
+    }
+
+    // Recursive helper to generate Cartesian product of cross bins
+    void generateCrossBinsRecursive(AstCoverCross* crossp,
+                                    const std::vector<AstCoverpoint*>& coverpointRefs,
+                                    const std::vector<std::vector<AstCoverBin*>>& allCpBins,
+                                    std::vector<AstCoverBin*> currentCombination,
+                                    size_t dimension) {
+        if (dimension == allCpBins.size()) {
+            // Base case: we have a complete combination, generate the cross bin
+            generateOneCrossBin(crossp, coverpointRefs, currentCombination);
+            return;
+        }
+
+        // Recursive case: iterate through bins at current dimension
+        for (AstCoverBin* binp : allCpBins[dimension]) {
+            currentCombination.push_back(binp);
+            generateCrossBinsRecursive(crossp, coverpointRefs, allCpBins, currentCombination,
+                                       dimension + 1);
+            currentCombination.pop_back();
+        }
+    }
+
+    // Generate a single cross bin for a specific combination of bins
+    void generateOneCrossBin(AstCoverCross* crossp,
+                             const std::vector<AstCoverpoint*>& coverpointRefs,
+                             const std::vector<AstCoverBin*>& bins) {
+        // Build sanitized name from all bins
+        string binName;
+        string varName = "__Vcov_" + crossp->name();
+
+        for (size_t i = 0; i < bins.size(); ++i) {
+            string sanitized = bins[i]->name();
+            std::replace(sanitized.begin(), sanitized.end(), '[', '_');
+            std::replace(sanitized.begin(), sanitized.end(), ']', '_');
+
+            if (i > 0) {
+                binName += "_x_";
+                varName += "_x_";
+            }
+            binName += sanitized;
+            varName += "_" + sanitized;
+        }
+
+        // Create member variable for this cross bin
+        AstVar* const varp = new AstVar{crossp->fileline(), VVarType::MEMBER, varName,
+                                        bins[0]->findUInt32DType()};
+        varp->isStatic(false);
+        m_covergroupp->addMembersp(varp);
+
+        UINFO(4, "      Created cross bin variable: " << varName << endl);
+
+        // Track this for coverage computation
+        AstCoverBin* pseudoBinp = new AstCoverBin{crossp->fileline(), binName,
+                                                  static_cast<AstNode*>(nullptr), false, false};
+        m_binInfos.push_back(BinInfo(pseudoBinp, varp, 1, nullptr, crossp));
+
+        // Generate matching code: if (bin1 && bin2 && ... && binN) varName++;
+        generateNWayCrossBinMatchCode(crossp, coverpointRefs, bins, varp);
+    }
+
+    // Generate matching code for N-way cross bin
+    void generateNWayCrossBinMatchCode(AstCoverCross* crossp,
+                                       const std::vector<AstCoverpoint*>& coverpointRefs,
+                                       const std::vector<AstCoverBin*>& bins, AstVar* hitVarp) {
+        UINFO(4, "      Generating " << bins.size() << "-way cross bin match" << endl);
+
+        // Build combined condition by ANDing all bin conditions
+        AstNodeExpr* fullCondp = nullptr;
+
+        for (size_t i = 0; i < bins.size(); ++i) {
+            AstNodeExpr* exprp = coverpointRefs[i]->exprp();
+            if (!exprp) continue;
+
+            AstNodeExpr* condp = buildBinCondition(bins[i], exprp);
+            if (!condp) continue;
+
+            if (fullCondp) {
+                fullCondp = new AstAnd{crossp->fileline(), fullCondp, condp};
+            } else {
+                fullCondp = condp;
+            }
+        }
+
+        if (!fullCondp) return;
+
+        // Generate: if (cond1 && cond2 && ... && condN) { ++varName; }
+        AstNodeStmt* incrp = new AstAssign{
+            crossp->fileline(), new AstVarRef{crossp->fileline(), hitVarp, VAccess::WRITE},
+            new AstAdd{crossp->fileline(),
+                       new AstVarRef{crossp->fileline(), hitVarp, VAccess::READ},
+                       new AstConst{crossp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
+
+        AstIf* const ifp = new AstIf{crossp->fileline(), fullCondp, incrp};
+        m_sampleFuncp->addStmtsp(ifp);
+    }
+
+    void generateCrossCode(AstCoverCross* crossp) {
+        if (!m_sampleFuncp || !m_constructorp) {
+            crossp->v3warn(E_UNSUPPORTED,
+                           "Cross coverage without sample() or constructor");  // LCOV_EXCL_LINE
+            return;
+        }
+
+        UINFO(4, "  Generating code for cross: " << crossp->name() << endl);
+
+        // Resolve coverpoint references and build list
+        std::vector<AstCoverpoint*> coverpointRefs;
+        AstNode* itemp = crossp->itemsp();
+        while (itemp) {
+            AstNode* nextp = itemp->nextp();
+            AstCoverpointRef* const refp = VN_CAST(itemp, CoverpointRef);
+            if (refp) {
+                // Find the referenced coverpoint
+                AstCoverpoint* foundCpp = nullptr;
+                for (AstCoverpoint* cpp : m_coverpoints) {
+                    if (cpp->name() == refp->name()) {
+                        foundCpp = cpp;
+                        break;
+                    }
+                }
+
+                if (!foundCpp) {
+                    refp->v3warn(COVERIGN,
+                                 "Ignoring unsupported: cross references unknown coverpoint: "
+                                     + refp->name());
+                    // Delete the entire cross since we can't generate it
+                    VL_DO_DANGLING(crossp->unlinkFrBack()->deleteTree(), crossp);
+                    return;
+                }
+
+                coverpointRefs.push_back(foundCpp);
+
+                // Delete the reference node - it's no longer needed
+                VL_DO_DANGLING(refp->unlinkFrBack()->deleteTree(), refp);
+            }
+            itemp = nextp;
+        }
+
+        if (coverpointRefs.size() < 2) {
+            crossp->v3warn(E_UNSUPPORTED,
+                           "Cross coverage requires at least 2 coverpoints");  // LCOV_EXCL_LINE
+            return;
+        }
+
+        UINFO(4, "    Generating " << coverpointRefs.size() << "-way cross" << endl);
+
+        // Collect bins from all coverpoints (excluding ignore/illegal bins)
+        std::vector<std::vector<AstCoverBin*>> allCpBins;
+        for (AstCoverpoint* cpp : coverpointRefs) {
+            std::vector<AstCoverBin*> cpBins;
+            for (AstNode* binp = cpp->binsp(); binp; binp = binp->nextp()) {
+                AstCoverBin* const cbinp = VN_CAST(binp, CoverBin);
+                if (cbinp && cbinp->binsType() == VCoverBinsType::USER) {
+                    cpBins.push_back(cbinp);
+                }
+            }
+            UINFO(4, "      Found " << cpBins.size() << " bins in " << cpp->name() << endl);
+            allCpBins.push_back(cpBins);
+        }
+
+        // Generate cross bins using Cartesian product
+        generateCrossBinsRecursive(crossp, coverpointRefs, allCpBins, {}, 0);
     }
 
     AstNodeExpr* buildBinCondition(AstCoverBin* binp, AstNodeExpr* exprp) {
@@ -1707,9 +1869,9 @@ class FunctionalCoverageVisitor final : public VNVisitor {
     }
 
     void visit(AstCoverCross* nodep) override {
-        // Cross coverage is not yet supported in this PR (deferred to PR-5)
-        nodep->v3warn(COVERIGN, "Ignoring unsupported: cross coverage not yet implemented");
-        VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
+        UINFO(9, "Found cross: " << nodep->name() << endl);
+        m_coverCrosses.push_back(nodep);
+        iterateChildren(nodep);
     }
 
     void visit(AstNode* nodep) override { iterateChildren(nodep); }
