@@ -363,11 +363,10 @@ class TimingSuspendableVisitor final : public VNVisitor {
         }
 
         UINFO(9, "V3Timing: Processing CCall to " << funcp->name() << " in dependency graph\n");
-        new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(funcp), getSuspendDepVtx(m_procp),
-                        P_CALL};
+        new V3GraphEdge{&m_suspGraph, getSuspendDepVtx(funcp), getSuspendDepVtx(m_procp), P_CALL};
 
-        new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(funcp),
-                        getNeedsProcDepVtx(m_procp), P_CALL};
+        new V3GraphEdge{&m_procGraph, getNeedsProcDepVtx(funcp), getNeedsProcDepVtx(m_procp),
+                        P_CALL};
 
         iterateChildren(nodep);
     }
