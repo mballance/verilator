@@ -172,7 +172,7 @@ public:
         // IEEE: function void sample([arguments])
         {
             AstFunc* const funcp = new AstFunc{nodep->fileline(), "sample", nullptr, nullptr};
-            
+
             // Add sample arguments as function parameters and assignments
             // Member variables have already been created in verilog.y
             if (sampleArgs) {
@@ -196,7 +196,7 @@ public:
                     }
                 }
             }
-            
+
             funcp->classMethod(true);
             funcp->dtypep(funcp->findVoidDType());
             nodep->addMembersp(funcp);
