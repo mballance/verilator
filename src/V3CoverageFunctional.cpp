@@ -1173,8 +1173,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             // Increment bin counter
             matchActionp
                 = new AstAssign{fl, new AstVarRef{fl, hitVarp, VAccess::WRITE},
-                                 new AstAdd{fl, new AstVarRef{fl, hitVarp, VAccess::READ},
-                                            new AstConst{fl, AstConst::WidthedValue{}, 32, 1}}};
+                                new AstAdd{fl, new AstVarRef{fl, hitVarp, VAccess::READ},
+                                           new AstConst{fl, AstConst::WidthedValue{}, 32, 1}}};
 
             // For illegal_bins, add error message
             if (binp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
