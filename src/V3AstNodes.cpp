@@ -3248,6 +3248,7 @@ void AstCoverToggleDecl::dumpJson(std::ostream& str) const {
                     std::to_string(range().left()) + ":" + std::to_string(range().right()));
     }
 }
+// NOTE: AstCoverBin and AstCoverpoint dump methods removed - moved to V3AstNodeFuncCov.cpp
 void AstCoverInc::dump(std::ostream& str) const {
     this->AstNodeStmt::dump(str);
     str << " -> ";
