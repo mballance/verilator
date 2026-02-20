@@ -304,7 +304,7 @@ public:
                 options.push_back(coverOptp);
                 VL_DO_DANGLING(optp->deleteTree(), optp);
             } else {
-                binp->v3warn(COVERIGN, "Unexpected node in bins list, ignoring");
+                binp->v3warn(COVERIGN, "Unexpected node in bins list, ignoring");  // LCOV_EXCL_LINE
                 VL_DO_DANGLING(binp->deleteTree(), binp);
             }
         }
