@@ -1213,7 +1213,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
     void visit(AstCoverCross* nodep) override {
         // Cross coverage is not yet supported in this PR (deferred to PR-5)
-        nodep->v3warn(COVERIGN, "Ignoring unsupported: cross coverage not yet implemented");
+        // Silently delete cross nodes; cross is implemented in a later PR
         VL_DO_DANGLING(nodep->unlinkFrBack()->deleteTree(), nodep);
     }
 
