@@ -177,8 +177,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             // TODO (PR-3/4): Handle array bins here
             // if (cbinp->isArray()) { generateArrayBins/generateTransitionArrayBins ... }
             if (cbinp->isArray()) {
-                UINFO(4, "    Skipping array bin (not yet implemented): " << cbinp->name()
-                                                                          << endl);
+                UINFO(4,
+                      "    Skipping array bin (not yet implemented): " << cbinp->name() << endl);
                 continue;
             }
 
