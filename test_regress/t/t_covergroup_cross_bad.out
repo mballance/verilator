@@ -1,0 +1,7 @@
+%Warning-COVERIGN: t/t_covergroup_cross_bad.v:16:33: Ignoring unsupported: cross references unknown coverpoint: cp_nonexistent
+                                                   : ... note: In instance 't'
+   16 |       bad_cross: cross cp_addr, cp_nonexistent;
+      |                                 ^~~~~~~~~~~~~~
+                   ... For warning description see https://verilator.org/warn/COVERIGN?v=latest
+                   ... Use "/* verilator lint_off COVERIGN */" and lint_on around source to disable this message.
+%Error: Exiting due to
