@@ -21,9 +21,6 @@
 //              Generate sample code in sample() method
 //
 // Not yet implemented (future PRs):
-//   - Auto-bins expansion (PR-3): expandAutomaticBins, createImplicitAutoBins,
-//     extractValuesFromRange, getExcludedValues, hasRegularBins, getAutoBinMax,
-//     generateArrayBins, generateArrayBinMatchCode
 //   - Transition bins (PR-4): createPrevValueVar, createSeqStateVar,
 //     generateTransitionBinMatchCode, generateMultiValueTransitionCode,
 //     generateSingleTransitionCode, generateTransitionArrayBins,
@@ -125,6 +122,284 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         return 1;  // Default: at least 1 hit required
     }
 
+    // Get auto_bin_max option value (check coverpoint options, then covergroup)
+    int getAutoBinMax(AstCoverpoint* coverpointp) {
+        // Check coverpoint options first
+        for (AstNode* optionp = coverpointp->optionsp(); optionp; optionp = optionp->nextp()) {
+            if (AstCoverOption* optp = VN_CAST(optionp, CoverOption)) {
+                if (optp->optionType() == VCoverOptionType::AUTO_BIN_MAX) {
+                    if (AstConst* constp = VN_CAST(optp->valuep(), Const)) {
+                        return constp->toSInt();
+                    }
+                }
+            }
+        }
+        // Check covergroup-level option stored in AstClass
+        if (m_covergroupp && m_covergroupp->cgAutoBinMax() >= 0) {
+            // Value was explicitly set (>= 0)
+            return m_covergroupp->cgAutoBinMax();
+        }
+        return 64;  // Default per IEEE 1800-2017
+    }
+
+    // Extract values to exclude from automatic bins (from ignore_bins and illegal_bins)
+    std::set<uint64_t> getExcludedValues(AstCoverpoint* coverpointp) {
+        std::set<uint64_t> excluded;
+
+        // Scan existing bins for ignore/illegal types
+        for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
+            AstCoverBin* cbinp = VN_CAST(binp, CoverBin);
+            if (!cbinp) continue;
+
+            VCoverBinsType btype = cbinp->binsType();
+            if (btype != VCoverBinsType::BINS_IGNORE && btype != VCoverBinsType::BINS_ILLEGAL) {
+                continue;
+            }
+
+            // Extract values from the bin's range expression
+            if (AstNode* rangep = cbinp->rangesp()) { extractValuesFromRange(rangep, excluded); }
+        }
+
+        return excluded;
+    }
+
+    // Extract individual values from a range expression
+    void extractValuesFromRange(AstNode* nodep, std::set<uint64_t>& values) {
+        if (!nodep) return;
+
+        if (AstConst* constp = VN_CAST(nodep, Const)) {
+            // Single constant value
+            values.insert(constp->toUQuad());
+        } else if (AstInsideRange* rangep = VN_CAST(nodep, InsideRange)) {
+            // Range [lo:hi]
+            AstConst* loConstp = VN_CAST(rangep->lhsp(), Const);
+            AstConst* hiConstp = VN_CAST(rangep->rhsp(), Const);
+            if (loConstp && hiConstp) {
+                uint64_t lo = loConstp->toUQuad();
+                uint64_t hi = hiConstp->toUQuad();
+                // Add all values in range (but limit to reasonable size)
+                if (hi - lo < 1000) {  // Sanity check
+                    for (uint64_t v = lo; v <= hi && v <= lo + 1000; v++) { values.insert(v); }
+                }
+            }
+        }
+
+        // Recurse into list of nodes
+        extractValuesFromRange(nodep->op1p(), values);
+        extractValuesFromRange(nodep->op2p(), values);
+        extractValuesFromRange(nodep->op3p(), values);
+        extractValuesFromRange(nodep->op4p(), values);
+    }
+
+    // Check if coverpoint has any regular bins (not just ignore/illegal)
+    bool hasRegularBins(AstCoverpoint* coverpointp) {
+        for (AstNode* binp = coverpointp->binsp(); binp; binp = binp->nextp()) {
+            if (AstCoverBin* cbinp = VN_CAST(binp, CoverBin)) {
+                VCoverBinsType btype = cbinp->binsType();
+                if (btype != VCoverBinsType::BINS_IGNORE
+                    && btype != VCoverBinsType::BINS_ILLEGAL) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    void expandAutomaticBins(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {
+        // Find and expand any automatic bins
+        AstNode* prevBinp = nullptr;
+        for (AstNode* binp = coverpointp->binsp(); binp;) {
+            AstCoverBin* const cbinp = VN_CAST(binp, CoverBin);
+            AstNode* nextBinp = binp->nextp();
+
+            if (cbinp && cbinp->binsType() == VCoverBinsType::AUTO) {
+                UINFO(4, "  Expanding automatic bin: " << cbinp->name() << endl);
+
+                // Get array size - must be a constant
+                AstNodeExpr* sizep = cbinp->arraySizep();
+                if (!sizep) {
+                    cbinp->v3error("Automatic bins requires array size [N]");  // LCOV_EXCL_LINE
+                    binp = nextBinp;
+                    continue;
+                }
+
+                // Evaluate as constant
+                const AstConst* constp = VN_CAST(sizep, Const);
+                if (!constp) {
+                    cbinp->v3error("Automatic bins array size must be a constant");
+                    binp = nextBinp;
+                    continue;
+                }
+
+                const int numBins = constp->toSInt();
+                if (numBins <= 0 || numBins > 10000) {
+                    cbinp->v3error("Automatic bins array size must be 1-10000, got "
+                                   + std::to_string(numBins));
+                    binp = nextBinp;
+                    continue;
+                }
+
+                // Calculate range division
+                const int width = exprp->width();
+                const uint64_t maxVal = (width >= 64) ? UINT64_MAX : ((1ULL << width) - 1);
+                const uint64_t binSize = (maxVal + 1) / numBins;
+
+                UINFO(4, "    Width=" << width << " maxVal=" << maxVal << " numBins=" << numBins
+                                      << " binSize=" << binSize << endl);
+
+                // Create expanded bins
+                for (int i = 0; i < numBins; i++) {
+                    const uint64_t lo = i * binSize;
+                    const uint64_t hi = (i == numBins - 1) ? maxVal : ((i + 1) * binSize - 1);
+
+                    // Create constants for range
+                    AstConst* loConstp
+                        = new AstConst{cbinp->fileline(), V3Number(cbinp->fileline(), width, lo)};
+                    AstConst* hiConstp
+                        = new AstConst{cbinp->fileline(), V3Number(cbinp->fileline(), width, hi)};
+
+                    // Create InsideRange [lo:hi]
+                    AstInsideRange* rangep
+                        = new AstInsideRange{cbinp->fileline(), loConstp, hiConstp};
+                    rangep->dtypeFrom(exprp);  // Set dtype from coverpoint expression
+
+                    // Create new bin
+                    const string binName = cbinp->name() + "[" + std::to_string(i) + "]";
+                    AstCoverBin* newBinp
+                        = new AstCoverBin{cbinp->fileline(), binName, rangep, false, false};
+
+                    // Insert after previous bin
+                    if (prevBinp) {
+                        prevBinp->addNext(newBinp);
+                    } else {
+                        coverpointp->addBinsp(newBinp);
+                    }
+                    prevBinp = newBinp;
+                }
+
+                // Remove the AUTO bin from the list
+                binp->unlinkFrBack();
+                VL_DO_DANGLING(binp->deleteTree(), binp);
+            } else {
+                prevBinp = binp;
+            }
+
+            binp = nextBinp;
+        }
+    }
+
+    // Create implicit automatic bins when coverpoint has no explicit regular bins
+    void createImplicitAutoBins(AstCoverpoint* coverpointp, AstNodeExpr* exprp) {
+        // If already has regular bins, nothing to do
+        if (hasRegularBins(coverpointp)) return;
+
+        UINFO(4, "  Creating implicit automatic bins for coverpoint: " << coverpointp->name()
+                                                                       << endl);
+
+        // Get excluded values from ignore_bins and illegal_bins
+        std::set<uint64_t> excluded = getExcludedValues(coverpointp);
+
+        if (!excluded.empty()) {
+            UINFO(4, "    Found " << excluded.size() << " excluded values" << endl);
+        }
+
+        // Get auto_bin_max option
+        const int autoBinMax = getAutoBinMax(coverpointp);
+        const int width = exprp->width();
+        const uint64_t maxVal = (width >= 64) ? UINT64_MAX : ((1ULL << width) - 1);
+        const uint64_t numTotalValues = (width >= 64) ? UINT64_MAX : (1ULL << width);
+        const uint64_t numValidValues = numTotalValues - excluded.size();
+
+        // Determine number of bins to create (based on non-excluded values)
+        int numBins;
+        if (numValidValues <= static_cast<uint64_t>(autoBinMax)) {
+            // Create one bin per valid value
+            numBins = numValidValues;
+        } else {
+            // Create autoBinMax bins, dividing range
+            numBins = autoBinMax;
+        }
+
+        UINFO(4, "    Width=" << width << " numTotalValues=" << numTotalValues
+                              << " numValidValues=" << numValidValues << " autoBinMax="
+                              << autoBinMax << " creating " << numBins << " bins" << endl);
+
+        // Strategy: Create bins for each value (if numValidValues <= autoBinMax)
+        // or create range bins that avoid excluded values
+        if (numValidValues <= static_cast<uint64_t>(autoBinMax)) {
+            // Create one bin per valid value
+            int binCount = 0;
+            for (uint64_t v = 0; v <= maxVal && binCount < numBins; v++) {
+                // Skip excluded values
+                if (excluded.find(v) != excluded.end()) continue;
+
+                // Create single-value bin
+                AstConst* valConstp = new AstConst{coverpointp->fileline(),
+                                                   V3Number(coverpointp->fileline(), width, v)};
+                AstConst* valConstp2 = new AstConst{coverpointp->fileline(),
+                                                    V3Number(coverpointp->fileline(), width, v)};
+
+                AstInsideRange* rangep
+                    = new AstInsideRange{coverpointp->fileline(), valConstp, valConstp2};
+                rangep->dtypeFrom(exprp);
+
+                const string binName = "auto_" + std::to_string(binCount);
+                AstCoverBin* newBinp
+                    = new AstCoverBin{coverpointp->fileline(), binName, rangep, false, false};
+
+                coverpointp->addBinsp(newBinp);
+                binCount++;
+            }
+            UINFO(4, "    Created " << binCount << " single-value automatic bins" << endl);
+        } else {
+            // Create range bins (more complex - need to handle excluded values in ranges)
+            // For simplicity, create bins and let excluded values not match any bin
+            const uint64_t binSize = (maxVal + 1) / numBins;
+
+            for (int i = 0; i < numBins; i++) {
+                const uint64_t lo = i * binSize;
+                const uint64_t hi = (i == numBins - 1) ? maxVal : ((i + 1) * binSize - 1);
+
+                // Check if entire range is excluded
+                bool anyValid = false;
+                for (uint64_t v = lo; v <= hi && v <= lo + 1000; v++) {
+                    if (excluded.find(v) == excluded.end()) {
+                        anyValid = true;
+                        break;
+                    }
+                }
+
+                if (!anyValid && (hi - lo < 1000)) {
+                    // Skip this bin entirely if all values are excluded
+                    UINFO(4, "    Skipping bin [" << lo << ":" << hi << "] - all values excluded"
+                                                  << endl);
+                    continue;
+                }
+
+                // Create constants for range
+                AstConst* loConstp = new AstConst{coverpointp->fileline(),
+                                                  V3Number(coverpointp->fileline(), width, lo)};
+                AstConst* hiConstp = new AstConst{coverpointp->fileline(),
+                                                  V3Number(coverpointp->fileline(), width, hi)};
+
+                // Create InsideRange [lo:hi]
+                AstInsideRange* rangep
+                    = new AstInsideRange{coverpointp->fileline(), loConstp, hiConstp};
+                rangep->dtypeFrom(exprp);
+
+                // Create bin name
+                const string binName = "auto_" + std::to_string(i);
+                AstCoverBin* newBinp
+                    = new AstCoverBin{coverpointp->fileline(), binName, rangep, false, false};
+
+                // Add to coverpoint
+                coverpointp->addBinsp(newBinp);
+            }
+
+            UINFO(4, "    Created range-based automatic bins" << endl);
+        }
+    }
+
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
         if (!m_sampleFuncp || !m_constructorp) {
             coverpointp->v3warn(E_UNSUPPORTED,
@@ -141,9 +416,11 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             return;
         }
 
-        // TODO (PR-3): Expand automatic bins and create implicit auto-bins here
-        // expandAutomaticBins(coverpointp, exprp);
-        // createImplicitAutoBins(coverpointp, exprp);
+        // Expand automatic bins before processing
+        expandAutomaticBins(coverpointp, exprp);
+
+        // Create implicit automatic bins if no regular bins exist
+        createImplicitAutoBins(coverpointp, exprp);
 
         // Extract option values for this coverpoint
         int atLeastValue = getCoverpointAtLeast(coverpointp);
@@ -167,18 +444,15 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 continue;
             }
 
-            // TODO (PR-3): Handle AUTO bins expansion here
-            if (cbinp->binsType() == VCoverBinsType::AUTO) {
-                UINFO(4, "    Skipping AUTO bin (not yet implemented, PR-3): " << cbinp->name()
-                                                                               << endl);
-                continue;
-            }
-
-            // TODO (PR-3/4): Handle array bins here
-            // if (cbinp->isArray()) { generateArrayBins/generateTransitionArrayBins ... }
+            // Handle array bins: create separate bin for each value
             if (cbinp->isArray()) {
-                UINFO(4, "    Skipping array bin (not yet implemented): " << cbinp->name()
-                                                                          << endl);
+                if (cbinp->binsType() == VCoverBinsType::TRANSITION) {
+                    // TODO (PR-4): Handle transition array bins
+                    UINFO(4, "    Skipping TRANSITION array bin (not yet implemented, PR-4): "
+                                 << cbinp->name() << endl);
+                } else {
+                    generateArrayBins(coverpointp, cbinp, exprp, atLeastValue);
+                }
                 continue;
             }
 
@@ -472,6 +746,112 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstNodeExpr* valueMasked = new AstAnd{fl, valueConstp, maskConstp->cloneTree(false)};
 
         return new AstEq{fl, exprMasked, valueMasked};
+    }
+
+    void generateArrayBins(AstCoverpoint* coverpointp, AstCoverBin* arrayBinp, AstNodeExpr* exprp,
+                           int atLeastValue) {
+        UINFO(4, "    Generating array bins for: " << arrayBinp->name() << endl);
+
+        // Extract all values from the range list
+        std::vector<AstNodeExpr*> values;
+        for (AstNode* rangep = arrayBinp->rangesp(); rangep; rangep = rangep->nextp()) {
+            if (AstRange* const rangenodep = VN_CAST(rangep, Range)) {
+                // For ranges [min:max], create bins for each value
+                AstConst* const minConstp = VN_CAST(rangenodep->leftp(), Const);
+                AstConst* const maxConstp = VN_CAST(rangenodep->rightp(), Const);
+                if (minConstp && maxConstp) {
+                    int minVal = minConstp->toSInt();
+                    int maxVal = maxConstp->toSInt();
+                    for (int val = minVal; val <= maxVal; ++val) {
+                        values.push_back(
+                            new AstConst{rangenodep->fileline(), AstConst::Signed32{}, val});
+                    }
+                } else {
+                    arrayBinp->v3error("covergroup value range");
+                    return;
+                }
+            } else if (AstInsideRange* const insideRangep = VN_CAST(rangep, InsideRange)) {
+                // For InsideRange [min:max], create bins for each value
+                AstConst* const minConstp = VN_CAST(insideRangep->lhsp(), Const);
+                AstConst* const maxConstp = VN_CAST(insideRangep->rhsp(), Const);
+                if (minConstp && maxConstp) {
+                    int minVal = minConstp->toSInt();
+                    int maxVal = maxConstp->toSInt();
+                    UINFO(6, "      Expanding InsideRange [" << minVal << ":" << maxVal << "]"
+                                                             << endl);
+                    for (int val = minVal; val <= maxVal; ++val) {
+                        values.push_back(
+                            new AstConst{insideRangep->fileline(), AstConst::Signed32{}, val});
+                    }
+                } else {
+                    arrayBinp->v3error("covergroup value range");
+                    return;
+                }
+            } else {
+                // Single value - should be an expression
+                values.push_back(VN_AS(rangep->cloneTree(false), NodeExpr));
+            }
+        }
+
+        // Create a separate bin for each value
+        int index = 0;
+        for (AstNodeExpr* valuep : values) {
+            // Create bin name: originalName[index]
+            const string binName = arrayBinp->name() + "[" + std::to_string(index) + "]";
+            const string sanitizedName = arrayBinp->name() + "_" + std::to_string(index);
+            const string varName = "__Vcov_" + coverpointp->name() + "_" + sanitizedName;
+
+            // Create member variable for this bin
+            AstVar* const varp = new AstVar{arrayBinp->fileline(), VVarType::MEMBER, varName,
+                                            arrayBinp->findUInt32DType()};
+            varp->isStatic(false);
+            m_covergroupp->addMembersp(varp);
+            UINFO(4, "    Created array bin [" << index << "]: " << varName << endl);
+
+            // Track for coverage computation
+            m_binInfos.push_back(BinInfo(arrayBinp, varp, atLeastValue, coverpointp));
+
+            // Generate matching code for this specific value
+            generateArrayBinMatchCode(coverpointp, arrayBinp, exprp, varp, valuep);
+
+            ++index;
+        }
+
+        UINFO(4, "    Generated " << index << " array bins" << endl);
+    }
+
+    // Generate matching code for a single array bin element
+    void generateArrayBinMatchCode(AstCoverpoint* coverpointp, AstCoverBin* binp,
+                                   AstNodeExpr* exprp, AstVar* hitVarp, AstNodeExpr* valuep) {
+        // Create condition: expr == value
+        AstNodeExpr* condp = new AstEq{binp->fileline(), exprp->cloneTree(false), valuep};
+
+        // Apply iff condition if present
+        if (AstNodeExpr* iffp = coverpointp->iffp()) {
+            condp = new AstAnd{binp->fileline(), iffp->cloneTree(false), condp};
+        }
+
+        // Create increment statement
+        AstNode* stmtp = new AstAssign{
+            binp->fileline(), new AstVarRef{binp->fileline(), hitVarp, VAccess::WRITE},
+            new AstAdd{binp->fileline(), new AstVarRef{binp->fileline(), hitVarp, VAccess::READ},
+                       new AstConst{binp->fileline(), AstConst::WidthedValue{}, 32, 1}}};
+
+        // For illegal_bins, add error message
+        if (binp->binsType() == VCoverBinsType::BINS_ILLEGAL) {
+            const string errMsg = "Illegal bin hit in coverpoint '" + coverpointp->name() + "'";
+            AstDisplay* errorp = new AstDisplay{binp->fileline(), VDisplayType::DT_ERROR, errMsg,
+                                                nullptr, nullptr};
+            errorp->fmtp()->timeunit(m_covergroupp->timeunit());
+            stmtp = stmtp->addNext(errorp);
+            stmtp = stmtp->addNext(new AstStop{binp->fileline(), true});
+        }
+
+        // Create if statement
+        AstIf* const ifp = new AstIf{binp->fileline(), condp, stmtp, nullptr};
+
+        if (!m_sampleFuncp) binp->v3fatalSrc("m_sampleFuncp is null for array bin");
+        m_sampleFuncp->addStmtsp(ifp);
     }
 
     void generateCoverageComputationCode() {
