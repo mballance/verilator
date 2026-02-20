@@ -624,15 +624,12 @@ public:
 // This runs after ActiveVisitor to add automatic sample() calls for covergroups
 // declared with sensitivity events (e.g., covergroup cg @(posedge clk);)
 
-// Global map to store sample CFuncs for covergroups
-// Key: AstClass pointer, Value: sample CFunc
-std::unordered_map<const AstClass*, AstCFunc*> s_covergroupSampleFuncs;
-
 class CovergroupSamplingVisitor final : public VNVisitor {
     // STATE
     ActiveNamer m_namer;  // Reuse active naming infrastructure
     AstScope* m_scopep = nullptr;  // Current scope
     bool m_inFirstPass = true;  // First pass collects CFuncs, second pass adds sampling
+    std::unordered_map<const AstClass*, AstCFunc*> m_covergroupSampleFuncs;  // Class -> sample CFunc
 
     // Helper to get the clocking event from a covergroup class
     AstSenTree* getCovergroupEvent(AstClass* classp) {
@@ -667,7 +664,8 @@ class CovergroupSamplingVisitor final : public VNVisitor {
                                  modp = modp->nextp()) {
                                 if (AstClass* const classp = VN_CAST(modp, Class)) {
                                     if (classp->isCovergroup() && classp->name() == className) {
-                                        s_covergroupSampleFuncs[classp] = cfuncp;
+                                        m_covergroupSampleFuncs[classp] = cfuncp;
+                                        cfuncp->isCovergroupSample(true);
                                         break;
                                     }
                                 }
@@ -737,8 +735,8 @@ class CovergroupSamplingVisitor final : public VNVisitor {
 
         if (!sampleCFuncp) {
             // Fallback: try the cached version
-            auto it = s_covergroupSampleFuncs.find(classp);
-            if (it != s_covergroupSampleFuncs.end()) { sampleCFuncp = it->second; }
+            auto it = m_covergroupSampleFuncs.find(classp);
+            if (it != m_covergroupSampleFuncs.end()) { sampleCFuncp = it->second; }
         }
 
         if (!sampleCFuncp) {
@@ -755,10 +753,6 @@ class CovergroupSamplingVisitor final : public VNVisitor {
         // Note: We don't pass arguments in argsp since vlSymsp is passed via argTypes
         AstCMethodCall* const cmethodCallp
             = new AstCMethodCall{fl, varrefp, sampleCFuncp, nullptr};
-
-        // Mark this as an automatic covergroup sampling call so other passes can identify it
-        // Use user3() as a marker (1 = automatic sampling call)
-        cmethodCallp->user3(1);
 
         // Set dtype to void since sample() doesn't return a value
         cmethodCallp->dtypeSetVoid();
@@ -856,6 +850,5 @@ void V3Active::activeAll(AstNetlist* nodep) {
             }
         }
     }
-    s_covergroupSampleFuncs.clear();
     V3Global::dumpCheckGlobalTree("active", 0, dumpTreeEitherLevel() >= 3);
 }

@@ -120,7 +120,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
                 // Get array size - must be a constant
                 AstNodeExpr* sizep = cbinp->arraySizep();
                 if (!sizep) {
-                    cbinp->v3error("Automatic bins requires array size [N]");
+                    cbinp->v3error("Automatic bins requires array size [N]");  // LCOV_EXCL_LINE
                     binp = nextBinp;
                     continue;
                 }
@@ -466,7 +466,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
     void generateCoverpointCode(AstCoverpoint* coverpointp) {
         if (!m_sampleFuncp || !m_constructorp) {
-            coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without sample() or constructor");
+            coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without sample() or constructor");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -475,7 +475,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // Get the coverpoint expression
         AstNodeExpr* exprp = coverpointp->exprp();
         if (!exprp) {
-            coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without expression");
+            coverpointp->v3warn(E_UNSUPPORTED, "Coverpoint without expression");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -623,10 +623,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstIf* const ifp = new AstIf{binp->fileline(), fullCondp, stmtp, nullptr};
 
         UINFO(4, "      Adding bin match if statement to sample function" << endl);
-        if (!m_sampleFuncp) {
-            binp->v3error("INTERNAL: m_sampleFuncp is null when trying to add bin match code");
-            return;
-        }
+        if (!m_sampleFuncp)
+            binp->v3fatalSrc("m_sampleFuncp is null when trying to add bin match code");
         m_sampleFuncp->addStmtsp(ifp);
         UINFO(4, "      Successfully added if statement for bin: " << binp->name() << endl);
     }
@@ -688,10 +686,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // Create if statement
         AstIf* const ifp = new AstIf{defBinp->fileline(), defaultCondp, stmtp, nullptr};
 
-        if (!m_sampleFuncp) {
-            defBinp->v3error("INTERNAL: m_sampleFuncp is null for default bin");
-            return;
-        }
+        if (!m_sampleFuncp)
+            defBinp->v3fatalSrc("m_sampleFuncp is null for default bin");
         m_sampleFuncp->addStmtsp(ifp);
         UINFO(4, "      Successfully added default bin if statement" << endl);
     }
@@ -705,7 +701,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // Get the (single) transition set
         AstCoverTransSet* transSetp = binp->transp();
         if (!transSetp) {
-            binp->v3error("Transition bin without transition set");
+            binp->v3error("Transition bin without transition set");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -758,8 +754,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstNodeExpr* matchCondp
             = buildTransitionItemCondition(items[state], exprp->cloneTree(false));
         if (!matchCondp) {
-            binp->v3error("Could not build transition condition for state "
-                          + std::to_string(state));
+            binp->v3error("Could not build transition condition for state "  // LCOV_EXCL_LINE
+                          + std::to_string(state));  // LCOV_EXCL_LINE
             return nullptr;
         }
 
@@ -1076,10 +1072,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // Create if statement
         AstIf* const ifp = new AstIf{binp->fileline(), condp, stmtp, nullptr};
 
-        if (!m_sampleFuncp) {
-            binp->v3error("INTERNAL: m_sampleFuncp is null for array bin");
-            return;
-        }
+        if (!m_sampleFuncp)
+            binp->v3fatalSrc("m_sampleFuncp is null for array bin");
         m_sampleFuncp->addStmtsp(ifp);
     }
 
@@ -1098,7 +1092,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
 
         if (transSets.empty()) {
-            arrayBinp->v3error("Transition array bin without transition sets");
+            arrayBinp->v3error("Transition array bin without transition sets");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -1141,7 +1135,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstVar* prevVarp = createPrevValueVar(coverpointp, exprp);
 
         if (!transSetp) {
-            binp->v3error("Transition bin without transition set");
+            binp->v3error("Transition bin without transition set");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -1159,13 +1153,16 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
 
         // Check for unsupported repetition operators
-        for (AstCoverTransItem* item : items) {
+        // Note: the grammar handles [*], [->], [=] at parse time via COVERIGN warning,
+        // resulting in null AstCoverTransItem nodes which are filtered out above.
+        // This check is therefore unreachable from normal SV parsing.
+        for (AstCoverTransItem* item : items) {  // LCOV_EXCL_START
             if (item->repType() != VTransRepType::NONE) {
                 binp->v3warn(E_UNSUPPORTED,
                              "Transition repetition operators ([*], [->], [=]) not yet supported");
                 return;
             }
-        }
+        }  // LCOV_EXCL_STOP
 
         if (items.size() == 1) {
             // Single item transition not valid (need at least 2 values for =>)
@@ -1179,7 +1176,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
             AstNodeExpr* cond2p = buildTransitionItemCondition(items[1], exprp->cloneTree(false));
 
             if (!cond1p || !cond2p) {
-                binp->v3error("Could not build transition conditions");
+                binp->v3error("Could not build transition conditions");  // LCOV_EXCL_LINE
                 return;
             }
 
@@ -1318,7 +1315,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
 
     void generateCrossCode(AstCoverCross* crossp) {
         if (!m_sampleFuncp || !m_constructorp) {
-            crossp->v3warn(E_UNSUPPORTED, "Cross coverage without sample() or constructor");
+            crossp->v3warn(E_UNSUPPORTED, "Cross coverage without sample() or constructor");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -1358,7 +1355,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         }
 
         if (coverpointRefs.size() < 2) {
-            crossp->v3warn(E_UNSUPPORTED, "Cross coverage requires at least 2 coverpoints");
+            crossp->v3warn(E_UNSUPPORTED, "Cross coverage requires at least 2 coverpoints");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -1707,7 +1704,7 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         // The registration should happen after member variables are initialized
         if (!m_constructorp) {
             m_covergroupp->v3warn(E_UNSUPPORTED,
-                                  "Cannot generate coverage registration without constructor");
+                                  "Cannot generate coverage registration without constructor");  // LCOV_EXCL_LINE
             return;
         }
 
@@ -1888,7 +1885,7 @@ public:
 // Functional coverage class functions
 
 void V3CoverageFunctional::coverageFunctional(AstNetlist* nodep) {
-    UINFO(2, __FUNCTION__ << ": " << endl);
+    UINFO(4, __FUNCTION__ << ": " << endl);
     { FunctionalCoverageVisitor{nodep}; }  // Destruct before checking
     V3Global::dumpCheckGlobalTree("coveragefunc", 0, dumpTreeEitherLevel() >= 3);
 }

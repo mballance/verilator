@@ -340,14 +340,10 @@ class TimingSuspendableVisitor final : public VNVisitor {
         }
     }
     void visit(AstNodeCCall* nodep) override {
-        // Skip automatic covergroup sampling calls (marked with user3==1)
-        if (nodep->user3()) {
-            iterateChildren(nodep);
-            return;
-        }
+        AstCFunc* const funcp = nodep->funcp();
 
-        AstCFunc* funcp = nodep->funcp();
-        if (!funcp) {
+        // Skip automatic covergroup sampling calls
+        if (funcp->isCovergroupSample()) {
             iterateChildren(nodep);
             return;
         }
@@ -924,15 +920,10 @@ class TimingControlVisitor final : public VNVisitor {
         }
     }
     void visit(AstNodeCCall* nodep) override {
-        // Skip automatic covergroup sampling calls (marked with user3==1)
-        if (nodep->user3()) {
-            iterateChildren(nodep);
-            return;
-        }
+        AstCFunc* const funcp = nodep->funcp();
 
-        // Check if this is a valid CCall with a valid function pointer
-        AstCFunc* funcp = nodep->funcp();
-        if (!funcp) {
+        // Skip automatic covergroup sampling calls
+        if (funcp->isCovergroupSample()) {
             iterateChildren(nodep);
             return;
         }

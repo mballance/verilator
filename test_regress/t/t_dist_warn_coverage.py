@@ -167,27 +167,10 @@ for s in [
         'is not an unpacked array, but is in an unpacked array context',
         'loading other than unpacked-array variable',
         'loading other than unpacked/associative-array variable',
-        # Functional-coverage diagnostics pending dedicated *.out coverage
-        'Automatic bins requires array size [N]',
-        'Automatic bins array size must be a constant',
-        'Automatic bins array size must be 1-10000, got',
-        'Could not build transition condition for state',
-        'Could not build transition conditions',
-        'Coverpoint without expression',
-        'Coverpoint without sample() or constructor',
-        'Cross coverage requires at least 2 coverpoints',
-        'Cross coverage without sample() or constructor',
-        'Ignoring unsupported coverage option:',
+        # These are safety limits requiring >1000 bins or >10000 members to trigger
         'Too many bins or infinite loop detected in bin iteration',
         'Too many members or infinite loop in membersp iteration (1)',
         'Too many members or infinite loop in membersp iteration (3)',
-        'Transition array bin without transition sets',
-        'Transition bin without transition set',
-        'Transition repetition operators ([*], [->], [=]) not yet supported',
-        'Transition requires at least two values',
-        'Transition set without items',
-        'Unexpected node in bins list, ignoring',
-        'Cannot generate coverage registration without constructor',
 ]:
     Suppressed[s] = True
 
