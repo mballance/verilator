@@ -46,8 +46,8 @@ class FunctionalCoverageVisitor final : public VNVisitor {
         AstNode* nextp;
         for (AstNode* childp = nodep->membersp(); childp; childp = nextp) {
             nextp = childp->nextp();
-            if (VN_IS(childp, Coverpoint) || VN_IS(childp, CoverCross)
-                || VN_IS(childp, Covergroup) || VN_IS(childp, CgOptionAssign)) {
+            if (VN_IS(childp, Coverpoint) || VN_IS(childp, CoverCross) || VN_IS(childp, Covergroup)
+                || VN_IS(childp, CgOptionAssign)) {
                 VL_DO_DANGLING(childp->unlinkFrBack()->deleteTree(), childp);
             }
         }
