@@ -13,8 +13,6 @@ import vltest_bootstrap
 test.scenarios('vlt')
 
 # Cross referencing a non-existent coverpoint should emit COVERIGN warning
-test.lint(verilator_flags2=['--coverage'],
-          expect_filename=test.golden_filename,
-          fails=True)
+test.lint(verilator_flags2=['--coverage'], expect_filename=test.golden_filename, fails=True)
 
 test.passes()
