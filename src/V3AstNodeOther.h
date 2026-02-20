@@ -501,6 +501,7 @@ class AstCFunc final : public AstNode {
     bool m_recursive : 1;  // Recursive or part of recursion
     bool m_noLife : 1;  // Disable V3Life on this function - has multiple calls, and reads Syms
                         // state
+    bool m_isCovergroupSample : 1;  // Automatic covergroup sample() function
     int m_cost;  // Function call cost
 public:
     AstCFunc(FileLine* fl, const string& name, AstScope* scopep, const string& rtnType = "")
@@ -532,6 +533,7 @@ public:
         m_dpiImportWrapper = false;
         m_recursive = false;
         m_noLife = false;
+        m_isCovergroupSample = false;
         m_cost = v3Global.opt.instrCountDpi();  // As proxy for unknown general DPI cost
     }
     ASTGEN_MEMBERS_AstCFunc;
@@ -612,6 +614,8 @@ public:
     bool recursive() const { return m_recursive; }
     void noLife(bool flag) { m_noLife = flag; }
     bool noLife() const { return m_noLife; }
+    bool isCovergroupSample() const { return m_isCovergroupSample; }
+    void isCovergroupSample(bool flag) { m_isCovergroupSample = flag; }
     void cost(int cost) { m_cost = cost; }
     // Special methods
     bool emptyBody() const {
@@ -1014,9 +1018,6 @@ public:
     bool isPredictOptimizable() const override { return false; }
     bool sameNode(const AstNode* /*samep*/) const override { return true; }
 };
-// NOTE: AstCoverBin and AstCoverpoint moved to V3AstNodeFuncCov.h
-// These were placeholder implementations that are now replaced with full
-// functional coverage support (IEEE 1800-2023 Section 19)
 class AstDefParam final : public AstNode {
     // A defparam assignment
     // Parents: MODULE

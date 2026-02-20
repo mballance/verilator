@@ -58,7 +58,7 @@ module t;
       #1; // Small delay to ensure last sample completes
 
       begin
-         real cov = cg_inst.get_inst_coverage();
+         automatic real cov = cg_inst.get_inst_coverage();
          $display("Coverage: %0.1f%%", cov);
 
          // Should have hit all 4 bins = 100%
