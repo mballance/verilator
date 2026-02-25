@@ -3227,5 +3227,4 @@ public:
     bool sameNode(const AstNode* /*samep*/) const override { return true; }
 };
 
-
 #endif  // Guard
