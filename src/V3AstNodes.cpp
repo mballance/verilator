@@ -3697,14 +3697,9 @@ void AstWith::dumpJson(std::ostream& str) const {
 //######################################################################
 // Functional coverage dump methods
 
-void AstCovergroup::dump(std::ostream& str) const {
-    this->AstNode::dump(str);
-    str << " " << m_name;
-    if (m_isClass) str << " [class]";
-}
+void AstCovergroup::dump(std::ostream& str) const { this->AstNode::dump(str); }
 
 void AstCovergroup::dumpJson(std::ostream& str) const {
-    dumpJsonBoolFuncIf(str, isClass);
     dumpJsonGen(str);
 }
 
@@ -3714,13 +3709,12 @@ void AstCoverpoint::dumpJson(std::ostream& str) const { this->AstNodeFuncCovItem
 
 void AstCoverBin::dump(std::ostream& str) const {
     this->AstNode::dump(str);
-    str << " " << m_name << " " << m_type.ascii();
+    str << " " << m_type.ascii();
     if (m_isArray) str << "[]";
 }
 
 void AstCoverBin::dumpJson(std::ostream& str) const {
     this->AstNode::dumpJson(str);
-    str << ", \"name\": " << VString::quotePercent(m_name);
     str << ", \"binsType\": \"" << m_type.ascii() << "\"";
     if (m_isArray) str << ", \"isArray\": true";
 }
@@ -3737,7 +3731,6 @@ void AstCoverTransItem::dumpJson(std::ostream& str) const {
 
 void AstCoverTransSet::dump(std::ostream& str) const {
     this->AstNode::dump(str);
-    str << " trans_set";
 }
 
 void AstCoverTransSet::dumpJson(std::ostream& str) const { this->AstNode::dumpJson(str); }
@@ -3746,15 +3739,9 @@ void AstCoverCross::dump(std::ostream& str) const { this->AstNodeFuncCovItem::du
 
 void AstCoverCross::dumpJson(std::ostream& str) const { this->AstNodeFuncCovItem::dumpJson(str); }
 
-void AstCoverCrossBins::dump(std::ostream& str) const {
-    this->AstNode::dump(str);
-    str << " " << m_name;
-}
+void AstCoverCrossBins::dump(std::ostream& str) const { this->AstNode::dump(str); }
 
-void AstCoverCrossBins::dumpJson(std::ostream& str) const {
-    this->AstNode::dumpJson(str);
-    str << ", \"name\": " << VString::quotePercent(m_name);
-}
+void AstCoverCrossBins::dumpJson(std::ostream& str) const { this->AstNode::dumpJson(str); }
 
 void AstCoverOption::dump(std::ostream& str) const {
     this->AstNode::dump(str);
@@ -3766,15 +3753,9 @@ void AstCoverOption::dumpJson(std::ostream& str) const {
     str << ", \"optionType\": \"" << m_type.ascii() << "\"";
 }
 
-void AstCoverpointRef::dump(std::ostream& str) const {
-    this->AstNode::dump(str);
-    str << " " << m_name;
-}
+void AstCoverpointRef::dump(std::ostream& str) const { this->AstNode::dump(str); }
 
-void AstCoverpointRef::dumpJson(std::ostream& str) const {
-    this->AstNode::dumpJson(str);
-    str << ", \"name\": " << VString::quotePercent(m_name);
-}
+void AstCoverpointRef::dumpJson(std::ostream& str) const { this->AstNode::dumpJson(str); }
 
 void AstCoverSelectExpr::dump(std::ostream& str) const { this->AstNode::dump(str); }
 
