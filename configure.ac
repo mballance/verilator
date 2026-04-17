@@ -506,6 +506,7 @@ _MY_CXX_CHECK_OPT(CFG_CXXFLAGS_PARSER,-Wno-char-subscripts)
 _MY_CXX_CHECK_OPT(CFG_CXXFLAGS_PARSER,-Wno-null-conversion)
 _MY_CXX_CHECK_OPT(CFG_CXXFLAGS_PARSER,-Wno-parentheses-equality)
 _MY_CXX_CHECK_OPT(CFG_CXXFLAGS_PARSER,-Wno-unused)
+_MY_CXX_CHECK_OPT(CFG_CXXFLAGS_PARSER,-Wno-free-nonheap-object)
 AC_SUBST(CFG_CXXFLAGS_PARSER)
 
 # Flags for compiling the debug version of Verilator (in addition to above CFG_CXXFLAGS_SRC)
