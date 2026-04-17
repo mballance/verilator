@@ -202,6 +202,7 @@ set(HEADERS
     V3WidthCommit.h
     V3WidthRemove.h
     VlcBucket.h
+    VlcCovergroup.h
     VlcOptions.h
     VlcPoint.h
     VlcSource.h
