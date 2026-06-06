@@ -139,7 +139,8 @@ private:
             puts(/**/ "VerilatedVpi::doInertialPuts();\n");
             puts(/**/ "settle_value_callbacks();\n");
             puts(/**/ "}\n");
-            puts(/**/ "} while (VerilatedVpi::evalNeeded() || VerilatedVpi::hasCbs(cbReadWriteSynch));\n");
+            puts(/**/ "} while (VerilatedVpi::evalNeeded() || "
+                      "VerilatedVpi::hasCbs(cbReadWriteSynch));\n");
             puts(/**/ "// Pre-Postponed\n");
             puts(/**/ "VerilatedVpi::callCbs(cbAtEndOfSimTime);\n");
             puts(/**/ "// End of timestep: $strobe/$monitor, tracing\n");
