@@ -71,6 +71,16 @@ private:
 
         puts("//======================\n\n");
 
+        if (v3Global.opt.vpi()) {
+            puts("// Drive cbValueChange callbacks to a fixed point\n");
+            puts("static inline bool settle_value_callbacks() {\n");
+            puts(/**/ "bool called = false;\n");
+            puts(/**/ "while (VerilatedVpi::callValueCbs()) called = true;\n");
+            puts(/**/ "return called;\n");
+            puts("}\n");
+            puts("\n");
+        }
+
         if (v3Global.opt.debugRuntimeTimeout()) {
             puts("void alarmHandler(int signum) {\n");
             // Add newline so %Error is at beginning-of-line, as might get the alarm
@@ -104,45 +114,68 @@ private:
         puts("\n");
 
         if (v3Global.opt.vpi()) {
+            // VPI-aware loop, following IEEE 1800-2023 4.4 time-slot region order
             puts("// Hook VPI startup routines and invoke callback\n");
             puts("if (vlog_startup_routines) {\n");
             puts(/**/ "for (auto routinep = &vlog_startup_routines[0]; *routinep; routinep++)"
                       " (*routinep)();\n");
             puts("}\n");
             puts("VerilatedVpi::callCbs(cbStartOfSimulation);\n");
+            puts("settle_value_callbacks();\n");
             puts("\n");
-        }
 
-        puts("// Simulate until $finish\n");
-        puts("while (VL_LIKELY(!contextp->gotFinish())) {\n");
-        if (v3Global.opt.vpi()) {
-            puts(/**/ "// VPI callbacks\n");
-            puts(/**/ "VerilatedVpi::callTimedCbs();\n");
+            puts("// Simulate until $finish\n");
+            puts("while (VL_LIKELY(!contextp->gotFinish())) {\n");
+            puts(/**/ "// Active region: converge model and VPI-driven puts\n");
+            puts(/**/ "do {\n");
+            puts(/**/ "do {\n");
+            puts(/**/ "topp->eval_step();\n");
+            puts(/**/ "VerilatedVpi::clearEvalNeeded();\n");
+            puts(/**/ "VerilatedVpi::doInertialPuts();\n");
+            puts(/**/ "settle_value_callbacks();\n");
+            puts(/**/ "} while (VerilatedVpi::evalNeeded());\n");
+            puts(/**/ "// Pre-NBA/Post-NBA: ReadWrite callbacks may write more\n");
+            puts(/**/ "if (VerilatedVpi::callCbs(cbReadWriteSynch)) {\n");
+            puts(/**/ "VerilatedVpi::doInertialPuts();\n");
+            puts(/**/ "settle_value_callbacks();\n");
+            puts(/**/ "}\n");
+            puts(/**/ "} while (VerilatedVpi::evalNeeded() || VerilatedVpi::hasCbs(cbReadWriteSynch));\n");
+            puts(/**/ "// Pre-Postponed\n");
+            puts(/**/ "VerilatedVpi::callCbs(cbAtEndOfSimTime);\n");
+            puts(/**/ "// End of timestep: $strobe/$monitor, tracing\n");
+            puts(/**/ "topp->eval_end_step();\n");
+            puts(/**/ "// Postponed region (read-only)\n");
+            puts(/**/ "VerilatedVpi::callCbs(cbReadOnlySynch);\n");
+            puts(/**/ "// Advance time to earliest pending deadline\n");
+            puts(/**/ "const uint64_t NO_EVENTS = ~static_cast<uint64_t>(0);\n");
+            puts(/**/ "const uint64_t next_vpi = VerilatedVpi::cbNextDeadline();\n");
+            puts(/**/ "const uint64_t next_timing = topp->eventsPending()"
+                      " ? topp->nextTimeSlot() : NO_EVENTS;\n");
+            puts(/**/ "const uint64_t next_time = std::min(next_vpi, next_timing);\n");
+            puts(/**/ "if (next_time == NO_EVENTS) break;\n");  // Nothing left to do
+            puts(/**/ "contextp->time(next_time);\n");
+            puts(/**/ "// Pre-Active region of the new time slot\n");
             puts(/**/ "VerilatedVpi::callCbs(cbNextSimTime);\n");  // Before next event queue
             puts(/**/ "VerilatedVpi::callCbs(cbAtStartOfSimTime);\n");  // Before time queue
-        }
-        puts(/**/ "// Evaluate model\n");
-        puts(/**/ "topp->eval();\n");
-        if (v3Global.opt.vpi()) {
-            puts(/**/ "// VPI callbacks\n");
-            puts(/**/ "VerilatedVpi::callValueCbs();\n");
-            puts(/**/ "VerilatedVpi::callCbs(cbAtEndOfSimTime);\n");  // After nonblocking events
-            puts(/**/ "VerilatedVpi::callCbs(cbReadWriteSynch);\n");  // After a specified time
-            puts(/**/ "VerilatedVpi::callCbs(cbReadOnlySynch);\n");  // After cbReadWriteSynch
-        }
-        puts(/**/ "// Advance time\n");
-        if (v3Global.rootp()->delaySchedulerp() || v3Global.opt.timing()) {
-            puts("if (!topp->eventsPending()) break;\n");
-        }
-        const std::string nextSlot = v3Global.rootp()->delaySchedulerp() ? "topp->nextTimeSlot()"
-                                                                         : "contextp->time() + 1";
-        if (v3Global.opt.vpi()) {
-            puts("contextp->time(std::min("s + nextSlot + ", VerilatedVpi::cbNextDeadline()));\n");
+            puts(/**/ "settle_value_callbacks();\n");
+            puts(/**/ "VerilatedVpi::callTimedCbs();\n");  // cbAfterDelay
+            puts(/**/ "settle_value_callbacks();\n");
+            puts("}\n");
         } else {
+            puts("// Simulate until $finish\n");
+            puts("while (VL_LIKELY(!contextp->gotFinish())) {\n");
+            puts(/**/ "// Evaluate model\n");
+            puts(/**/ "topp->eval();\n");
+            puts(/**/ "// Advance time\n");
+            if (v3Global.rootp()->delaySchedulerp() || v3Global.opt.timing()) {
+                puts("if (!topp->eventsPending()) break;\n");
+            }
+            const std::string nextSlot = v3Global.rootp()->delaySchedulerp()
+                                             ? "topp->nextTimeSlot()"
+                                             : "contextp->time() + 1";
             puts("contextp->time("s + nextSlot + ");\n");
+            puts("}\n");
         }
-
-        puts("}\n");
         puts("\n");
 
         puts("if (VL_LIKELY(!contextp->gotFinish())) {\n");
