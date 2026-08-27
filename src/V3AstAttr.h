@@ -509,6 +509,8 @@ public:
         PROCESS_REFERENCE,
         RANDOM_GENERATOR,
         RANDOM_STDGENERATOR,
+        COVERGROUP_INSTHANDLE,
+        COVERGROUP_CROSS,
         // Unsigned and two state; fundamental types
         UINT32,
         UINT64,
@@ -544,6 +546,8 @@ public:
                                             "VlProcessRef",
                                             "VlRandomizer",
                                             "VlStdRandomizer",
+                                            "VlCovInstHandle",
+                                            "VlCoverCross*",
                                             "IData",
                                             "QData",
                                             "LOGIC_IMPLICIT",
@@ -576,6 +580,8 @@ public:
                                             "%E-proc-ref",
                                             "%E-rand-gen",
                                             "%E-stdrand-gen",
+                                            "%E-cg-insthandle",
+                                            "%E-cover-cross",
                                             "IData",
                                             "QData",
                                             "%E-logic-implct",
@@ -620,6 +626,8 @@ public:
         case PROCESS_REFERENCE: return 0;  // opaque
         case RANDOM_GENERATOR: return 0;  // opaque
         case RANDOM_STDGENERATOR: return 0;  // opaque
+        case COVERGROUP_INSTHANDLE: return 0;  // opaque
+        case COVERGROUP_CROSS: return 0;  // opaque
         case UINT32: return 32;
         case UINT64: return 64;
         default: return 0;
@@ -660,7 +668,8 @@ public:
         return (m_e == EVENT || m_e == STRING || m_e == SCOPEPTR || m_e == CHARPTR
                 || m_e == MTASKSTATE || m_e == DELAY_SCHEDULER || m_e == TRIGGER_SCHEDULER
                 || m_e == DYNAMIC_TRIGGER_SCHEDULER || m_e == FORK_SYNC || m_e == PROCESS_REFERENCE
-                || m_e == RANDOM_GENERATOR || m_e == RANDOM_STDGENERATOR || m_e == DOUBLE
+                || m_e == RANDOM_GENERATOR || m_e == RANDOM_STDGENERATOR
+                || m_e == COVERGROUP_INSTHANDLE || m_e == COVERGROUP_CROSS || m_e == DOUBLE
                 || m_e == UNTYPED);
     }
     bool isCHandle() const VL_MT_SAFE { return m_e == CHANDLE; }
@@ -716,6 +725,8 @@ public:
             /* PROCESS_REFERENCE:         */ "",  // Should not be traced
             /* RANDOM_GENERATOR:          */ "",  // Should not be traced
             /* RANDOM_STD_GENERATOR:      */ "",  // Should not be traced
+            /* COVERGROUP_INSTHANDLE:     */ "",  // Should not be traced
+            /* COVERGROUP_CROSS:          */ "",  // Should not be traced
             /* UINT32:                    */ "BIT",
             /* UINT64:                    */ "BIT",
             /* LOGIC_IMPLICIT:            */ "",  // Should not be traced
@@ -857,12 +868,15 @@ public:
         ASSOC_SIZE,
         CLASS_SET_RANDMODE,
         COVERGROUP_ADD_ARRAY_NAMER,
+        COVERGROUP_ADD_COVERPOINT,
+        COVERGROUP_ADD_CROSS,
         COVERGROUP_ADD_SINGLE_NAMER,
         COVERGROUP_ATTACH,
         COVERGROUP_CLEAR_HIT_LIST,
         COVERGROUP_COVERAGE_PARTS,
         COVERGROUP_INCREMENT_BIN,
         COVERGROUP_INIT,
+        COVERGROUP_INST_P,
         COVERGROUP_RECORD_HIT,
         COVERGROUP_REGISTER_BINS,
         COVERGROUP_SAMPLE,
@@ -1021,12 +1035,15 @@ inline std::ostream& operator<<(std::ostream& os, const VCMethod& rhs) {
            {ASSOC_SIZE, "size", true}, \
            {CLASS_SET_RANDMODE, "set_randmode", false}, \
            {COVERGROUP_ADD_ARRAY_NAMER, "addArrayNamer", false}, \
+           {COVERGROUP_ADD_COVERPOINT, "addCoverpoint", false}, \
+           {COVERGROUP_ADD_CROSS, "addCross", false}, \
            {COVERGROUP_ADD_SINGLE_NAMER, "addSingleNamer", false}, \
            {COVERGROUP_ATTACH, "attach", false}, \
            {COVERGROUP_CLEAR_HIT_LIST, "clearHitList", false}, \
            {COVERGROUP_COVERAGE_PARTS, "coverageParts", false}, \
            {COVERGROUP_INCREMENT_BIN, "incrementBin", false}, \
            {COVERGROUP_INIT, "init", false}, \
+           {COVERGROUP_INST_P, "p", true}, \
            {COVERGROUP_RECORD_HIT, "recordHit", false}, \
            {COVERGROUP_REGISTER_BINS, "registerBins", false}, \
            {COVERGROUP_SAMPLE, "sample", false}, \
