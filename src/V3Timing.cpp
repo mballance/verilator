@@ -879,6 +879,24 @@ class TimingControlVisitor final : public VNVisitor {
         return varp->isClassMember() && varp->isHideLocal() && !varp->isSigPublic()
                && !varp->isRand() && classVars.count(varp);
     }
+    // Is the variable a temporary that V3LiftExpr lifted out of a wait condition?
+    static bool isLiftTemp(const AstVar* varp) {
+        return varp->isInternal() && VString::startsWith(varp->name(), "__Vlef");
+    }
+    // Is the node a call to std::process::status() or self()? status() only changes when the
+    // process is killed, which wakes the queue the process is parked on (VlProcess::state).
+    // self() is constant for the waiting process.
+    static bool isParkableProcessCall(const AstNode* np) {
+        const AstNodeCCall* const callp = VN_CAST(np, NodeCCall);
+        if (!callp || !callp->funcp()->scopep()) return false;
+        const AstNodeModule* const modp = callp->funcp()->scopep()->modp();
+        const AstClass* classp = VN_CAST(modp, Class);
+        // Static methods (self) live in the class package
+        if (const AstClassPackage* const pkgp = VN_CAST(modp, ClassPackage)) classp = pkgp->classp();
+        if (!classp || classp->prettyName() != "std::process") return false;
+        const string& name = callp->funcp()->name();
+        return name == "__VnoInFunc_status" || name == "__VnoInFunc_self";
+    }
     // Find waits in class scope 'scopep' whose condition only reads 'local' members of the class
     // (through 'this') and function inputs/locals not written in a fork. Those waits park on a
     // per-object wait queue, woken after each write to the members (see visit(AstWait)).
@@ -903,9 +921,22 @@ class TimingControlVisitor final : public VNVisitor {
             std::vector<const AstVar*> members;
             waitp->condp()->foreach([&](AstNode* np) {
                 if (!ok) return;
+                if (isParkableProcessCall(np)) return;
+                if (VN_IS(np, ExprStmt) || VN_IS(np, StmtExpr) || VN_IS(np, Comment)
+                    || VN_IS(np, If)) {
+                    return;
+                }
+                if (const AstAssign* const assp = VN_CAST(np, Assign)) {
+                    // Assignment of a temporary lifted out of the condition (V3LiftExpr)
+                    const AstNodeVarRef* const lhsp = VN_CAST(assp->lhsp(), NodeVarRef);
+                    if (!lhsp || !isLiftTemp(lhsp->varp())) ok = false;
+                    return;
+                }
                 if (const AstNodeVarRef* const refp = VN_CAST(np, NodeVarRef)) {
                     const AstVar* const varp = refp->varp();
-                    if (isTrackableMember(varp, classVars)) {
+                    if (isLiftTemp(varp)) {
+                        // Written in the condition itself before being read
+                    } else if (isTrackableMember(varp, classVars)) {
                         members.push_back(varp);
                         anyMember = true;
                     } else if (!varp->isFuncLocal() || forkWritten.count(varp)

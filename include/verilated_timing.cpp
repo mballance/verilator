@@ -356,14 +356,15 @@ void VlProcess::state(int s) {
         // We can't change the sttaus of completed process
         return;
     }
-    if (s == KILLED && m_forkSyncOnKillp && !m_forkSyncOnKillDone) {
+    m_state = s;
+    if (s != KILLED) return;
+    // Others parked on the same queue may wait on this process' status (e.g. semaphore)
+    if (m_parkedOnp) std::exchange(m_parkedOnp, nullptr)->wake();
+    if (m_forkSyncOnKillp && !m_forkSyncOnKillDone) {
         m_forkSyncOnKillDone = true;
-        m_state = s;
         m_forkSyncOnKillp->done();
         m_forkSyncOnKillp = nullptr;
-        return;
     }
-    m_state = s;
 }
 
 void VlForkSync::onKill(VlProcessRef process) {

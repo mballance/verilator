@@ -43,6 +43,7 @@ class VlClass;
 template <typename T_Class>
 class VlClassRef;
 class VlProcess;
+class VlWaitQueue;
 template <typename T_Value, std::size_t N_Depth>
 class VlUnpacked;
 
@@ -329,6 +330,7 @@ class VlProcess final {
     std::shared_ptr<VlForkSyncState> m_forkSyncOnKillp
         = nullptr;  // Optional fork..join counter to decrement on kill
     bool m_forkSyncOnKillDone = false;  // Ensure on-kill callback fires only once
+    VlWaitQueue* m_parkedOnp = nullptr;  // Wait queue the process is parked on, woken on kill
     VlRNG m_rng;  // Per-process RNG (IEEE 1800-2023 18.14)
     VlClass* m_selfp = nullptr;  // std::process object of this process, not owned
 
@@ -383,6 +385,7 @@ public:
         for (VlProcess* childp : children) childp->disable();
     }
     void forkSyncOnKill(std::shared_ptr<VlForkSyncState> forkSyncp);
+    void parkedOn(VlWaitQueue* queuep) { m_parkedOnp = queuep; }
     void forkSyncOnKillClear(VlForkSyncState* forkSyncp);
     bool completed() const { return state() == FINISHED || state() == KILLED; }
     bool completedFork() const {

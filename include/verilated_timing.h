@@ -472,12 +472,16 @@ public:
             VlFileLineDebug fileline;
 
             bool await_ready() const { return false; }  // Always suspend
+            VlWaitQueue* queuep;  // Queue parked on, recorded in the process for kill
             void await_suspend(std::coroutine_handle<VlPromise> coro) {
+                if (process) process->parkedOn(queuep);
                 suspended.emplace_back(coro, process, fileline);
             }
-            void await_resume() const {}
+            void await_resume() const {
+                if (process) process->parkedOn(nullptr);
+            }
         };
-        return Awaitable{m_parked, process, VlFileLineDebug{filename, lineno}};
+        return Awaitable{m_parked, process, VlFileLineDebug{filename, lineno}, this};
     }
 };
 
