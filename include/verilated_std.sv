@@ -37,8 +37,8 @@ package std;
   class mailbox #(
       type T
   );
-    protected int m_bound;
-    protected T m_queue[$];
+    local int m_bound;
+    local T m_queue[$];
 
     function new(int bound = 0);
       m_bound = bound;
@@ -199,8 +199,8 @@ package std;
       process proc;
       int reqKeys;
     } procKeys;
-    procKeys m_queue[$];
-    protected int m_keyCount;
+    local procKeys m_queue[$];
+    local int m_keyCount;
 
     local task dropKilled;
       // Drop killed processes from the queue
