@@ -397,6 +397,86 @@ public:
 };
 
 //=============================================================================
+// VlWaitScheduler resumes coroutines parked on VlWaitQueues that were woken. There is one per
+// model. Woken coroutines are resumed in wake order (FIFO). When no queue was woken, there is no
+// per-eval work beyond the anyReady() check.
+
+class VlWaitScheduler final {
+    // TYPES
+    using VlCoroutineVec = std::vector<VlCoroutineHandle>;
+
+    // MEMBERS
+    VlCoroutineVec m_ready;  // Coroutines woken, awaiting resumption
+    VlCoroutineVec m_resuming;  // Coroutines being resumed (for resume())
+
+public:
+    // METHODS
+    // Are there any woken coroutines awaiting resumption?
+    bool anyReady() const { return !m_ready.empty(); }
+    // Moves all coroutines in 'parked' to the ready queue
+    void ready(VlCoroutineVec& parked) {
+        for (auto& coro : parked) m_ready.emplace_back(std::move(coro));
+        parked.clear();
+    }
+    // Resumes all woken coroutines (those woken during resumption wait for the next call)
+    void resume();
+#ifdef VL_DEBUG
+    void dump() const;
+#endif
+};
+
+//=============================================================================
+// VlWaitQueue holds coroutines parked on a wait whose condition only changes through known
+// writes (e.g. a class-local member). Each such write calls wake(), which hands all parked
+// coroutines to the VlWaitScheduler; they then re-evaluate their condition and park again if
+// it is still false:
+//     while (!<cond>) co_await <queue>.park(__VwaitSched, process, ...);
+
+class VlWaitQueue final {
+    // TYPES
+    using VlCoroutineVec = std::vector<VlCoroutineHandle>;
+
+    // MEMBERS
+    VlCoroutineVec m_parked;  // Coroutines parked on this queue
+    VlWaitScheduler* m_schedp = nullptr;  // Scheduler of the parked coroutines
+
+public:
+    // CONSTRUCTORS
+    VlWaitQueue() = default;
+    // Copying an object must not copy its waiters
+    VlWaitQueue(const VlWaitQueue&) {}
+    VlWaitQueue& operator=(const VlWaitQueue&) { return *this; }
+    // METHODS
+    // Are no coroutines parked?
+    bool empty() const { return m_parked.empty(); }
+    // Called on each write to the waited-on state: hands parked coroutines to the scheduler
+    void wake() {
+        if (VL_LIKELY(m_parked.empty())) return;
+        m_schedp->ready(m_parked);
+    }
+    // Used by coroutines for co_awaiting a wake()
+    auto park(VlWaitScheduler& sched, VlProcessRef process,
+              const char* eventDescription = VL_UNKNOWN, const char* filename = VL_UNKNOWN,
+              int lineno = 0) {
+        VL_DEBUG_IF(VL_DBG_MSGF("         Parking process waiting for %s at %s:%d\n",
+                                eventDescription, filename, lineno););
+        m_schedp = &sched;
+        struct Awaitable final {
+            VlCoroutineVec& suspended;  // Coros parked on the queue
+            VlProcessRef process;  // Data of the suspended process, null if not needed
+            VlFileLineDebug fileline;
+
+            bool await_ready() const { return false; }  // Always suspend
+            void await_suspend(std::coroutine_handle<VlPromise> coro) {
+                suspended.emplace_back(coro, process, fileline);
+            }
+            void await_resume() const {}
+        };
+        return Awaitable{m_parked, process, VlFileLineDebug{filename, lineno}};
+    }
+};
+
+//=============================================================================
 // VlForkSync is used to manage fork..join and fork..join_any constructs.
 
 // Shared fork..join state, because VlForkSync is copied into generated coroutine frames.

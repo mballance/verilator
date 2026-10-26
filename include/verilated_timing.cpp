@@ -305,6 +305,39 @@ void VlDynamicTriggerScheduler::dump() const {
 #endif
 
 //======================================================================
+// VlWaitScheduler:: Methods
+
+void VlWaitScheduler::resume() {
+    VL_DEBUG_IF(if (!m_ready.empty()) VL_DBG_MSGF("         Resuming woken processes:\n");  //
+                for (const auto& susp : m_ready) {
+                    VL_DBG_MSGF("           - ");
+                    susp.dump();
+                });
+    if (VL_UNLIKELY(Verilated::threadContextp()->gotFinish())) {
+        m_ready.clear();
+        return;
+    }
+    // Swap out, as resumed coroutines may wake queues again
+    std::swap(m_ready, m_resuming);
+    for (auto& coro : m_resuming) coro.resume();
+    m_resuming.clear();
+}
+
+#ifdef VL_DEBUG
+void VlWaitScheduler::dump() const {
+    if (m_ready.empty()) {
+        VL_DBG_MSGF("         No woken processes awaiting resumption\n");
+    } else {
+        VL_DBG_MSGF("         Woken processes awaiting resumption:\n");
+        for (const auto& susp : m_ready) {
+            VL_DBG_MSGF("           - ");
+            susp.dump();
+        }
+    }
+}
+#endif
+
+//======================================================================
 // VlForkSync:: Methods
 
 void VlProcess::forkSyncOnKill(std::shared_ptr<VlForkSyncState> forkSyncp) {
