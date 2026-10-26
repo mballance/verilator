@@ -146,6 +146,9 @@ public:
     }
     // Resume the coroutine if the handle isn't null and the process isn't killed
     void resume();
+#ifdef VL_WAIT_PROFILE
+    const VlFileLineDebug& fileline() const { return m_fileline; }
+#endif
 #ifdef VL_DEBUG
     void dump() const;
 #endif

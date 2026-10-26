@@ -217,6 +217,25 @@ void VlTriggerScheduler::dump(const char* eventDescription) const {
 //======================================================================
 // VlDynamicTriggerScheduler:: Methods
 
+#ifdef VL_WAIT_PROFILE
+#include <cstdio>
+#include <map>
+#include <string>
+// Per-site count of dynamic-trigger re-evaluations, dumped at exit (profiling only)
+static struct VlWaitProfile final {
+    std::map<std::string, uint64_t> m_counts;
+    uint64_t m_evals = 0;
+    ~VlWaitProfile() {
+        FILE* fp = std::fopen("vl_wait_profile.txt", "w");
+        if (!fp) return;
+        std::fprintf(fp, "evaluate_calls %llu\n", (unsigned long long)m_evals);
+        for (const auto& it : m_counts)
+            std::fprintf(fp, "%llu %s\n", (unsigned long long)it.second, it.first.c_str());
+        std::fclose(fp);
+    }
+} s_vlWaitProfile;
+#endif
+
 bool VlDynamicTriggerScheduler::evaluate() {
     if (VL_UNLIKELY(Verilated::threadContextp()->gotFinish())) {
         m_anyTriggered = false;
@@ -229,6 +248,14 @@ bool VlDynamicTriggerScheduler::evaluate() {
     m_anyTriggered = false;
     VL_DEBUG_IF(dump(););
     std::swap(m_suspended, m_evaluated);
+#ifdef VL_WAIT_PROFILE
+    ++s_vlWaitProfile.m_evals;
+    for (const auto& coro : m_evaluated) {
+        const VlFileLineDebug& fl = coro.fileline();
+        ++s_vlWaitProfile.m_counts[std::string{fl.filename() ? fl.filename() : "?"} + ":"
+                                   + std::to_string(fl.lineno())];
+    }
+#endif
     for (auto& coro : m_evaluated) coro.resume();
     m_evaluated.clear();
     return m_anyTriggered;
