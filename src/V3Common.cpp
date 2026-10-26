@@ -332,6 +332,25 @@ public:
             AstNode::user2ClearTree();
 
             iterateConst(nodep);
+
+            // A class resolved before a sibling marked its parents may now inherit
+            // to_string() from more than one parent; it then needs its own final overrider
+            bool changed = true;
+            while (changed) {
+                changed = false;
+                nodep->foreach([&](AstClass* classp) {
+                    if (classp->user1()) return;
+                    int nToString = 0;
+                    for (const AstClassExtends* const extendp : classp->extendspList()) {
+                        if (extendp->classp() && extendp->classp()->user1()) ++nToString;
+                    }
+                    if (nToString < 2) return;
+                    VL_RESTORER(m_emitTowardsRoot);
+                    ++m_emitTowardsRoot;
+                    iterateConst(classp);
+                    changed = true;
+                });
+            }
         }
 
         V3Stats::addStat("Optimizations, Class ToString emitted", m_statClassToString);
