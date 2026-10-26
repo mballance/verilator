@@ -954,6 +954,7 @@ class TimingControlVisitor final : public VNVisitor {
             = new AstBasicDType{flp, VBasicDTypeKwd::WAIT_QUEUE, VSigning::UNSIGNED};
         m_netlistp->typeTablep()->addTypesp(queueDtp);
         AstVar* const queueVarp = new AstVar{flp, VVarType::MEMBER, "__VwaitQ", queueDtp};
+        queueVarp->isInternal(true);  // Not printed by %p / to_string
         m_classp->addMembersp(queueVarp);
         m_waitQueuep = new AstVarScope{flp, scopep, queueVarp};
         scopep->addVarsp(m_waitQueuep);
