@@ -401,6 +401,8 @@ public:
 // model. Woken coroutines are resumed in wake order (FIFO). When no queue was woken, there is no
 // per-eval work beyond the anyReady() check.
 
+class VlWaitQueue;
+
 class VlWaitScheduler final {
     // TYPES
     using VlCoroutineVec = std::vector<VlCoroutineHandle>;
@@ -420,6 +422,9 @@ public:
     }
     // Resumes all woken coroutines (those woken during resumption wait for the next call)
     void resume();
+    // Used by coroutines for co_awaiting a wake() of 'queue' (defined after VlWaitQueue)
+    auto park(VlWaitQueue& queue, VlProcessRef process, const char* eventDescription = VL_UNKNOWN,
+              const char* filename = VL_UNKNOWN, int lineno = 0);
 #ifdef VL_DEBUG
     void dump() const;
 #endif
@@ -475,6 +480,11 @@ public:
         return Awaitable{m_parked, process, VlFileLineDebug{filename, lineno}};
     }
 };
+
+inline auto VlWaitScheduler::park(VlWaitQueue& queue, VlProcessRef process,
+                                  const char* eventDescription, const char* filename, int lineno) {
+    return queue.park(*this, process, eventDescription, filename, lineno);
+}
 
 //=============================================================================
 // VlForkSync is used to manage fork..join and fork..join_any constructs.

@@ -515,6 +515,8 @@ class TimingControlVisitor final : public VNVisitor {
     AstVarScope* m_dynamicSchedp = nullptr;  // Global dynamic trigger scheduler
     AstSenTree* m_delaySensesp = nullptr;  // Domain to trigger if a delayed coroutine is resumed
     AstSenTree* m_dynamicSensesp = nullptr;  // Domain to trigger if a dynamic trigger is set
+    AstVarScope* m_waitSchedp = nullptr;  // Global wait queue scheduler
+    AstSenTree* m_waitSensesp = nullptr;  // Domain to trigger if a wait queue was woken
 
     // Other
     SenTreeFinder m_finder{m_netlistp};  // Sentree finder and uniquifier
@@ -597,6 +599,28 @@ class TimingControlVisitor final : public VNVisitor {
         m_netlistp->typeTablep()->addTypesp(dynSchedDtp);
         m_dynamicSchedp = m_topScopep->createTemp("__VdynSched", dynSchedDtp);
         return m_dynamicSchedp;
+    }
+    // Creates the global wait queue scheduler variable
+    AstVarScope* getCreateWaitScheduler() {
+        if (m_waitSchedp) return m_waitSchedp;
+        auto* const waitSchedDtp = new AstBasicDType{
+            m_scopeTopp->fileline(), VBasicDTypeKwd::WAIT_SCHEDULER, VSigning::UNSIGNED};
+        m_netlistp->typeTablep()->addTypesp(waitSchedDtp);
+        m_waitSchedp = m_topScopep->createTemp("__VwaitSched", waitSchedDtp);
+        return m_waitSchedp;
+    }
+    // Creates the wait queue sentree (true if any parked coroutine was woken)
+    AstSenTree* getCreateWaitSenTree() {
+        if (m_waitSensesp) return m_waitSensesp;
+        FileLine* const flp = m_scopeTopp->fileline();
+        auto* const anyReadyp = new AstCMethodHard{
+            flp, new AstVarRef{flp, getCreateWaitScheduler(), VAccess::READ},
+            VCMethod::SCHED_ANY_READY};
+        anyReadyp->dtypeSetBit();
+        m_waitSensesp
+            = new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_TRUE, anyReadyp}};
+        m_netlistp->topScopep()->addSenTreesp(m_waitSensesp);
+        return m_waitSensesp;
     }
     // Creates the dynamic trigger sentree
     AstSenTree* getCreateDynamicTriggerSenTree() {

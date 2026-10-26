@@ -145,7 +145,8 @@ AstCCall* TimingKit::createReady(AstVarScope* trigVscp) {
             AstVarScope* const schedulerp = VN_AS(resumep->fromp(), VarRef)->varScopep();
             UASSERT_OBJ(schedulerp->dtypep()->basicp()->isDelayScheduler()
                             || schedulerp->dtypep()->basicp()->isTriggerScheduler()
-                            || schedulerp->dtypep()->basicp()->isDynamicTriggerScheduler(),
+                            || schedulerp->dtypep()->basicp()->isDynamicTriggerScheduler()
+                            || schedulerp->dtypep()->basicp()->isWaitScheduler(),
                         schedulerp, "Unexpected type");
             if (!schedulerp->dtypep()->basicp()->isTriggerScheduler()) continue;
             // Create the global ready function only if we have trigger schedulers

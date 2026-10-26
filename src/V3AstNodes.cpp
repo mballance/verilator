@@ -2659,6 +2659,10 @@ AstNodeDType::CTypeRecursed AstNodeDType::cTypeRecurse(bool compound, bool packe
             info.m_type = "::VlTriggerScheduler";
         } else if (bdtypep->isDynamicTriggerScheduler()) {
             info.m_type = "::VlDynamicTriggerScheduler";
+        } else if (bdtypep->isWaitScheduler()) {
+            info.m_type = "::VlWaitScheduler";
+        } else if (bdtypep->isWaitQueue()) {
+            info.m_type = "::VlWaitQueue";
         } else if (bdtypep->isForkSync()) {
             info.m_type = "::VlForkSync";
         } else if (bdtypep->isProcessRef()) {

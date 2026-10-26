@@ -518,6 +518,8 @@ public:
         DELAY_SCHEDULER,
         TRIGGER_SCHEDULER,
         DYNAMIC_TRIGGER_SCHEDULER,
+        WAIT_SCHEDULER,
+        WAIT_QUEUE,
         FORK_SYNC,
         PROCESS_REFERENCE,
         RANDOM_GENERATOR,
@@ -557,6 +559,8 @@ public:
                                                       "VlDelayScheduler",
                                                       "VlTriggerScheduler",
                                                       "VlDynamicTriggerScheduler",
+                                                      "VlWaitScheduler",
+                                                      "VlWaitQueue",
                                                       "VlFork",
                                                       "VlProcessRef",
                                                       "VlRandomizer",
@@ -601,6 +605,8 @@ public:
                                                       "%E-dly-sched",
                                                       "%E-trig-sched",
                                                       "%E-dyn-sched",
+                                                      "%E-wait-sched",
+                                                      "%E-wait-queue",
                                                       "%E-fork",
                                                       "%E-proc-ref",
                                                       "%E-rand-gen",
@@ -647,6 +653,8 @@ public:
         case DELAY_SCHEDULER: return 0;  // opaque
         case TRIGGER_SCHEDULER: return 0;  // opaque
         case DYNAMIC_TRIGGER_SCHEDULER: return 0;  // opaque
+        case WAIT_SCHEDULER: return 0;  // opaque
+        case WAIT_QUEUE: return 0;  // opaque
         case FORK_SYNC: return 0;  // opaque
         case PROCESS_REFERENCE: return 0;  // opaque
         case RANDOM_GENERATOR: return 0;  // opaque
@@ -694,7 +702,8 @@ public:
     bool isOpaque() const VL_MT_SAFE {  // IE not a simple number we can bit optimize
         return (m_e == EVENT || m_e == STRING || m_e == SCOPEPTR || m_e == CHARPTR
                 || m_e == DELAY_SCHEDULER || m_e == TRIGGER_SCHEDULER
-                || m_e == DYNAMIC_TRIGGER_SCHEDULER || m_e == FORK_SYNC || m_e == PROCESS_REFERENCE
+                || m_e == DYNAMIC_TRIGGER_SCHEDULER || m_e == WAIT_SCHEDULER
+                || m_e == WAIT_QUEUE || m_e == FORK_SYNC || m_e == PROCESS_REFERENCE
                 || m_e == RANDOM_GENERATOR || m_e == RANDOM_STDGENERATOR
                 || m_e == COVERGROUP_INSTHANDLE || m_e == DOUBLE || m_e == UNTYPED);
     }
@@ -763,6 +772,8 @@ public:
             /* DELAY_SCHEDULER:           */ "",  // Should not be traced
             /* TRIGGER_SCHEDULER:         */ "",  // Should not be traced
             /* DYNAMIC_TRIGGER_SCHEDULER: */ "",  // Should not be traced
+            /* WAIT_SCHEDULER:            */ "",  // Should not be traced
+            /* WAIT_QUEUE:                */ "",  // Should not be traced
             /* FORK_SYNC:                 */ "",  // Should not be traced
             /* PROCESS_REFERENCE:         */ "",  // Should not be traced
             /* RANDOM_GENERATOR:          */ "",  // Should not be traced
@@ -1058,6 +1069,7 @@ static constexpr bool validateArgsDescriptor(const char* descrp) {
     macro(RNG_GET_RANDSTATE,                  "__Vm_rng.get_randstate", PURE,   CLEAN,  "") \
     macro(RNG_SET_RANDSTATE,                  "__Vm_rng.set_randstate", false,  CLEAN,  "r") \
     macro(SCHED_ANY_TRIGGERED,                "anyTriggered",           false,  CLEAN,  "r") \
+    macro(SCHED_ANY_READY,                    "anyReady",               PURE,   CLEAN,  "") \
     macro(SCHED_AWAITING_CURRENT_TIME,        "awaitingCurrentTime",    PURE,   CLEAN,  "") \
     macro(SCHED_AWAITING_ZERO_DELAY,          "awaitingZeroDelay",      PURE,   CLEAN,  "") \
     macro(SCHED_READY,                        "ready",                  false,  CLEAN,  "r") \
@@ -1066,6 +1078,7 @@ static constexpr bool validateArgsDescriptor(const char* descrp) {
     macro(SCHED_DO_POST_UPDATES,              "doPostUpdates",          false,  CLEAN,  "") \
     macro(SCHED_EVALUATE,                     "evaluate",               false,  CLEAN,  "") \
     macro(SCHED_EVALUATION,                   "evaluation",             false,  CLEAN,  "rrrr") \
+    macro(SCHED_PARK,                         "park",                   false,  CLEAN,  "wrrrr") \
     macro(SCHED_POST_UPDATE,                  "postUpdate",             false,  CLEAN,  "rrrr") \
     macro(SCHED_RESUME,                       "resume",                 false,  CLEAN,  "TODO") \
     macro(SCHED_RESUME_ZERO_DELAY,            "resumeZeroDelay",        false,  CLEAN,  "") \

@@ -517,6 +517,8 @@ public:
     bool isDynamicTriggerScheduler() const VL_MT_SAFE {
         return keyword() == VBasicDTypeKwd::DYNAMIC_TRIGGER_SCHEDULER;
     }
+    bool isWaitScheduler() const VL_MT_SAFE { return keyword() == VBasicDTypeKwd::WAIT_SCHEDULER; }
+    bool isWaitQueue() const VL_MT_SAFE { return keyword() == VBasicDTypeKwd::WAIT_QUEUE; }
     bool isRandomGenerator() const VL_MT_SAFE {
         return keyword() == VBasicDTypeKwd::RANDOM_GENERATOR;
     }
