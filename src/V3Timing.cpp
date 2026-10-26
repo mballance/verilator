@@ -517,6 +517,8 @@ class TimingControlVisitor final : public VNVisitor {
     AstSenTree* m_dynamicSensesp = nullptr;  // Domain to trigger if a dynamic trigger is set
     AstVarScope* m_waitSchedp = nullptr;  // Global wait queue scheduler
     AstSenTree* m_waitSensesp = nullptr;  // Domain to trigger if a wait queue was woken
+    std::unordered_set<const AstWait*> m_parkWaits;  // Waits that park on m_waitQueuep
+    AstVarScope* m_waitQueuep = nullptr;  // Wait queue member of current class, if any
 
     // Other
     SenTreeFinder m_finder{m_netlistp};  // Sentree finder and uniquifier
@@ -871,6 +873,106 @@ class TimingControlVisitor final : public VNVisitor {
         return V3Timing::delayToTicks(valuep, nodep->timeunit());
     }
 
+    // Can the variable referenced in a wait condition only change by writes we track?
+    static bool isTrackableMember(const AstVar* varp,
+                                  const std::unordered_set<const AstVar*>& classVars) {
+        return varp->isClassMember() && varp->isHideLocal() && !varp->isSigPublic()
+               && !varp->isRand() && classVars.count(varp);
+    }
+    // Find waits in class scope 'scopep' whose condition only reads 'local' members of the class
+    // (through 'this') and function inputs/locals not written in a fork. Those waits park on a
+    // per-object wait queue, woken after each write to the members (see visit(AstWait)).
+    void findParkableWaits(AstScope* scopep) {
+        std::unordered_set<const AstVar*> classVars;
+        for (AstNode* stmtp = m_classp->membersp(); stmtp; stmtp = stmtp->nextp()) {
+            if (const AstVar* const varp = VN_CAST(stmtp, Var)) classVars.insert(varp);
+        }
+        // Locals written under a fork may change while waiting
+        std::unordered_set<const AstVar*> forkWritten;
+        scopep->foreach([&](const AstFork* forkp) {
+            forkp->foreach([&](const AstNodeVarRef* refp) {
+                if (refp->access().isWriteOrRW()) forkWritten.insert(refp->varp());
+            });
+        });
+        // Candidate waits and the members they read
+        std::vector<AstWait*> waits;
+        std::unordered_set<const AstVar*> tracked;
+        scopep->foreach([&](AstWait* waitp) {
+            bool ok = true;
+            bool anyMember = false;
+            std::vector<const AstVar*> members;
+            waitp->condp()->foreach([&](AstNode* np) {
+                if (!ok) return;
+                if (const AstNodeVarRef* const refp = VN_CAST(np, NodeVarRef)) {
+                    const AstVar* const varp = refp->varp();
+                    if (isTrackableMember(varp, classVars)) {
+                        members.push_back(varp);
+                        anyMember = true;
+                    } else if (!varp->isFuncLocal() || forkWritten.count(varp)
+                               || (varp->isIO() && varp->direction() != VDirection::INPUT)) {
+                        ok = false;
+                    }
+                } else if (VN_IS(np, MemberSel) || !np->isPure()) {
+                    ok = false;
+                }
+            });
+            if (!ok || !anyMember) return;
+            waits.push_back(waitp);
+            tracked.insert(members.begin(), members.end());
+        });
+        // Every write to a tracked member must be a plain statement we can follow with a wake
+        std::vector<AstNode*> wakeAfter;
+        std::unordered_set<const AstVar*> untrackable;
+        scopep->foreach([&](AstNodeVarRef* refp) {
+            if (!tracked.count(refp->varp()) || !refp->access().isWriteOrRW()) return;
+            AstNode* stmtp = refp;
+            while (stmtp && !VN_IS(stmtp, NodeStmt)) stmtp = stmtp->backp();
+            AstNode* const upp = refp->backp();
+            const bool okWrite
+                = (VN_IS(stmtp, NodeAssign) && !VN_IS(stmtp, AssignDly))
+                  || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, CMethodHard)
+                      && VN_AS(upp, CMethodHard)->fromp() == refp);
+            if (!okWrite || !refp->isPure()) {
+                untrackable.insert(refp->varp());
+            } else {
+                wakeAfter.push_back(stmtp);
+            }
+        });
+        scopep->foreach([&](const AstMemberSel* selp) {
+            if (tracked.count(selp->varp())) untrackable.insert(selp->varp());
+        });
+        for (AstWait* const waitp : waits) {
+            const bool ok = !waitp->condp()->exists([&](const AstNodeVarRef* refp) {
+                return untrackable.count(refp->varp());
+            });
+            if (ok) m_parkWaits.insert(waitp);
+        }
+        if (m_parkWaits.empty()) return;
+        // Create the queue and the wakes (a wake only costs a branch when nothing is parked)
+        FileLine* const flp = m_classp->fileline();
+        AstBasicDType* const queueDtp
+            = new AstBasicDType{flp, VBasicDTypeKwd::WAIT_QUEUE, VSigning::UNSIGNED};
+        m_netlistp->typeTablep()->addTypesp(queueDtp);
+        AstVar* const queueVarp = new AstVar{flp, VVarType::MEMBER, "__VwaitQ", queueDtp};
+        m_classp->addMembersp(queueVarp);
+        m_waitQueuep = new AstVarScope{flp, scopep, queueVarp};
+        scopep->addVarsp(m_waitQueuep);
+        std::unordered_set<AstNode*> done;
+        for (AstNode* const stmtp : wakeAfter) {
+            if (!done.insert(stmtp).second) continue;
+            if (stmtp->exists([&](const AstNodeVarRef* refp) {
+                    return untrackable.count(refp->varp()) && refp->access().isWriteOrRW();
+                })) {
+                continue;
+            }
+            AstCMethodHard* const wakep = new AstCMethodHard{
+                stmtp->fileline(), new AstVarRef{stmtp->fileline(), m_waitQueuep, VAccess::WRITE},
+                VCMethod::SCHED_WAKE};
+            wakep->dtypeSetVoid();
+            stmtp->addNextHere(wakep->makeStmt());
+        }
+    }
+
     // VISITORS
     void visit(AstNodeModule* nodep) override {
         UASSERT_OBJ(!m_classp, nodep, "Module or class under class");
@@ -883,6 +985,8 @@ class TimingControlVisitor final : public VNVisitor {
     void visit(AstScope* nodep) override {
         VL_RESTORER(m_scopep);
         m_scopep = nodep;
+        VL_RESTORER(m_waitQueuep);
+        if (m_classp) findParkableWaits(nodep);
         SenExprBuilder senExprBuilder{m_scopep};
         {  // Restore m_senExprBuilderp before destroying senExprBuilder
             VL_RESTORER(m_senExprBuilderp);
@@ -1456,6 +1560,23 @@ class TimingControlVisitor final : public VNVisitor {
                 nodep->v3fatalSrc("constant wait should have been removed in "
                                   "TimingSuspendableVisitor::visit(AstWait)");
             }
+        } else if (m_waitQueuep && m_parkWaits.count(nodep)) {
+            // Condition only changes by tracked writes, which wake the queue:
+            // while (!cond) co_await __VwaitSched.park(this->__VwaitQ, ...);
+            AstCMethodHard* const parkp = new AstCMethodHard{
+                flp, new AstVarRef{flp, getCreateWaitScheduler(), VAccess::WRITE},
+                VCMethod::SCHED_PARK, new AstVarRef{flp, m_waitQueuep, VAccess::WRITE}};
+            parkp->dtypeSetVoid();
+            addProcessInfo(parkp);
+            AstCExpr* const descp = new AstCExpr{flp, "\"wait\""};
+            descp->dtypeSetString();
+            parkp->addPinsp(descp);
+            addDebugInfo(parkp);
+            AstLoop* const loopp = new AstLoop{flp};
+            loopp->addStmtsp(new AstLoopTest{flp, loopp, new AstLogNot{flp, condp}});
+            loopp->addStmtsp(new AstCAwait{flp, parkp, getCreateWaitSenTree()});
+            if (stmtsp) AstNode::addNext<AstNode, AstNode>(loopp, stmtsp);
+            nodep->replaceWith(loopp);
         } else if (needDynamicTrigger(condp)) {
             // No point in making a sentree, just use the expression as sensitivity
             // Put the event control in an if so we only wait if the condition isn't met already

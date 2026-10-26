@@ -1085,6 +1085,7 @@ static constexpr bool validateArgsDescriptor(const char* descrp) {
     macro(SCHED_RESUMPTION,                   "resumption",             false,  CLEAN,  "rrrr") \
     macro(SCHED_TRIGGER,                      "trigger",                false,  CLEAN,  "rrrrr") \
     macro(SCHED_WAIT_FOREVER,                 "waitForever",            false,  CLEAN,  "rrr") \
+    macro(SCHED_WAKE,                         "wake",                   false,  CLEAN,  "") \
     macro(UNPACKED_ASSIGN,                    "assign",                 false,  CLEAN,  "r") \
     macro(UNPACKED_FILL,                      "fill",                   false,  CLEAN,  "r") \
     macro(UNPACKED_NEQ,                       "neq",                    PURE,   CLEAN,  "r")
