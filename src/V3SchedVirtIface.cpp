@@ -44,6 +44,8 @@ private:
 
     // Set of (iface, member) pairs written through VIF -- defines which members need triggers
     std::set<IfaceMember> m_vifWrittenMembers;
+    // Subset of the above written by a MemberSel through a VIF (no dirty hook yet: ungated)
+    std::set<IfaceMember> m_memberSelWritten;
     // All candidate VarScopes of interface members (keyed by interface type + member name)
     std::map<IfaceMember, std::vector<AstVarScope*>> m_candidateVscps;
     std::set<std::pair<IfaceMember, AstVarScope*>> m_seenCandidateVscps;
@@ -75,6 +77,7 @@ private:
                 = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), IfaceRefDType);
             if (dtypep && dtypep->isVirtual()) {
                 m_vifWrittenMembers.emplace(dtypep->ifacep(), nodep->varp()->name());
+                m_memberSelWritten.emplace(dtypep->ifacep(), nodep->varp()->name());
             }
         }
         iterateChildren(nodep);
@@ -133,6 +136,88 @@ private:
         }
     }
 
+    // Returns true if a write to this member must always be checked by value compare
+    static bool mustStayUngated(const AstVar* const varp) {
+        return varp->isSigUserRWPublic() || varp->isSigPublic() || varp->isForceable()
+               || varp->isPrimaryIO();
+    }
+
+    // Decide which triggers are gated and add 'dirty = 1' after each write to them.
+    // A trigger is gated only if every write is the plain VarRef LHS of a procedural
+    // assignment. Members written through a VIF MemberSel stay ungated (no hook yet).
+    void gateTriggers(AstNetlist* const netlistp) {
+        std::set<const AstVarScope*> trigVscps;
+        for (const VirtIfaceTriggers::TriggerEntry& entry : m_triggers.m_triggers) {
+            if (!m_memberSelWritten.count({entry.m_ifacep, entry.m_memberp->name()})
+                && !mustStayUngated(entry.m_memberp)) {
+                trigVscps.insert(entry.m_vscp);
+            }
+        }
+        if (trigVscps.empty()) return;
+        // Find hook sites; any other write shape ungates the VarScope
+        std::set<const AstVarScope*> ungated;
+        std::vector<std::pair<AstNodeAssign*, AstVarScope*>> sites;
+        netlistp->foreach([&](AstVarRef* const refp) {
+            if (!refp->access().isWriteOrRW()) return;
+            AstVarScope* const vscp = refp->varScopep();
+            if (!trigVscps.count(vscp)) return;
+            AstNodeAssign* const assp = VN_CAST(refp->backp(), NodeAssign);
+            if (assp && assp->lhsp() == refp && refp->access().isWriteOnly()
+                && (VN_IS(assp, Assign) || VN_IS(assp, AssignDly))) {
+                sites.emplace_back(assp, vscp);
+            } else {
+                ungated.insert(vscp);
+            }
+        });
+        // Dirty flags: one variable per interface module, one VarScope per scope
+        std::map<AstNodeModule*, std::pair<AstVar*, AstVar*>> modVars;
+        std::map<AstScope*, std::pair<AstVarScope*, AstVarScope*>> scopeFlags;
+        const auto getFlags = [&](AstScope* const scopep) {
+            auto it = scopeFlags.find(scopep);
+            if (it != scopeFlags.end()) return it->second;
+            AstNodeModule* const modp = scopep->modp();
+            FileLine* const flp = modp->fileline();
+            auto mit = modVars.find(modp);
+            if (mit == modVars.end()) {
+                const auto newVar = [&](const string& name) {
+                    AstVar* const varp = new AstVar{flp, VVarType::MODULETEMP, name,
+                                                    netlistp->findBitDType()};
+                    modp->addStmtsp(varp);
+                    return varp;
+                };
+                mit = modVars.emplace(modp, std::make_pair(newVar("__Vvifdirty_ico"),
+                                                           newVar("__Vvifdirty_act")))
+                          .first;
+            }
+            const auto newVscp = [&](AstVar* const varp) {
+                AstVarScope* const vscp = new AstVarScope{flp, scopep, varp};
+                scopep->addVarsp(vscp);
+                return vscp;
+            };
+            const auto flags = std::make_pair(newVscp(mit->second.first),
+                                              newVscp(mit->second.second));
+            scopeFlags.emplace(scopep, flags);
+            return flags;
+        };
+        for (VirtIfaceTriggers::TriggerEntry& entry : m_triggers.m_triggers) {
+            if (!trigVscps.count(entry.m_vscp) || ungated.count(entry.m_vscp)) continue;
+            const auto flags = getFlags(entry.m_vscp->scopep());
+            entry.m_gated = true;
+            entry.m_dirtyIcop = flags.first;
+            entry.m_dirtyActp = flags.second;
+        }
+        // Hooks: 'dirty_ico = 1; dirty_act = 1;' after each write of a gated VarScope
+        for (const auto& site : sites) {
+            if (ungated.count(site.second)) continue;
+            const auto flags = scopeFlags.at(site.second->scopep());
+            FileLine* const flp = site.first->fileline();
+            for (AstVarScope* const flagp : {flags.first, flags.second}) {
+                site.first->addNextHere(new AstAssign{
+                    flp, new AstVarRef{flp, flagp, VAccess::WRITE}, new AstConst{flp, 1}});
+            }
+        }
+    }
+
 public:
     // CONSTRUCTORS
     explicit VirtIfaceVisitor(AstNetlist* nodep) {
@@ -161,6 +246,7 @@ public:
             });
         }
         buildTriggers();
+        gateTriggers(nodep);
     }
     ~VirtIfaceVisitor() override = default;
 

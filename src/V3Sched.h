@@ -440,6 +440,11 @@ public:
         const AstIface* m_ifacep;  // Interface type
         const AstVar* m_memberp;  // Member variable in the interface definition
         AstVarScope* m_vscp;  // VarScope to monitor
+        // Gated: every write to m_vscp is followed by setting the dirty flags below, so the
+        // value-change compare is needed only when the flag of the kit is set
+        bool m_gated = false;
+        AstVarScope* m_dirtyIcop = nullptr;  // Dirty flag of m_vscp's scope, for 'ico' kit
+        AstVarScope* m_dirtyActp = nullptr;  // Dirty flag of m_vscp's scope, for 'act' kit
     };
 
     std::vector<TriggerEntry> m_triggers;
