@@ -520,6 +520,15 @@ class TimingControlVisitor final : public VNVisitor {
     AstSenTree* m_waitSensesp = nullptr;  // Domain to trigger if a wait queue was woken
     std::unordered_set<const AstWait*> m_parkWaits;  // Waits that park on m_waitQueuep
     AstVarScope* m_waitQueuep = nullptr;  // Wait queue member of current class, if any
+    // Waits on members of another object, 'wait(h.f ...)': park on h.__VwaitQ of class 'classp'
+    struct RemoteWait final {
+        AstClass* classp;  // Class of the object the condition reads
+        AstNodeExpr* fromp;  // The handle 'h'
+    };
+    std::unordered_map<const AstWait*, RemoteWait> m_remoteWaits;
+    // Members of each class read by remote waits: writes to them wake the class's queue
+    std::unordered_map<const AstClass*, std::unordered_set<const AstVar*>> m_remoteTracked;
+    std::unordered_map<const AstClass*, AstVar*> m_classQueues;  // __VwaitQ member of each class
     // Class members written outside their own class's scopes in a way we cannot follow with a
     // wake (whole-program writer rule)
     std::unordered_set<const AstVar*> m_externallyWritten;
@@ -1167,6 +1176,124 @@ class TimingControlVisitor final : public VNVisitor {
         const string& name = callp->funcp()->name();
         return name == "__VnoInFunc_status" || name == "__VnoInFunc_self";
     }
+    AstVar* getCreateClassQueue(AstClass* classp) {
+        AstVar*& queueVarp = m_classQueues[classp];
+        if (queueVarp) return queueVarp;
+        FileLine* const flp = classp->fileline();
+        AstBasicDType* const queueDtp
+            = new AstBasicDType{flp, VBasicDTypeKwd::WAIT_QUEUE, VSigning::UNSIGNED};
+        m_netlistp->typeTablep()->addTypesp(queueDtp);
+        queueVarp = new AstVar{flp, VVarType::MEMBER, "__VwaitQ", queueDtp};
+        queueVarp->isInternal(true);  // Not printed by %p / to_string
+        classp->addMembersp(queueVarp);
+        return queueVarp;
+    }
+    // Find waits whose condition reads members of one other object, 'wait(h.f != h.g)', where
+    // f and g are trackable and only written by statements we can follow with a wake, and h is
+    // a local not written in a fork, or a member written by no coroutine (so it does not
+    // change while parked). Those waits park on h.__VwaitQ.
+    void findRemoteWaits() {
+        std::unordered_map<const AstVar*, AstClass*> ownerOf;
+        m_netlistp->foreach([&](AstClass* classp) {
+            for (AstNode* stmtp = classp->membersp(); stmtp; stmtp = stmtp->nextp()) {
+                if (const AstVar* const varp = VN_CAST(stmtp, Var)) ownerOf.emplace(varp, classp);
+            }
+        });
+        std::unordered_set<const AstVar*> coWritten;
+        m_netlistp->foreach([&](const AstCFunc* funcp) {
+            if (!funcp->isCoroutine()) return;
+            funcp->foreach([&](const AstNodeVarRef* refp) {
+                if (refp->access().isWriteOrRW()) coWritten.insert(refp->varp());
+            });
+            funcp->foreach([&](const AstMemberSel* selp) {
+                if (selp->access().isWriteOrRW()) coWritten.insert(selp->varp());
+            });
+        });
+        std::unordered_map<const AstWait*, std::vector<const AstVar*>> waitMembers;
+        m_netlistp->foreach([&](AstScope* scopep) {
+            if (!VN_IS(scopep->modp(), Class)) return;
+            std::unordered_set<const AstVar*> forkWritten;
+            scopep->foreach([&](const AstFork* forkp) {
+                forkp->foreach([&](const AstNodeVarRef* refp) {
+                    if (refp->access().isWriteOrRW()) forkWritten.insert(refp->varp());
+                });
+            });
+            const auto isStableLocal = [&](const AstVar* varp) {
+                return varp->isFuncLocal() && !forkWritten.count(varp)
+                       && !(varp->isIO() && varp->direction() != VDirection::INPUT);
+            };
+            scopep->foreach([&](AstWait* waitp) {
+                bool ok = true;
+                AstClass* classp = nullptr;
+                AstNodeVarRef* handlep = nullptr;
+                std::vector<const AstVar*> members;
+                waitp->condp()->foreach([&](AstNode* np) {
+                    if (!ok) return;
+                    if (isParkableProcessCall(np)) return;
+                    if (VN_IS(np, ExprStmt) || VN_IS(np, StmtExpr) || VN_IS(np, Comment)
+                        || VN_IS(np, If)) {
+                        return;
+                    }
+                    if (const AstAssign* const assp = VN_CAST(np, Assign)) {
+                        const AstNodeVarRef* const lhsp = VN_CAST(assp->lhsp(), NodeVarRef);
+                        if (!lhsp || !isLiftTemp(lhsp->varp())) ok = false;
+                        return;
+                    }
+                    if (const AstMemberSel* const selp = VN_CAST(np, MemberSel)) {
+                        AstNodeVarRef* const hp = VN_CAST(selp->fromp(), NodeVarRef);
+                        const AstVar* const fp = selp->varp();
+                        const auto it = fp ? ownerOf.find(fp) : ownerOf.end();
+                        if (!hp || it == ownerOf.end() || (handlep && handlep->varp() != hp->varp())
+                            || fp->isSigPublic() || fp->isRand()
+                            || (!fp->isHideLocal() && m_externallyWritten.count(fp))
+                            || (classp && classp != it->second)) {
+                            ok = false;
+                            return;
+                        }
+                        const AstVar* const hvarp = hp->varp();
+                        if (!(hvarp->isClassMember() && !coWritten.count(hvarp))
+                            && !isStableLocal(hvarp)) {
+                            ok = false;
+                            return;
+                        }
+                        handlep = hp;
+                        classp = it->second;
+                        members.push_back(fp);
+                        return;
+                    }
+                    if (const AstNodeVarRef* const refp = VN_CAST(np, NodeVarRef)) {
+                        if (refp == handlep) return;
+                        if (VN_IS(refp->backp(), MemberSel)) return;  // Checked above
+                        if (!isLiftTemp(refp->varp()) && !isStableLocal(refp->varp())) ok = false;
+                    } else if (!np->isPure()) {
+                        ok = false;
+                    }
+                });
+                if (!ok || !classp) return;
+                m_remoteWaits.emplace(waitp, RemoteWait{classp, handlep});
+                waitMembers.emplace(waitp, members);
+            });
+        });
+        // Every write to a member in its own class must be one we can follow with a wake
+        std::unordered_set<const AstVar*> readVars;
+        for (const auto& it : waitMembers) readVars.insert(it.second.begin(), it.second.end());
+        std::unordered_set<const AstVar*> untrackable;
+        m_netlistp->foreach([&](AstNodeVarRef* refp) {
+            if (!readVars.count(refp->varp()) || !refp->access().isWriteOrRW()) return;
+            if (!wakeableWriteStmt(refp)) untrackable.insert(refp->varp());
+        });
+        for (const auto& it : waitMembers) {
+            bool ok = true;
+            for (const AstVar* const varp : it.second) ok = ok && !untrackable.count(varp);
+            if (!ok) {
+                m_remoteWaits.erase(it.first);
+                continue;
+            }
+            const AstClass* const classp = m_remoteWaits.at(it.first).classp;
+            m_remoteTracked[classp].insert(it.second.begin(), it.second.end());
+        }
+    }
+
     // Find waits in class scope 'scopep' whose condition only reads trackable members of the class
     // (through 'this') and function inputs/locals not written in a fork. Those waits park on a
     // per-object wait queue, woken after each write to the members (see visit(AstWait)).
@@ -1239,15 +1366,23 @@ class TimingControlVisitor final : public VNVisitor {
             });
             if (ok) m_parkWaits.insert(waitp);
         }
-        if (m_parkWaits.empty()) return;
+        const auto remoteIt = m_remoteTracked.find(m_classp);
+        if (remoteIt != m_remoteTracked.end()) {
+            for (const AstVar* const varp : remoteIt->second) {
+                if (tracked.insert(varp).second) {
+                    scopep->foreach([&](AstNodeVarRef* refp) {
+                        if (refp->varp() != varp || !refp->access().isWriteOrRW()) return;
+                        if (AstNode* const stmtp = wakeableWriteStmt(refp)) {
+                            wakeAfter.push_back(stmtp);
+                        }
+                    });
+                }
+            }
+        }
+        if (m_parkWaits.empty() && remoteIt == m_remoteTracked.end()) return;
         // Create the queue and the wakes (a wake only costs a branch when nothing is parked)
         FileLine* const flp = m_classp->fileline();
-        AstBasicDType* const queueDtp
-            = new AstBasicDType{flp, VBasicDTypeKwd::WAIT_QUEUE, VSigning::UNSIGNED};
-        m_netlistp->typeTablep()->addTypesp(queueDtp);
-        AstVar* const queueVarp = new AstVar{flp, VVarType::MEMBER, "__VwaitQ", queueDtp};
-        queueVarp->isInternal(true);  // Not printed by %p / to_string
-        m_classp->addMembersp(queueVarp);
+        AstVar* const queueVarp = getCreateClassQueue(m_classp);
         m_waitQueuep = new AstVarScope{flp, scopep, queueVarp};
         scopep->addVarsp(m_waitQueuep);
         std::unordered_set<AstNode*> done;
@@ -1901,12 +2036,25 @@ class TimingControlVisitor final : public VNVisitor {
                 nodep->v3fatalSrc("constant wait should have been removed in "
                                   "TimingSuspendableVisitor::visit(AstWait)");
             }
-        } else if (m_waitQueuep && m_parkWaits.count(nodep)) {
+        } else if ((m_waitQueuep && m_parkWaits.count(nodep)) || m_remoteWaits.count(nodep)) {
             // Condition only changes by tracked writes, which wake the queue:
             // while (!cond) co_await __VwaitSched.park(this->__VwaitQ, ...);
+            // or, for a wait on another object's members, park(h->__VwaitQ, ...)
+            AstNodeExpr* queuep;
+            const auto remoteIt = m_remoteWaits.find(nodep);
+            if (remoteIt != m_remoteWaits.end()) {
+                AstNodeExpr* const fromp = remoteIt->second.fromp->cloneTree(false);
+                fromp->foreach([](AstNodeVarRef* refp) { refp->access(VAccess::READ); });
+                AstMemberSel* const selp = new AstMemberSel{
+                    flp, fromp, getCreateClassQueue(remoteIt->second.classp)};
+                selp->access(VAccess::WRITE);
+                queuep = selp;
+            } else {
+                queuep = new AstVarRef{flp, m_waitQueuep, VAccess::WRITE};
+            }
             AstCMethodHard* const parkp = new AstCMethodHard{
                 flp, new AstVarRef{flp, getCreateWaitScheduler(), VAccess::WRITE},
-                VCMethod::SCHED_PARK, new AstVarRef{flp, m_waitQueuep, VAccess::WRITE}};
+                VCMethod::SCHED_PARK, queuep};
             parkp->dtypeSetVoid();
             addProcessInfo(parkp);
             AstCExpr* const descp = new AstCExpr{flp, "\"wait\""};
@@ -1995,6 +2143,7 @@ public:
     explicit TimingControlVisitor(AstNetlist* nodep)
         : m_netlistp{nodep} {
         findExternallyWritten();
+        findRemoteWaits();
         findParkableEvents();
         iterate(nodep);
 
