@@ -523,6 +523,12 @@ class TimingControlVisitor final : public VNVisitor {
     // Class members written outside their own class's scopes in a way we cannot follow with a
     // wake (whole-program writer rule)
     std::unordered_set<const AstVar*> m_externallyWritten;
+    // Wait queue of a class member event: @(ev) parks on it, '->ev' wakes it
+    struct EventQueue final {
+        AstVar* varp;  // __VwaitQ__<ev> member
+        AstVarScope* vscp;  // Its VarScope in the owning class's scope
+    };
+    std::unordered_map<const AstVar*, EventQueue> m_eventQueues;
     // Writes outside the member's own class that can be followed by a wake: the statement, and
     // the object written through ('obj' in 'obj.f = v'), or nullptr for a derived-class write
     struct ExternalWrite final {
@@ -1000,6 +1006,129 @@ class TimingControlVisitor final : public VNVisitor {
             });
         });
     }
+    // The class member event referenced by 'exprp' (a VarRef, or a MemberSel from a simple
+    // ref), or nullptr
+    static const AstVar* eventMemberOf(const AstNodeExpr* exprp,
+                                       const std::unordered_map<const AstVar*, const AstClass*>& ownerOf) {
+        const AstVar* varp = nullptr;
+        if (const AstVarRef* const refp = VN_CAST(exprp, VarRef)) {
+            varp = refp->varp();
+        } else if (const AstMemberSel* const selp = VN_CAST(exprp, MemberSel)) {
+            varp = selp->varp();
+        }
+        if (!varp || !ownerOf.count(varp)) return nullptr;
+        if (!varp->dtypep() || !varp->dtypep()->skipRefp()->isEvent()) return nullptr;
+        return varp;
+    }
+    // Find class member events that @(ev) can park on: every '->ev' is a plain fire through
+    // 'this' or a simple member select, and the event handle is never copied (an assignment or
+    // argument would alias the VlAssignableEvent, and a fire via the alias would miss the queue).
+    // Creates the queues and adds a wake after each fire.
+    void findParkableEvents() {
+        std::unordered_map<const AstVar*, const AstClass*> ownerOf;
+        m_netlistp->foreach([&](const AstClass* classp) {
+            for (const AstNode* stmtp = classp->membersp(); stmtp; stmtp = stmtp->nextp()) {
+                if (const AstVar* const varp = VN_CAST(stmtp, Var)) ownerOf.emplace(varp, classp);
+            }
+        });
+        std::unordered_set<const AstVar*> waited;
+        std::unordered_set<const AstVar*> untrackable;
+        const auto markAll = [&](const AstNode* np) {
+            if (!np) return;
+            np->foreach([&](const AstNodeExpr* exprp) {
+                if (const AstVar* const varp = eventMemberOf(exprp, ownerOf)) untrackable.insert(varp);
+            });
+        };
+        m_netlistp->foreach([&](const AstSenItem* itemp) {
+            if (itemp->edgeType() != VEdgeType::ET_EVENT) return;
+            if (const AstVar* const varp = eventMemberOf(itemp->sensp(), ownerOf)) {
+                waited.insert(varp);
+            }
+        });
+        if (waited.empty()) return;
+        m_netlistp->foreach([&](const AstNodeAssign* assp) { markAll(assp); });
+        m_netlistp->foreach([&](const AstNodeFTaskRef* refp) { markAll(refp->argsp()); });
+        m_netlistp->foreach([&](const AstNodeCCall* callp) { markAll(callp->argsp()); });
+        std::vector<std::pair<AstFireEvent*, const AstVar*>> fires;
+        m_netlistp->foreach([&](AstFireEvent* firep) {
+            const AstVar* const varp = eventMemberOf(firep->operandp(), ownerOf);
+            if (!varp) {
+                markAll(firep->operandp());
+                return;
+            }
+            bool ok = !firep->isDelayed();
+            if (const AstVarRef* const refp = VN_CAST(firep->operandp(), VarRef)) {
+                ok = ok && refp->varScopep()
+                     && refp->varScopep()->scopep()->modp() == ownerOf.at(varp);
+            } else {
+                ok = ok && isSimpleRef(VN_AS(firep->operandp(), MemberSel)->fromp());
+            }
+            if (ok) {
+                fires.emplace_back(firep, varp);
+            } else {
+                untrackable.insert(varp);
+            }
+        });
+        // Create the queues, in the owning class's scope
+        m_netlistp->foreach([&](AstScope* scopep) {
+            AstClass* const classp = VN_CAST(scopep->modp(), Class);
+            if (!classp) return;
+            for (AstNode* stmtp = classp->membersp(); stmtp; stmtp = stmtp->nextp()) {
+                const AstVar* const evp = VN_CAST(stmtp, Var);
+                if (!evp || !waited.count(evp) || untrackable.count(evp)) continue;
+                if (m_eventQueues.count(evp)) continue;
+                FileLine* const flp = evp->fileline();
+                AstBasicDType* const queueDtp
+                    = new AstBasicDType{flp, VBasicDTypeKwd::WAIT_QUEUE, VSigning::UNSIGNED};
+                m_netlistp->typeTablep()->addTypesp(queueDtp);
+                AstVar* const queueVarp
+                    = new AstVar{flp, VVarType::MEMBER, "__VwaitQ__" + evp->name(), queueDtp};
+                queueVarp->isInternal(true);  // Not printed by %p / to_string
+                classp->addMembersp(queueVarp);
+                AstVarScope* const vscp = new AstVarScope{flp, scopep, queueVarp};
+                scopep->addVarsp(vscp);
+                m_eventQueues.emplace(evp, EventQueue{queueVarp, vscp});
+            }
+        });
+        // Wake after each fire
+        for (const auto& pair : fires) {
+            AstFireEvent* const firep = pair.first;
+            const auto it = m_eventQueues.find(pair.second);
+            if (it == m_eventQueues.end()) continue;
+            FileLine* const flp = firep->fileline();
+            AstCMethodHard* const wakep
+                = new AstCMethodHard{flp, eventQueueRef(firep->operandp(), it->second),
+                                     VCMethod::SCHED_WAKE};
+            wakep->dtypeSetVoid();
+            firep->addNextHere(wakep->makeStmt());
+        }
+    }
+    // Reference to the wait queue of the event referenced by 'evExprp'
+    static AstNodeExpr* eventQueueRef(AstNodeExpr* evExprp, const EventQueue& queue) {
+        FileLine* const flp = evExprp->fileline();
+        if (const AstMemberSel* const selp = VN_CAST(evExprp, MemberSel)) {
+            AstNodeExpr* const fromp = selp->fromp()->cloneTree(false);
+            fromp->foreach([](AstNodeVarRef* refp) { refp->access(VAccess::READ); });
+            fromp->foreach([](AstMemberSel* mselp) { mselp->access(VAccess::READ); });
+            AstMemberSel* const qselp = new AstMemberSel{flp, fromp, queue.varp};
+            qselp->access(VAccess::WRITE);
+            return qselp;
+        }
+        return new AstVarRef{flp, queue.vscp, VAccess::WRITE};
+    }
+    // The queue a single-event @(ev) can park on, or nullptr
+    const EventQueue* parkableEvent(const AstSenTree* sentreep) const {
+        const AstSenItem* const itemp = sentreep->sensesp();
+        if (!itemp || itemp->nextp() || itemp->edgeType() != VEdgeType::ET_EVENT) return nullptr;
+        const AstVar* varp = nullptr;
+        if (const AstVarRef* const refp = VN_CAST(itemp->sensp(), VarRef)) {
+            varp = refp->varp();
+        } else if (const AstMemberSel* const selp = VN_CAST(itemp->sensp(), MemberSel)) {
+            if (isSimpleRef(selp->fromp())) varp = selp->varp();
+        }
+        const auto it = m_eventQueues.find(varp);
+        return it == m_eventQueues.end() ? nullptr : &it->second;
+    }
     // Is the variable a temporary that V3LiftExpr lifted out of a wait condition?
     static bool isLiftTemp(const AstVar* varp) {
         return varp->isInternal() && VString::startsWith(varp->name(), "__Vlef");
@@ -1349,6 +1478,23 @@ class TimingControlVisitor final : public VNVisitor {
         FileLine* const flp = nodep->fileline();
         // Relink child statements after the event control
         if (nodep->stmtsp()) nodep->addNextHere(nodep->stmtsp()->unlinkFrBackWithNext());
+        if (const EventQueue* const queuep = parkableEvent(nodep->sentreep())) {
+            // Every fire of the event wakes its queue, so any wake means the event fired:
+            // co_await __VwaitSched.park(<obj>.__VwaitQ__ev, ...);
+            AstCMethodHard* const parkp = new AstCMethodHard{
+                flp, new AstVarRef{flp, getCreateWaitScheduler(), VAccess::WRITE},
+                VCMethod::SCHED_PARK,
+                eventQueueRef(nodep->sentreep()->sensesp()->sensp(), *queuep)};
+            parkp->dtypeSetVoid();
+            addProcessInfo(parkp);
+            AstCExpr* const descp = new AstCExpr{flp, "\"@(event)\""};
+            descp->dtypeSetString();
+            parkp->addPinsp(descp);
+            addDebugInfo(parkp);
+            nodep->replaceWith(new AstCAwait{flp, parkp, getCreateWaitSenTree()});
+            VL_DO_DANGLING(pushDeletep(nodep), nodep);
+            return;
+        }
         const bool ifaceStatic = isIfaceStaticSenTree(nodep->sentreep());
         if (!ifaceStatic && needDynamicTrigger(nodep->sentreep())) {
             // Create the trigger variable and init it with 0
@@ -1829,6 +1975,7 @@ public:
     explicit TimingControlVisitor(AstNetlist* nodep)
         : m_netlistp{nodep} {
         findExternallyWritten();
+        findParkableEvents();
         iterate(nodep);
 
         // If there is no static #0 in the design, but an unknown delay was found,
