@@ -330,7 +330,12 @@ public:
 
 //===================================================================
 // Metadata of processes
+#if defined(VL_SINGLE_THREADED_TYPES) && defined(__GLIBCXX__)
+// Non-atomic use count (libstdc++ extension) when the model is single-threaded
+using VlProcessRef = std::__shared_ptr<VlProcess, __gnu_cxx::_S_single>;
+#else
 using VlProcessRef = std::shared_ptr<VlProcess>;
+#endif
 class VlForkSync;
 class VlForkSyncState;
 
@@ -434,6 +439,15 @@ public:
     // Return process RNG if in a process, else thread RNG
     static VlRNG& currentRng() VL_MT_SAFE;
 };
+
+template <typename... T_Args>
+inline VlProcessRef vlMakeProcess(T_Args&&... args) {
+#if defined(VL_SINGLE_THREADED_TYPES) && defined(__GLIBCXX__)
+    return std::__make_shared<VlProcess, __gnu_cxx::_S_single>(std::forward<T_Args>(args)...);
+#else
+    return std::make_shared<VlProcess>(std::forward<T_Args>(args)...);
+#endif
+}
 
 inline std::string VL_TO_STRING(const VlProcessRef&) { return std::string("process"); }
 

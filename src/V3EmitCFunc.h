@@ -458,7 +458,7 @@ public:
         });
         if (m_instantiatesOwnProcess) {
             AstCStmt* const vlprocp = new AstCStmt{nodep->fileline()};
-            vlprocp->add("VlProcessRef vlProcess = std::make_shared<VlProcess>();\n");
+            vlprocp->add("VlProcessRef vlProcess = vlMakeProcess();\n");
             vlprocp->add("VlProcess::currentp(vlProcess.get());");
             nodep->prependStmtsp(vlprocp);
         } else if (nodep->needProcess() && nodep->stmtsp()) {
