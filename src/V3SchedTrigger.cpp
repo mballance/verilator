@@ -433,6 +433,17 @@ void TriggerKit::addGatedValueChangeTriggerAssignments(
             = new AstSel{flp, wordp, static_cast<int>(index % WORD_SIZE), 1};
         elsesp = AstNode::addNext(
             elsesp, new AstAssign{flp, lhsp, new AstConst{flp, AstConst::BitFalse{}}});
+        if (v3Global.opt.debugCheck()) {
+            // Check at run-time that the member did not change without setting 'dirty'
+            AstNodeExpr* const neqp = VN_AS(setp, Assign)->rhsp()->cloneTree(false);
+            AstCStmt* const stmtp = new AstCStmt{flp};
+            const std::string& file = VIdProtect::protect(item.first->fileline()->filename());
+            const std::string& line = std::to_string(item.first->fileline()->lineno());
+            stmtp->add("VL_FATAL_MT(\"" + V3OutFormatter::quoteNameControls(file) + "\", "
+                       + line + ", \"\", \"Internal: gated virtual interface member '"
+                       + item.first->prettyName() + "' changed without setting dirty flag\");");
+            elsesp = AstNode::addNext(elsesp, new AstIf{flp, neqp, stmtp});
+        }
     }
     // The first evaluation after 'prev' is initialized must compare
     initFuncp->addStmtsp(new AstAssign{flp, new AstVarRef{flp, dirtyVscp, VAccess::WRITE},
