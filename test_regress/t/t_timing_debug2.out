@@ -6,25 +6,41 @@
 -V{t#,#}+ Initial
 -V{t#,#}+    Vt_timing_debug2___024root___eval_static
 -V{t#,#}+      Vt_timing_debug2_t___eval_static__TOP__t
+-V{t#,#}+          Vt_timing_debug2___024unit__03a__03aBaseClass::new
+-V{t#,#}+          Vt_timing_debug2___024unit__03a__03aBaseClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aEventClass::new
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aEventClass::_ctor_var_reset
+-V{t#,#}+          Vt_timing_debug2___024unit__03a__03aBaseClass::new
+-V{t#,#}+          Vt_timing_debug2___024unit__03a__03aBaseClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aWaitClass::new
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aWaitClass::_ctor_var_reset
+-V{t#,#}+          Vt_timing_debug2___024unit__03a__03aBaseClass::new
+-V{t#,#}+          Vt_timing_debug2___024unit__03a__03aBaseClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aLocalWaitClass::new
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aLocalWaitClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aClkClass::new
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aClkClass::_ctor_var_reset
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelayClass::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelayClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aDelay10::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelay10::_ctor_var_reset
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelayClass::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelayClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aDelay20::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelay20::_ctor_var_reset
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelayClass::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelayClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aDelay40::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelay40::_ctor_var_reset
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelayClass::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aDelayClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aNoDelay::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aNoDelay::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aAssignDelayClass::new
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aAssignDelayClass::_ctor_var_reset
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___eval_initial
 -V{t#,#}+      Vt_timing_debug2_t___eval_initial__TOP__t__Vtiming__0
--V{t#,#}+    Vt_timing_debug2___024root____VbeforeTrig_h########__0
--V{t#,#}         Suspending process waiting for @([event] t.ec.e) at t/t_timing_class.v:115
+-V{t#,#}         Parking process waiting for @(event) at t/t_timing_class.v:115
 -V{t#,#}+      Vt_timing_debug2_t___eval_initial__TOP__t__Vtiming__1
 -V{t#,#}+      Vt_timing_debug2_t___eval_initial__TOP__t__Vtiming__2
 -V{t#,#}+      Vt_timing_debug2_t___eval_initial__TOP__t__Vtiming__3
@@ -36,6 +52,7 @@
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aDelay10::__VnoInFunc_do_delay
 -V{t#,#}+      Vt_timing_debug2_t___eval_initial__TOP__t__Vtiming__7
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aForkClass::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aForkClass::_ctor_var_reset
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aForkClass::__VnoInFunc_do_fork
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aForkClass::__VnoInFunc_do_fork____Vfork_1__0
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aForkClass::__VnoInFunc_do_fork____Vfork_1__1
@@ -60,7 +77,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:101
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:101
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:101
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -88,18 +104,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:101
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:101
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:101
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Not triggered processes waiting for @([event] t.ec.e):
--V{t#,#}           - Process waiting at t/t_timing_class.v:115
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 5: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 10: Process waiting at t/t_timing_class.v:176
@@ -120,18 +131,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:101
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:101
 -V{t#,#}         Process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:101 awaiting resumption
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 1 is active: @([true] __VdynSched.evaluate())
+-V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Not triggered processes waiting for @([event] t.ec.e):
--V{t#,#}           - Process waiting at t/t_timing_class.v:115
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Resuming processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:101
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:101
@@ -142,7 +148,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:102
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:102
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:102
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -160,7 +165,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:102
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:102
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:102
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -188,18 +192,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:102
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:102
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:102
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Not triggered processes waiting for @([event] t.ec.e):
--V{t#,#}           - Process waiting at t/t_timing_class.v:115
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 10: Process waiting at t/t_timing_class.v:176
 -V{t#,#}             Awaiting time 10: Process waiting at t/t_timing_class.v:256
@@ -225,7 +224,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:102
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:102
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:102
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -243,7 +241,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:102
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:102
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:102
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -271,18 +268,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:102
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:102
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:102
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Not triggered processes waiting for @([event] t.ec.e):
--V{t#,#}           - Process waiting at t/t_timing_class.v:115
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 15: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 20: Process waiting at t/t_timing_class.v:123
@@ -302,18 +294,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:102
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:102
 -V{t#,#}         Process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:102 awaiting resumption
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 1 is active: @([true] __VdynSched.evaluate())
+-V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Not triggered processes waiting for @([event] t.ec.e):
--V{t#,#}           - Process waiting at t/t_timing_class.v:115
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Resuming processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:102
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:102
@@ -324,7 +311,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:103
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -342,7 +328,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:103
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -370,18 +355,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:103
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Not triggered processes waiting for @([event] t.ec.e):
--V{t#,#}           - Process waiting at t/t_timing_class.v:115
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 20: Process waiting at t/t_timing_class.v:123
 -V{t#,#}             Awaiting time 20: Process waiting at t/t_timing_class.v:261
@@ -396,6 +376,8 @@
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:123
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aEventClass::__VnoInFunc_wake
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:261
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aForkDelayClass::new
+-V{t#,#}+        Vt_timing_debug2_t__03a__03aForkDelayClass::_ctor_var_reset
 -V{t#,#}             Process forked at t/t_timing_class.v:260 finished
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:135
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aClkClass::__VnoInFunc_flip
@@ -405,39 +387,25 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:103
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
--V{t#,#}         Committing processes waiting for @([event] t.ec.e):
--V{t#,#}           - Process waiting at t/t_timing_class.v:115
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}         'act' region trigger index 0 is active: @([event] t.ec.e)
+-V{t#,#}         'act' region trigger index 1 is active: @([true] __VwaitSched.anyReady())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         Moving to resume queue processes waiting for @([event] t.ec.e):
+-V{t#,#}         Resuming woken processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:115
--V{t#,#}         Processes to resume waiting for @([event] t.ec.e):
--V{t#,#}           - Process waiting at t/t_timing_class.v:115
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:115
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aEventClass::__VnoInFunc_sleep
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
+-V{t#,#}         Parking process waiting for @(event) at t/t_timing_class.v:40
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:103
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -455,17 +423,8 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:103
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -491,26 +450,15 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:103
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 25: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 30: Process waiting at t/t_timing_class.v:266
@@ -526,26 +474,15 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
 -V{t#,#}         Process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:103 awaiting resumption
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 1 is active: @([true] __VdynSched.evaluate())
+-V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Resuming processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:103
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:103
@@ -553,18 +490,9 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:104
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:104
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:104
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -580,17 +508,8 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:104
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:104
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:104
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -616,26 +535,15 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:104
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:104
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:104
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 30: Process waiting at t/t_timing_class.v:266
 -V{t#,#}             Awaiting time 30: Process waiting at t/t_timing_class.v:177
@@ -656,17 +564,8 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:104
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:104
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:104
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -682,17 +581,8 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:104
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:104
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:104
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -718,26 +608,15 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:104
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:104
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:104
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 35: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 40: Process waiting at t/t_timing_class.v:124
@@ -753,26 +632,15 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:104
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:104
 -V{t#,#}         Process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:104 awaiting resumption
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 1 is active: @([true] __VdynSched.evaluate())
+-V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Resuming processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:104
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:104
@@ -780,18 +648,9 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:105
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -807,17 +666,8 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:105
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -843,26 +693,15 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:105
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Suspending process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 40: Process waiting at t/t_timing_class.v:124
 -V{t#,#}             Awaiting time 40: Process waiting at t/t_timing_class.v:135
@@ -879,44 +718,28 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:105
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting the post update step
--V{t#,#}         Doing post updates for processes:
--V{t#,#}           - Process waiting at t/t_timing_class.v:40
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
--V{t#,#}         Process waiting for @([event] t::EventClass.e) at t/t_timing_class.v:40 awaiting resumption
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}         'act' region trigger index 0 is active: @([event] t.ec.e)
--V{t#,#}         'act' region trigger index 1 is active: @([true] __VdynSched.evaluate())
+-V{t#,#}         'act' region trigger index 1 is active: @([true] __VwaitSched.anyReady())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes:
+-V{t#,#}         Resuming woken processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:40
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:40
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aEventClass::__VnoInFunc_inc_trig_count
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aWaitClass::__VnoInFunc_await
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
+-V{t#,#}         Parking process waiting for wait at t/t_timing_class.v:61
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:105
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -934,13 +757,8 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:105
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -966,22 +784,15 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}         Suspending process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:105
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 45: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 50: Process waiting at t/t_timing_class.v:126
@@ -996,32 +807,21 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}         Process waiting for @(posedge t::ClkClass.clk) at t/t_timing_class.v:105 awaiting resumption
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 1 is active: @([true] __VdynSched.evaluate())
+-V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Resuming processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:105
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:105
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1035,11 +835,7 @@
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_clear__act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1063,20 +859,14 @@
 -V{t#,#}         'ico' region trigger index 0 is active: Internal 'ico' trigger - first iteration
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 50: Process waiting at t/t_timing_class.v:126
 -V{t#,#}             Awaiting time 50: Process waiting at t/t_timing_class.v:135
@@ -1090,11 +880,21 @@
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aClkClass::__VnoInFunc_flip
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
+-V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
+-V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
+-V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
+-V{t#,#}         'act' region trigger index 1 is active: @([true] __VwaitSched.anyReady())
+-V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
+-V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
+-V{t#,#}+    Vt_timing_debug2___024root___timing_resume
+-V{t#,#}         Resuming woken processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:61
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         Parking process waiting for wait at t/t_timing_class.v:61
+-V{t#,#}+    Vt_timing_debug2___024root___eval_act
+-V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1108,11 +908,7 @@
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_clear__act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1136,20 +932,14 @@
 -V{t#,#}         'ico' region trigger index 0 is active: Internal 'ico' trigger - first iteration
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 55: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 60: Process waiting at t/t_timing_class.v:127
@@ -1162,11 +952,7 @@
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aClkClass::__VnoInFunc_flip
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1180,11 +966,7 @@
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_clear__act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1208,20 +990,14 @@
 -V{t#,#}         'ico' region trigger index 0 is active: Internal 'ico' trigger - first iteration
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Suspending process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 60: Process waiting at t/t_timing_class.v:127
 -V{t#,#}             Awaiting time 60: Process waiting at t/t_timing_class.v:135
@@ -1235,21 +1011,15 @@
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aClkClass::__VnoInFunc_flip
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}         Suspended processes waiting for dynamic trigger evaluation:
--V{t#,#}           - Process waiting at t/t_timing_class.v:61
--V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
--V{t#,#}         Process waiting for @([true] ((32'sh4 == t::WaitClass.a) & (32'sh10 < t::WaitClass.b))) at t/t_timing_class.v:61 awaiting resumption
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
+-V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 1 is active: @([true] __VdynSched.evaluate())
+-V{t#,#}         'act' region trigger index 1 is active: @([true] __VwaitSched.anyReady())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes:
+-V{t#,#}         Resuming woken processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:61
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:61
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aLocalWaitClass::__VnoInFunc_await
@@ -1263,7 +1033,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:78
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:78
 -V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:78
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1281,7 +1050,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:78
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:78
 -V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:78
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1309,16 +1077,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:78
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:78
 -V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:78
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 65: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 70: Process waiting at t/t_timing_class.v:246
@@ -1335,7 +1100,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:78
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:78
 -V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:78
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1353,7 +1117,6 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:78
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:78
 -V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:78
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1381,16 +1144,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:78
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:78
 -V{t#,#}         Suspending process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:78
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 70: Process waiting at t/t_timing_class.v:246
 -V{t#,#}             Awaiting time 70: Process waiting at t/t_timing_class.v:178
@@ -1421,16 +1181,13 @@
 -V{t#,#}           - Process waiting at t/t_timing_class.v:78
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:78
 -V{t#,#}         Process waiting for @([true] ((32'sh2a == t::LocalWaitClass.a) | (32'sh64 != t::LocalWaitClass.b))) at t/t_timing_class.v:78 awaiting resumption
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 1 is active: @([true] __VdynSched.evaluate())
+-V{t#,#}         'act' region trigger index 2 is active: @([true] __VdynSched.evaluate())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Resuming processes:
 -V{t#,#}           - Process waiting at t/t_timing_class.v:78
 -V{t#,#}             Resuming: Process waiting at t/t_timing_class.v:78
@@ -1439,7 +1196,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1454,7 +1210,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1479,16 +1234,13 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 75: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 75: Process waiting at t/t_timing_class.v:228
@@ -1502,7 +1254,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1517,7 +1268,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1542,16 +1292,13 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 80: Process waiting at t/t_timing_class.v:140
 -V{t#,#}             Awaiting time 80: Process waiting at t/t_timing_class.v:193
@@ -1568,7 +1315,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1583,7 +1329,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1608,16 +1353,13 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 85: Process waiting at t/t_timing_class.v:237
 -V{t#,#}             Awaiting time 85: Process waiting at t/t_timing_class.v:135
@@ -1630,7 +1372,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1645,7 +1386,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1670,16 +1410,13 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 90: Process waiting at t/t_timing_class.v:193
 -V{t#,#}             Awaiting time 90: Process waiting at t/t_timing_class.v:135
@@ -1692,7 +1429,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1707,7 +1443,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1732,16 +1467,13 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 95: Process waiting at t/t_timing_class.v:135
 -V{t#,#}             Awaiting time 100: Process waiting at t/t_timing_class.v:238
@@ -1752,7 +1484,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1767,7 +1498,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1792,16 +1522,13 @@
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
 -V{t#,#}         No suspended processes waiting for dynamic trigger evaluation
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
--V{t#,#}         'act' region trigger index 2 is active: @([true] __VdlySched.awaitingCurrentTime())
+-V{t#,#}         'act' region trigger index 3 is active: @([true] __VdlySched.awaitingCurrentTime())
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
 -V{t#,#}+    Vt_timing_debug2___024root___timing_resume
--V{t#,#}         No process to resume waiting for @([event] t.ec.e)
--V{t#,#}         Resuming processes waiting for @([event] t.ec.e)
 -V{t#,#}         Delayed processes:
 -V{t#,#}             Awaiting time 100: Process waiting at t/t_timing_class.v:238
 -V{t#,#}             Awaiting time 100: Process waiting at t/t_timing_class.v:135
@@ -1813,7 +1540,6 @@
 -V{t#,#}+        Vt_timing_debug2_t__03a__03aClkClass::__VnoInFunc_flip
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
@@ -1827,7 +1553,6 @@
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_clear__act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_act
 -V{t#,#}+    Vt_timing_debug2___024root___eval_triggers_vec__act
--V{t#,#}+    Vt_timing_debug2___024root___timing_ready
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_orInto__act_vec_vec
 -V{t#,#}+    Vt_timing_debug2___024root___dump_triggers__act
 -V{t#,#}+    Vt_timing_debug2___024root___trigger_anySet__act
