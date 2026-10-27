@@ -898,13 +898,25 @@ class TimingControlVisitor final : public VNVisitor {
         AstNode* const upp = writep->backp();
         const bool ok = (VN_IS(stmtp, NodeAssign) && !VN_IS(stmtp, AssignDly))
                         || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, CMethodHard)
-                            && VN_AS(upp, CMethodHard)->fromp() == writep);
+                            && VN_AS(upp, CMethodHard)->fromp() == writep)
+                        // Output argument of a function call statement: a function cannot
+                        // suspend, so a wake after the call is as good as one at the write
+                        || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, NodeCCall)
+                            && upp->backp() == stmtp
+                            && !VN_AS(upp, NodeCCall)->funcp()->isCoroutine());
         return ok && writep->isPure() ? stmtp : nullptr;
     }
     // Whole-program writer rule: find class members written anywhere but in a scope of their
     // own class (through a MemberSel, or a VarRef from a derived class or other code). Plain
     // writes 'obj.f = v' and derived-class writes are noted in m_externalWrites, to be followed
     // by a wake; members with other external writes go in m_externallyWritten and do not park.
+    // Is the expression a variable, or a chain of member selects from one (e.g. a local
+    // moved to a fork's dynamic scope: __VDynScope->top)? Re-reading it after the write
+    // gives the same object.
+    static bool isSimpleRef(const AstNodeExpr* exprp) {
+        while (const AstMemberSel* const selp = VN_CAST(exprp, MemberSel)) exprp = selp->fromp();
+        return VN_IS(exprp, VarRef);
+    }
     void findExternallyWritten() {
         std::unordered_map<const AstVar*, const AstClass*> ownerOf;
         m_netlistp->foreach([&](const AstClass* classp) {
@@ -915,7 +927,7 @@ class TimingControlVisitor final : public VNVisitor {
         m_netlistp->foreach([&](AstMemberSel* selp) {
             if (!selp->access().isWriteOrRW()) return;
             AstNode* const stmtp = wakeableWriteStmt(selp);
-            if (stmtp && VN_IS(selp->fromp(), VarRef)) {
+            if (stmtp && isSimpleRef(selp->fromp())) {
                 m_externalWrites[selp->varp()].push_back({stmtp, selp->fromp()});
             } else {
                 m_externallyWritten.insert(selp->varp());
@@ -1065,8 +1077,9 @@ class TimingControlVisitor final : public VNVisitor {
                 FileLine* const wflp = write.stmtp->fileline();
                 AstNodeExpr* queuep;
                 if (write.fromp) {
-                    AstVarRef* const fromp = VN_AS(write.fromp->cloneTree(false), VarRef);
-                    fromp->access(VAccess::READ);
+                    AstNodeExpr* const fromp = write.fromp->cloneTree(false);
+                    fromp->foreach([](AstNodeVarRef* refp) { refp->access(VAccess::READ); });
+                    fromp->foreach([](AstMemberSel* mselp) { mselp->access(VAccess::READ); });
                     AstMemberSel* const selp = new AstMemberSel{wflp, fromp, queueVarp};
                     selp->access(VAccess::WRITE);
                     queuep = selp;
