@@ -519,8 +519,16 @@ class TimingControlVisitor final : public VNVisitor {
     AstSenTree* m_waitSensesp = nullptr;  // Domain to trigger if a wait queue was woken
     std::unordered_set<const AstWait*> m_parkWaits;  // Waits that park on m_waitQueuep
     AstVarScope* m_waitQueuep = nullptr;  // Wait queue member of current class, if any
-    // Class members written outside their own class's scopes (whole-program writer rule)
+    // Class members written outside their own class's scopes in a way we cannot follow with a
+    // wake (whole-program writer rule)
     std::unordered_set<const AstVar*> m_externallyWritten;
+    // Writes outside the member's own class that can be followed by a wake: the statement, and
+    // the object written through ('obj' in 'obj.f = v'), or nullptr for a derived-class write
+    struct ExternalWrite final {
+        AstNode* stmtp;
+        AstNodeExpr* fromp;
+    };
+    std::unordered_map<const AstVar*, std::vector<ExternalWrite>> m_externalWrites;
 
     // Other
     SenTreeFinder m_finder{m_netlistp};  // Sentree finder and uniquifier
@@ -882,9 +890,21 @@ class TimingControlVisitor final : public VNVisitor {
                && classVars.count(varp)
                && (varp->isHideLocal() || !m_externallyWritten.count(varp));
     }
+    // The statement writing through 'writep' (a NodeVarRef or MemberSel), if it is a plain
+    // statement we can follow with a wake, else nullptr
+    static AstNode* wakeableWriteStmt(AstNodeExpr* writep) {
+        AstNode* stmtp = writep;
+        while (stmtp && !VN_IS(stmtp, NodeStmt)) stmtp = stmtp->backp();
+        AstNode* const upp = writep->backp();
+        const bool ok = (VN_IS(stmtp, NodeAssign) && !VN_IS(stmtp, AssignDly))
+                        || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, CMethodHard)
+                            && VN_AS(upp, CMethodHard)->fromp() == writep);
+        return ok && writep->isPure() ? stmtp : nullptr;
+    }
     // Whole-program writer rule: find class members written anywhere but in a scope of their
-    // own class (through a MemberSel, or a VarRef from a derived class or other code). Members
-    // not in the set may be tracked like 'local' ones, whatever their visibility.
+    // own class (through a MemberSel, or a VarRef from a derived class or other code). Plain
+    // writes 'obj.f = v' and derived-class writes are noted in m_externalWrites, to be followed
+    // by a wake; members with other external writes go in m_externallyWritten and do not park.
     void findExternallyWritten() {
         std::unordered_map<const AstVar*, const AstClass*> ownerOf;
         m_netlistp->foreach([&](const AstClass* classp) {
@@ -892,15 +912,28 @@ class TimingControlVisitor final : public VNVisitor {
                 if (const AstVar* const varp = VN_CAST(stmtp, Var)) ownerOf.emplace(varp, classp);
             }
         });
-        m_netlistp->foreach([&](const AstMemberSel* selp) {
-            if (selp->access().isWriteOrRW()) m_externallyWritten.insert(selp->varp());
+        m_netlistp->foreach([&](AstMemberSel* selp) {
+            if (!selp->access().isWriteOrRW()) return;
+            AstNode* const stmtp = wakeableWriteStmt(selp);
+            if (stmtp && VN_IS(selp->fromp(), VarRef)) {
+                m_externalWrites[selp->varp()].push_back({stmtp, selp->fromp()});
+            } else {
+                m_externallyWritten.insert(selp->varp());
+            }
         });
-        m_netlistp->foreach([&](const AstScope* scopep) {
+        m_netlistp->foreach([&](AstScope* scopep) {
             const AstNodeModule* const modp = scopep->modp();
-            scopep->foreach([&](const AstNodeVarRef* refp) {
+            scopep->foreach([&](AstNodeVarRef* refp) {
                 if (!refp->access().isWriteOrRW()) return;
                 const auto it = ownerOf.find(refp->varp());
-                if (it != ownerOf.end() && it->second != modp) {
+                if (it == ownerOf.end() || it->second == modp) return;
+                // A derived class writes the member of its base through 'this'; the base
+                // class's wait queue is reachable the same way
+                AstNode* const stmtp = wakeableWriteStmt(refp);
+                if (stmtp && VN_IS(modp, Class) && refp->varScopep()
+                    && refp->varScopep()->scopep()->modp() == it->second) {
+                    m_externalWrites[refp->varp()].push_back({stmtp, nullptr});
+                } else {
                     m_externallyWritten.insert(refp->varp());
                 }
             });
@@ -983,22 +1016,13 @@ class TimingControlVisitor final : public VNVisitor {
         std::unordered_set<const AstVar*> untrackable;
         scopep->foreach([&](AstNodeVarRef* refp) {
             if (!tracked.count(refp->varp()) || !refp->access().isWriteOrRW()) return;
-            AstNode* stmtp = refp;
-            while (stmtp && !VN_IS(stmtp, NodeStmt)) stmtp = stmtp->backp();
-            AstNode* const upp = refp->backp();
-            const bool okWrite
-                = (VN_IS(stmtp, NodeAssign) && !VN_IS(stmtp, AssignDly))
-                  || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, CMethodHard)
-                      && VN_AS(upp, CMethodHard)->fromp() == refp);
-            if (!okWrite || !refp->isPure()) {
-                untrackable.insert(refp->varp());
-            } else {
+            if (AstNode* const stmtp = wakeableWriteStmt(refp)) {
                 wakeAfter.push_back(stmtp);
+            } else {
+                untrackable.insert(refp->varp());
             }
         });
-        scopep->foreach([&](const AstMemberSel* selp) {
-            if (tracked.count(selp->varp())) untrackable.insert(selp->varp());
-        });
+        // Writes through a MemberSel, and from derived classes, are in m_externalWrites
         for (AstWait* const waitp : waits) {
             const bool ok = !waitp->condp()->exists([&](const AstNodeVarRef* refp) {
                 return untrackable.count(refp->varp());
@@ -1029,6 +1053,31 @@ class TimingControlVisitor final : public VNVisitor {
                 VCMethod::SCHED_WAKE};
             wakep->dtypeSetVoid();
             stmtp->addNextHere(wakep->makeStmt());
+        }
+        // Wakes after writes from other scopes: 'obj.f = v' wakes obj.__VwaitQ, a derived class
+        // write wakes this->__VwaitQ (the base class's queue)
+        for (const AstVar* const varp : tracked) {
+            if (untrackable.count(varp)) continue;
+            const auto it = m_externalWrites.find(varp);
+            if (it == m_externalWrites.end()) continue;
+            for (const ExternalWrite& write : it->second) {
+                if (!done.insert(write.stmtp).second) continue;
+                FileLine* const wflp = write.stmtp->fileline();
+                AstNodeExpr* queuep;
+                if (write.fromp) {
+                    AstVarRef* const fromp = VN_AS(write.fromp->cloneTree(false), VarRef);
+                    fromp->access(VAccess::READ);
+                    AstMemberSel* const selp = new AstMemberSel{wflp, fromp, queueVarp};
+                    selp->access(VAccess::WRITE);
+                    queuep = selp;
+                } else {
+                    queuep = new AstVarRef{wflp, m_waitQueuep, VAccess::WRITE};
+                }
+                AstCMethodHard* const wakep
+                    = new AstCMethodHard{wflp, queuep, VCMethod::SCHED_WAKE};
+                wakep->dtypeSetVoid();
+                write.stmtp->addNextHere(wakep->makeStmt());
+            }
         }
     }
 
