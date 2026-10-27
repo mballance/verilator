@@ -44,8 +44,6 @@ private:
 
     // Set of (iface, member) pairs written through VIF -- defines which members need triggers
     std::set<IfaceMember> m_vifWrittenMembers;
-    // Subset of the above written by a MemberSel through a VIF (no dirty hook yet: ungated)
-    std::set<IfaceMember> m_memberSelWritten;
     // All candidate VarScopes of interface members (keyed by interface type + member name)
     std::map<IfaceMember, std::vector<AstVarScope*>> m_candidateVscps;
     std::set<std::pair<IfaceMember, AstVarScope*>> m_seenCandidateVscps;
@@ -77,7 +75,6 @@ private:
                 = VN_CAST(nodep->fromp()->dtypep()->skipRefp(), IfaceRefDType);
             if (dtypep && dtypep->isVirtual()) {
                 m_vifWrittenMembers.emplace(dtypep->ifacep(), nodep->varp()->name());
-                m_memberSelWritten.emplace(dtypep->ifacep(), nodep->varp()->name());
             }
         }
         iterateChildren(nodep);
@@ -143,17 +140,32 @@ private:
     }
 
     // Decide which triggers are gated and add 'dirty = 1' after each write to them.
-    // A trigger is gated only if every write is the plain VarRef LHS of a procedural
-    // assignment. Members written through a VIF MemberSel stay ungated (no hook yet).
+    // A trigger is gated only if every write is the plain LHS of a procedural
+    // assignment (VarRef in the member's scope, or MemberSel through a VIF).
     void gateTriggers(AstNetlist* const netlistp) {
         std::set<const AstVarScope*> trigVscps;
         for (const VirtIfaceTriggers::TriggerEntry& entry : m_triggers.m_triggers) {
-            if (!m_memberSelWritten.count({entry.m_ifacep, entry.m_memberp->name()})
-                && !mustStayUngated(entry.m_memberp)) {
-                trigVscps.insert(entry.m_vscp);
-            }
+            if (!mustStayUngated(entry.m_memberp)) trigVscps.insert(entry.m_vscp);
         }
         if (trigVscps.empty()) return;
+        // Writes through a VIF MemberSel: hook only on the plain LHS of a procedural
+        // assignment with a pure 'fromp' (cloned into the hook); else ungate the member
+        std::set<IfaceMember> ungatedMembers;
+        std::vector<std::pair<AstNodeAssign*, AstMemberSel*>> selSites;
+        netlistp->foreach([&](AstMemberSel* const selp) {
+            if (!selp->access().isWriteOrRW()) return;
+            AstIfaceRefDType* const dtypep
+                = VN_CAST(selp->fromp()->dtypep()->skipRefp(), IfaceRefDType);
+            if (!dtypep || !dtypep->isVirtual()) return;
+            const IfaceMember member{dtypep->ifacep(), selp->varp()->name()};
+            AstNodeAssign* const assp = VN_CAST(selp->backp(), NodeAssign);
+            if (assp && assp->lhsp() == selp && selp->access().isWriteOnly()
+                && (VN_IS(assp, Assign) || VN_IS(assp, AssignDly)) && selp->fromp()->isPure()) {
+                selSites.emplace_back(assp, selp);
+            } else {
+                ungatedMembers.insert(member);
+            }
+        });
         // Find hook sites; any other write shape ungates the VarScope
         std::set<const AstVarScope*> ungated;
         std::vector<std::pair<AstNodeAssign*, AstVarScope*>> sites;
@@ -201,6 +213,7 @@ private:
         };
         for (VirtIfaceTriggers::TriggerEntry& entry : m_triggers.m_triggers) {
             if (!trigVscps.count(entry.m_vscp) || ungated.count(entry.m_vscp)) continue;
+            if (ungatedMembers.count({entry.m_ifacep, entry.m_memberp->name()})) continue;
             const auto flags = getFlags(entry.m_vscp->scopep());
             entry.m_gated = true;
             entry.m_dirtyIcop = flags.first;
@@ -214,6 +227,24 @@ private:
             for (AstVarScope* const flagp : {flags.first, flags.second}) {
                 site.first->addNextHere(new AstAssign{
                     flp, new AstVarRef{flp, flagp, VAccess::WRITE}, new AstConst{flp, 1}});
+            }
+        }
+        // Hooks: 'vif.dirty_ico = 1; vif.dirty_act = 1;' after each VIF MemberSel write.
+        // The flags exist in every instance of the interface, so the hook may set one
+        // that no trigger reads (instance not gated); that is harmless.
+        for (const auto& site : selSites) {
+            AstMemberSel* const selp = site.second;
+            AstIfaceRefDType* const dtypep
+                = VN_AS(selp->fromp()->dtypep()->skipRefp(), IfaceRefDType);
+            if (ungatedMembers.count({dtypep->ifacep(), selp->varp()->name()})) continue;
+            const auto mit = modVars.find(dtypep->ifacep());
+            if (mit == modVars.end()) continue;  // No gated instance of this interface
+            FileLine* const flp = site.first->fileline();
+            for (AstVar* const flagp : {mit->second.first, mit->second.second}) {
+                AstMemberSel* const hookp
+                    = new AstMemberSel{flp, selp->fromp()->cloneTree(false), flagp};
+                hookp->access(VAccess::WRITE);
+                site.first->addNextHere(new AstAssign{flp, hookp, new AstConst{flp, 1}});
             }
         }
     }
