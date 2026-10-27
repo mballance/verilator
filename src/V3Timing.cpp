@@ -519,6 +519,8 @@ class TimingControlVisitor final : public VNVisitor {
     AstSenTree* m_waitSensesp = nullptr;  // Domain to trigger if a wait queue was woken
     std::unordered_set<const AstWait*> m_parkWaits;  // Waits that park on m_waitQueuep
     AstVarScope* m_waitQueuep = nullptr;  // Wait queue member of current class, if any
+    // Class members written outside their own class's scopes (whole-program writer rule)
+    std::unordered_set<const AstVar*> m_externallyWritten;
 
     // Other
     SenTreeFinder m_finder{m_netlistp};  // Sentree finder and uniquifier
@@ -874,10 +876,35 @@ class TimingControlVisitor final : public VNVisitor {
     }
 
     // Can the variable referenced in a wait condition only change by writes we track?
-    static bool isTrackableMember(const AstVar* varp,
-                                  const std::unordered_set<const AstVar*>& classVars) {
-        return varp->isClassMember() && varp->isHideLocal() && !varp->isSigPublic()
-               && !varp->isRand() && classVars.count(varp);
+    bool isTrackableMember(const AstVar* varp,
+                           const std::unordered_set<const AstVar*>& classVars) const {
+        return varp->isClassMember() && !varp->isSigPublic() && !varp->isRand()
+               && classVars.count(varp)
+               && (varp->isHideLocal() || !m_externallyWritten.count(varp));
+    }
+    // Whole-program writer rule: find class members written anywhere but in a scope of their
+    // own class (through a MemberSel, or a VarRef from a derived class or other code). Members
+    // not in the set may be tracked like 'local' ones, whatever their visibility.
+    void findExternallyWritten() {
+        std::unordered_map<const AstVar*, const AstClass*> ownerOf;
+        m_netlistp->foreach([&](const AstClass* classp) {
+            for (const AstNode* stmtp = classp->membersp(); stmtp; stmtp = stmtp->nextp()) {
+                if (const AstVar* const varp = VN_CAST(stmtp, Var)) ownerOf.emplace(varp, classp);
+            }
+        });
+        m_netlistp->foreach([&](const AstMemberSel* selp) {
+            if (selp->access().isWriteOrRW()) m_externallyWritten.insert(selp->varp());
+        });
+        m_netlistp->foreach([&](const AstScope* scopep) {
+            const AstNodeModule* const modp = scopep->modp();
+            scopep->foreach([&](const AstNodeVarRef* refp) {
+                if (!refp->access().isWriteOrRW()) return;
+                const auto it = ownerOf.find(refp->varp());
+                if (it != ownerOf.end() && it->second != modp) {
+                    m_externallyWritten.insert(refp->varp());
+                }
+            });
+        });
     }
     // Is the variable a temporary that V3LiftExpr lifted out of a wait condition?
     static bool isLiftTemp(const AstVar* varp) {
@@ -897,7 +924,7 @@ class TimingControlVisitor final : public VNVisitor {
         const string& name = callp->funcp()->name();
         return name == "__VnoInFunc_status" || name == "__VnoInFunc_self";
     }
-    // Find waits in class scope 'scopep' whose condition only reads 'local' members of the class
+    // Find waits in class scope 'scopep' whose condition only reads trackable members of the class
     // (through 'this') and function inputs/locals not written in a fork. Those waits park on a
     // per-object wait queue, woken after each write to the members (see visit(AstWait)).
     void findParkableWaits(AstScope* scopep) {
@@ -1685,6 +1712,7 @@ public:
     // CONSTRUCTORS
     explicit TimingControlVisitor(AstNetlist* nodep)
         : m_netlistp{nodep} {
+        findExternallyWritten();
         iterate(nodep);
 
         // If there is no static #0 in the design, but an unknown delay was found,
