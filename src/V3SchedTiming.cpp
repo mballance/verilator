@@ -199,6 +199,9 @@ class AwaitVisitor final : public VNVisitor {
     bool m_gatherVars = false;  // Should we gather vars in m_writtenBySuspendable?
     AstScope* const m_scopeTopp;  // Scope at the top
     LogicByScope& m_lbs;  // Timing resume actives
+    std::map<const AstNodeModule*, std::vector<AstScope*>> m_modScopes;  // Scopes of modules
+    std::unordered_map<const AstVarScope*, std::vector<AstSenTree*>>
+        m_ifaceDomains;  // Per-instance sentrees of interface trigger schedulers
     AstNodeStmt*& m_postUpdatesr;  // Post updates for the trigger eval function
     // Additional var sensitivities
     std::map<const AstVarScope*, std::set<AstSenTree*>>& m_externalDomains;
@@ -263,10 +266,11 @@ class AwaitVisitor final : public VNVisitor {
         }
     }
     // Create an active with a timing scheduler resume() call
-    void createResumeActive(AstCAwait* const awaitp) {
+    void createResumeActive(AstCAwait* const awaitp, AstVarScope* schedulerp = nullptr,
+                            AstSenTree* sentreep = nullptr) {
         auto* const methodp = VN_AS(awaitp->exprp(), CMethodHard);
-        AstVarScope* const schedulerp = VN_AS(methodp->fromp(), VarRef)->varScopep();
-        AstSenTree* const sentreep = awaitp->sentreep();
+        if (!schedulerp) schedulerp = VN_AS(methodp->fromp(), VarRef)->varScopep();
+        if (!sentreep) sentreep = awaitp->sentreep();
         FileLine* const flp = sentreep->fileline();
         // Create a resume() call on the timing scheduler
         auto* const resumep = new AstCMethodHard{
@@ -289,6 +293,56 @@ class AwaitVisitor final : public VNVisitor {
         AstActive* const activep = new AstActive{flp, "_timing", sentreep};
         activep->addStmtsp(resumep->makeStmt());
         m_lbs.add(m_scopeTopp, activep);
+    }
+    // Trigger scheduler member of an interface (from V3Timing), or nullptr
+    static AstVarScope* ifaceTriggerSchedulerp(AstCAwait* const awaitp) {
+        const AstCMethodHard* const methodp = VN_CAST(awaitp->exprp(), CMethodHard);
+        if (!methodp || methodp->method() != VCMethod::SCHED_TRIGGER) return nullptr;
+        const AstVarRef* const refp = VN_CAST(methodp->fromp(), VarRef);
+        if (!refp || !refp->varScopep()) return nullptr;
+        AstVarScope* const vscp = refp->varScopep();
+        if (!vscp->dtypep()->basicp()->isTriggerScheduler()) return nullptr;
+        if (!VN_IS(vscp->scopep()->modp(), Iface)) return nullptr;
+        return vscp;
+    }
+    // One resume active per instance of the interface owning the trigger scheduler; the
+    // sentree is retargeted to each instance's variables
+    void createIfaceResumeActives(AstCAwait* const awaitp, AstVarScope* const schedp,
+                                  std::vector<AstSenTree*>& domains) {
+        if (m_modScopes.empty()) {
+            v3Global.rootp()->foreach(
+                [this](AstScope* const scopep) { m_modScopes[scopep->modp()].push_back(scopep); });
+        }
+        AstTopScope* const topScopep = v3Global.rootp()->topScopep();
+        for (AstScope* const scopep : m_modScopes[schedp->scopep()->modp()]) {
+            std::unordered_map<const AstVar*, AstVarScope*> vscps;
+            for (AstVarScope* vscp = scopep->varsp(); vscp;
+                 vscp = VN_AS(vscp->nextp(), VarScope)) {
+                vscps.emplace(vscp->varp(), vscp);
+            }
+            const auto it = vscps.find(schedp->varp());
+            if (it == vscps.end()) continue;
+            AstSenTree* sentreep = awaitp->sentreep();
+            if (scopep != schedp->scopep()) {
+                sentreep = sentreep->cloneTree(false);
+                bool ok = true;
+                sentreep->foreach([&](AstVarRef* const refp) {
+                    const auto vit = vscps.find(refp->varp());
+                    if (vit == vscps.end()) {
+                        ok = false;
+                    } else {
+                        refp->varScopep(vit->second);
+                    }
+                });
+                if (!ok) {
+                    VL_DO_DANGLING(sentreep->deleteTree(), sentreep);
+                    continue;
+                }
+                topScopep->addSenTreesp(sentreep);
+            }
+            domains.push_back(sentreep);
+            createResumeActive(awaitp, it->second, sentreep);
+        }
     }
     // Visit AstCFunc from a AstNodeCCall - this function is rather expensive to call therefore, it
     // only shall be called when necessary
@@ -350,8 +404,18 @@ class AwaitVisitor final : public VNVisitor {
     }
     void visit(AstCAwait* nodep) override {
         if (AstSenTree* const sentreep = nodep->sentreep()) {
-            if (!sentreep->user1SetOnce()) createResumeActive(nodep);
-            if (m_inProcess) m_processDomains.insert(sentreep);
+            if (AstVarScope* const schedp = ifaceTriggerSchedulerp(nodep)) {
+                const auto pair = m_ifaceDomains.emplace(schedp, std::vector<AstSenTree*>{});
+                if (pair.second) createIfaceResumeActives(nodep, schedp, pair.first->second);
+                if (m_inProcess) {
+                    for (AstSenTree* const domainp : pair.first->second) {
+                        m_processDomains.insert(domainp);
+                    }
+                }
+            } else {
+                if (!sentreep->user1SetOnce()) createResumeActive(nodep);
+                if (m_inProcess) m_processDomains.insert(sentreep);
+            }
         }
         iterateChildren(nodep);
     }

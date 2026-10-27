@@ -502,6 +502,7 @@ class TimingControlVisitor final : public VNVisitor {
     V3UniqueNames m_intraLsbNames{"__Vintralsb"};  // Intra assign delay LSB var names
     V3UniqueNames m_trigSchedNames{"__VtrigSched"};  // Trigger scheduler name generator
     V3UniqueNames m_dynTrigNames{"__VdynTrigger"};  // Dynamic trigger name generator
+    std::map<const AstNodeModule*, std::vector<AstScope*>> m_modScopes;  // Scopes of each module
     // Module level temporary variables, shared by instances
     V3SharedTmps m_assignWTmps{"__VassignWtmp", VVarType::MODULETEMP};  // Delayed AssignW values
     V3SharedTmps m_assignWGens{"__VassignWgen", VVarType::MODULETEMP};  // AssignW generations
@@ -681,6 +682,54 @@ class TimingControlVisitor final : public VNVisitor {
             }
             return !nodep->isPure();
         });
+    }
+    // True if the sentree only has edges on plain members of the current interface scope, so a
+    // trigger scheduler member of the interface can serve every instance of it
+    bool isIfaceStaticSenTree(AstSenTree* const sentreep) const {
+        if (!m_underIfaceCFunc || m_classp) return false;
+        for (AstSenItem* itemp = sentreep->sensesp(); itemp;
+             itemp = VN_AS(itemp->nextp(), SenItem)) {
+            const VEdgeType edge = itemp->edgeType();
+            if (edge != VEdgeType::ET_POSEDGE && edge != VEdgeType::ET_NEGEDGE
+                && edge != VEdgeType::ET_BOTHEDGE && edge != VEdgeType::ET_CHANGED) {
+                return false;
+            }
+            const AstVarRef* const refp = VN_CAST(itemp->sensp(), VarRef);
+            if (!refp || !refp->varScopep() || refp->varp()->isFuncLocal()
+                || refp->varScopep()->scopep() != m_scopep) {
+                return false;
+            }
+        }
+        return true;
+    }
+    // Creates a trigger scheduler member of the current interface, with a VarScope in every
+    // instance; returns the one in the current scope
+    AstVarScope* createIfaceTriggerSchedulerp(AstSenTree* const sentreep) {
+        if (m_modScopes.empty()) {
+            m_netlistp->foreach(
+                [this](AstScope* const scopep) { m_modScopes[scopep->modp()].push_back(scopep); });
+        }
+        FileLine* const flp = m_scopep->fileline();
+        AstNodeModule* const modp = m_scopep->modp();
+        AstVar* const varp = new AstVar{flp, VVarType::MODULETEMP, m_trigSchedNames.get(sentreep),
+                                        getTrigSchedDtp()};
+        modp->addStmtsp(varp);
+        AstVarScope* resultp = nullptr;
+        for (AstScope* const scopep : m_modScopes[modp]) {
+            AstVarScope* const vscp = new AstVarScope{flp, scopep, varp};
+            scopep->addVarsp(vscp);
+            if (scopep == m_scopep) resultp = vscp;
+        }
+        UASSERT_OBJ(resultp, m_scopep, "Interface scope not found");
+        return resultp;
+    }
+    AstBasicDType* getTrigSchedDtp() {
+        if (!m_trigSchedDtp) {
+            m_trigSchedDtp = new AstBasicDType{
+                m_scopeTopp->fileline(), VBasicDTypeKwd::TRIGGER_SCHEDULER, VSigning::UNSIGNED};
+            m_netlistp->typeTablep()->addTypesp(m_trigSchedDtp);
+        }
+        return m_trigSchedDtp;
     }
     // Creates a trigger scheduler variable
     AstVarScope* getCreateTriggerSchedulerp(AstSenTree* const sentreep) {
@@ -1300,7 +1349,8 @@ class TimingControlVisitor final : public VNVisitor {
         FileLine* const flp = nodep->fileline();
         // Relink child statements after the event control
         if (nodep->stmtsp()) nodep->addNextHere(nodep->stmtsp()->unlinkFrBackWithNext());
-        if (needDynamicTrigger(nodep->sentreep())) {
+        const bool ifaceStatic = isIfaceStaticSenTree(nodep->sentreep());
+        if (!ifaceStatic && needDynamicTrigger(nodep->sentreep())) {
             // Create the trigger variable and init it with 0
             AstVarScope* const trigvscp
                 = createTemp(flp, m_dynTrigNames.get(nodep), nodep->findBitDType(), nodep);
@@ -1380,7 +1430,11 @@ class TimingControlVisitor final : public VNVisitor {
             // Get this sentree's trigger scheduler
             // Replace self with a 'co_await trigSched.trigger()'
             auto* const triggerMethodp = new AstCMethodHard{
-                flp, new AstVarRef{flp, getCreateTriggerSchedulerp(sentreep), VAccess::WRITE},
+                flp,
+                new AstVarRef{flp,
+                              ifaceStatic ? createIfaceTriggerSchedulerp(sentreep)
+                                          : getCreateTriggerSchedulerp(sentreep),
+                              VAccess::WRITE},
                 VCMethod::SCHED_TRIGGER};
             triggerMethodp->dtypeSetVoid();
             // If it should be committed immediately, pass true, otherwise false
