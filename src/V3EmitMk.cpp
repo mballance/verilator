@@ -580,6 +580,13 @@ public:
         of.putSet("VM_C11", "1");
         of.puts("# Timing enabled?  0/1\n");
         of.putSet("VM_TIMING", v3Global.usesTiming() ? "1" : "0");
+        // Hierarchical and --lib-create models may be linked into a multithreaded
+        // parent, so they keep the thread-safe runtime types
+        const bool parallel = v3Global.opt.threads() > 1 || v3Global.opt.hierThreads() > 1
+                              || v3Global.opt.hierarchical() || v3Global.opt.hierChild()
+                              || !v3Global.opt.libCreate().empty();
+        of.puts("# Multithreaded model (thread-safe runtime types)?  0/1 (from --threads)\n");
+        of.putSet("VM_PARALLEL", parallel ? "1" : "0");
         of.puts("# Coverage output mode?  0/1 (from --coverage)\n");
         of.putSet("VM_COVERAGE", v3Global.opt.coverage() ? "1" : "0");
         of.puts("# Parallel builds?  0/1 (from --output-split)\n");

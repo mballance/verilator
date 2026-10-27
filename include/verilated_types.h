@@ -69,6 +69,18 @@ class VlUnpacked;
     } while (false)
 #endif
 
+//=========================================================================
+// Single-threaded runtime types
+// VM_PARALLEL=0 (from the generated .mk, model built without --threads > 1) allows
+// non-atomic reference counts. Undefined (hand-written builds) keeps the atomic types.
+
+#if defined(VM_PARALLEL) && VM_PARALLEL == 0
+#define VL_SINGLE_THREADED_TYPES 1
+using VlRefCount_t = size_t;
+#else
+using VlRefCount_t = std::atomic<size_t>;
+#endif
+
 //===================================================================
 /// Verilog wide packed bit container.
 /// Similar to std::array<EData, N>, but lighter weight, only methods needed
@@ -2154,7 +2166,7 @@ class VlClass VL_NOT_FINAL : public VlDeletable {
     friend class VlClassRef;  // Needed for access to the ref counter and deleter
 
     // MEMBERS
-    std::atomic<size_t> m_counter{1};  // Reference count for this object
+    VlRefCount_t m_counter{1};  // Reference count for this object
     VlDeleter* m_deleterp = nullptr;  // The deleter that will delete this object
 
     // METHODS
