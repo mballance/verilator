@@ -2451,8 +2451,10 @@ public:
 #define VL_KEEP_THIS \
     VlClassRef<std::remove_pointer<decltype(this)>::type> __Vthisref { this }
 
+// By const reference: avoids a refcount inc/dec per checked access. The argument outlives
+// the full-expression the result is used in, so returning the reference is safe.
 template <typename T>  // T typically of type VlClassRef<x>
-inline T VL_NULL_CHECK(T t, const char* filename, int linenum) {
+inline const T& VL_NULL_CHECK(const T& t, const char* filename, int linenum) {
     if (VL_UNLIKELY(!t)) Verilated::nullPointerError(filename, linenum);
     return t;
 }
