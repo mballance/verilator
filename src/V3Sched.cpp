@@ -376,10 +376,25 @@ void createFinal(AstNetlist* netlistp, const LogicClasses& logicClasses) {
 void addVirtIfaceTriggerAssignments(AstNetlist* netlistp, AstCFunc* initFuncp,
                                     const VirtIfaceTriggers& virtIfaceTriggers,
                                     uint32_t firstIndex, const TriggerKit& trigKit) {
+    const bool isIco = trigKit.name() == "ico";
+    // Gated entries grouped by the dirty flag of their scope, in first-seen order
+    std::vector<AstVarScope*> dirtyOrder;
+    std::map<AstVarScope*, std::vector<std::pair<AstVarScope*, uint32_t>>> gated;
     uint32_t index = firstIndex;
     for (const auto& entry : virtIfaceTriggers.m_triggers) {
-        trigKit.addValueChangeTriggerAssignment(netlistp, initFuncp, entry.m_vscp, index);
+        AstVarScope* const dirtyVscp = isIco ? entry.m_dirtyIcop : entry.m_dirtyActp;
+        if (entry.m_gated && dirtyVscp) {
+            auto& items = gated[dirtyVscp];
+            if (items.empty()) dirtyOrder.push_back(dirtyVscp);
+            items.emplace_back(entry.m_vscp, index);
+        } else {
+            trigKit.addValueChangeTriggerAssignment(netlistp, initFuncp, entry.m_vscp, index);
+        }
         ++index;
+    }
+    for (AstVarScope* const dirtyVscp : dirtyOrder) {
+        trigKit.addGatedValueChangeTriggerAssignments(netlistp, initFuncp, dirtyVscp,
+                                                      gated[dirtyVscp]);
     }
 }
 

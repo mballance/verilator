@@ -407,6 +407,43 @@ void TriggerKit::addExtraTriggerAssignment(AstVarScope* vscp, uint32_t index) co
 // Creates: trigger[bit] = (vscp != prev); prev = vscp;
 void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc* initFuncp,
                                                  AstVarScope* instVscp, uint32_t index) const {
+    if (AstNode* const setp = newValueChangeTriggerAssignment(netlistp, initFuncp, instVscp, index))
+        m_compVecp->prependStmtsp(setp);
+}
+
+// Gated value-change detection for VarScopes whose writes all set 'dirtyVscp'. Creates:
+// if (dirty) { dirty = 0; <value-change assignments> } else { trigger[bit] = 0; ... }
+void TriggerKit::addGatedValueChangeTriggerAssignments(
+    AstNetlist* netlistp, AstCFunc* initFuncp, AstVarScope* dirtyVscp,
+    const std::vector<std::pair<AstVarScope*, uint32_t>>& items) const {
+    FileLine* const flp = dirtyVscp->fileline();
+    AstNode* thensp = new AstAssign{flp, new AstVarRef{flp, dirtyVscp, VAccess::WRITE},
+                                    new AstConst{flp, AstConst::BitFalse{}}};
+    AstNode* elsesp = nullptr;
+    for (const auto& item : items) {
+        AstNode* const setp
+            = newValueChangeTriggerAssignment(netlistp, initFuncp, item.first, item.second);
+        if (!setp) continue;
+        thensp->addNext(setp);
+        const uint32_t index = item.second + m_nSenseWords * WORD_SIZE;
+        AstVarRef* const refp = new AstVarRef{flp, m_vscp, VAccess::WRITE};
+        AstNodeExpr* const wordp
+            = new AstArraySel{flp, refp, static_cast<int>(index / WORD_SIZE)};
+        AstNodeExpr* const lhsp
+            = new AstSel{flp, wordp, static_cast<int>(index % WORD_SIZE), 1};
+        elsesp = AstNode::addNext(
+            elsesp, new AstAssign{flp, lhsp, new AstConst{flp, AstConst::BitFalse{}}});
+    }
+    // The first evaluation after 'prev' is initialized must compare
+    initFuncp->addStmtsp(new AstAssign{flp, new AstVarRef{flp, dirtyVscp, VAccess::WRITE},
+                                       new AstConst{flp, AstConst::BitTrue{}}});
+    m_compVecp->prependStmtsp(
+        new AstIf{flp, new AstVarRef{flp, dirtyVscp, VAccess::READ}, thensp, elsesp});
+}
+
+AstNode* TriggerKit::newValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc* initFuncp,
+                                                     AstVarScope* instVscp,
+                                                     uint32_t index) const {
     index += m_nSenseWords * WORD_SIZE;
     const uint32_t wordIndex = index / WORD_SIZE;
     const uint32_t bitIndex = index % WORD_SIZE;
@@ -421,13 +458,13 @@ void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc*
             || bdtypep->keyword() == VBasicDTypeKwd::CHANDLE) {
             instVscp->v3warn(E_UNSUPPORTED, "Unsupported: virtual interface trigger on "
                                                 << dtypep->prettyDTypeNameQ() << " type");
-            return;
+            return nullptr;
         }
     } else if (!VN_IS(dtypep, PackArrayDType) && !VN_IS(dtypep, UnpackArrayDType)
                && !VN_IS(dtypep, NodeUOrStructDType) && !VN_IS(dtypep, ClassRefDType)) {
         instVscp->v3warn(E_UNSUPPORTED, "Unsupported: virtual interface trigger on "
                                             << dtypep->prettyDTypeNameQ() << " type");
-        return;
+        return nullptr;
     }
 
     const auto rdInst = [flp](AstVarScope* vp) { return new AstVarRef{flp, vp, VAccess::READ}; };
@@ -480,8 +517,7 @@ void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc*
 
     // Chain: set trigger bit -> update prev
     setp->addNext(updp);
-
-    m_compVecp->prependStmtsp(setp);
+    return setp;
 }
 
 TriggerKit::TriggerKit(const std::string& name, bool slow, uint32_t nSenseWords,

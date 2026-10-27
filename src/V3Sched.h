@@ -397,6 +397,14 @@ public:
     // Creates a prev variable: trigger[bit] = (vscp != prev); prev = vscp
     void addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc* initFuncp,
                                          AstVarScope* vscp, uint32_t index) const;
+    // As above, for each (vscp, index) in 'items', but compared only when 'dirtyVscp' is set
+    // (then cleared); otherwise the trigger bits are cleared
+    void addGatedValueChangeTriggerAssignments(
+        AstNetlist* netlistp, AstCFunc* initFuncp, AstVarScope* dirtyVscp,
+        const std::vector<std::pair<AstVarScope*, uint32_t>>& items) const;
+    // Value-change trigger assignment and prev update statements; nullptr if unsupported type
+    AstNode* newValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc* initFuncp,
+                                             AstVarScope* vscp, uint32_t index) const;
 };
 
 // Everything needed for combining timing with static scheduling.
