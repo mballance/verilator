@@ -972,6 +972,26 @@ class TimingControlVisitor final : public VNVisitor {
         while (const AstMemberSel* const selp = VN_CAST(exprp, MemberSel)) exprp = selp->fromp();
         return VN_IS(exprp, VarRef);
     }
+    // Like isSimpleRef, but also allows array/assoc selects with a constant or variable index
+    // (e.g. m_events[obj]): reading it twice with no write between gives the same object
+    static bool isStableRef(const AstNodeExpr* exprp) {
+        if (VN_IS(exprp, VarRef)) return true;
+        if (const AstMemberSel* const selp = VN_CAST(exprp, MemberSel)) {
+            return isStableRef(selp->fromp());
+        }
+        const AstNodeExpr* bitp = nullptr;
+        const AstNodeExpr* fromp = nullptr;
+        if (const AstArraySel* const selp = VN_CAST(exprp, ArraySel)) {
+            fromp = selp->fromp();
+            bitp = selp->bitp();
+        } else if (const AstAssocSel* const selp = VN_CAST(exprp, AssocSel)) {
+            fromp = selp->fromp();
+            bitp = selp->bitp();
+        } else {
+            return false;
+        }
+        return (VN_IS(bitp, Const) || isStableRef(bitp)) && isStableRef(fromp);
+    }
     void findExternallyWritten() {
         std::unordered_map<const AstVar*, const AstClass*> ownerOf;
         m_netlistp->foreach([&](const AstClass* classp) {
@@ -1061,7 +1081,7 @@ class TimingControlVisitor final : public VNVisitor {
                 ok = ok && refp->varScopep()
                      && refp->varScopep()->scopep()->modp() == ownerOf.at(varp);
             } else {
-                ok = ok && isSimpleRef(VN_AS(firep->operandp(), MemberSel)->fromp());
+                ok = ok && isStableRef(VN_AS(firep->operandp(), MemberSel)->fromp());
             }
             if (ok) {
                 fires.emplace_back(firep, varp);
@@ -1124,7 +1144,7 @@ class TimingControlVisitor final : public VNVisitor {
         if (const AstVarRef* const refp = VN_CAST(itemp->sensp(), VarRef)) {
             varp = refp->varp();
         } else if (const AstMemberSel* const selp = VN_CAST(itemp->sensp(), MemberSel)) {
-            if (isSimpleRef(selp->fromp())) varp = selp->varp();
+            if (isStableRef(selp->fromp())) varp = selp->varp();
         }
         const auto it = m_eventQueues.find(varp);
         return it == m_eventQueues.end() ? nullptr : &it->second;
