@@ -29,8 +29,8 @@ endclass
 
 module t;
   initial begin
-    Bridge br = new;
-    Printed p = new;
+    automatic Bridge br = new;
+    automatic Printed p = new;
     $display("%p", p);
     $write("*-* All Finished *-*\n");
     $finish;
