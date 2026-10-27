@@ -29,6 +29,7 @@
 
 #include "V3AstNodeExpr.h"
 #include "V3Sched.h"
+#include "V3Stats.h"
 
 VL_DEFINE_DEBUG_FUNCTIONS;
 
@@ -147,7 +148,10 @@ private:
         for (const VirtIfaceTriggers::TriggerEntry& entry : m_triggers.m_triggers) {
             if (!mustStayUngated(entry.m_memberp)) trigVscps.insert(entry.m_vscp);
         }
-        if (trigVscps.empty()) return;
+        if (trigVscps.empty()) {
+            addGateStats();
+            return;
+        }
         // Writes through a VIF MemberSel: hook only on the plain LHS of a procedural
         // assignment with a pure 'fromp' (cloned into the hook); else ungate the member
         std::set<IfaceMember> ungatedMembers;
@@ -247,6 +251,17 @@ private:
                 site.first->addNextHere(new AstAssign{flp, hookp, new AstConst{flp, 1}});
             }
         }
+        addGateStats();
+    }
+
+    void addGateStats() const {
+        size_t nGated = 0;
+        for (const VirtIfaceTriggers::TriggerEntry& entry : m_triggers.m_triggers) {
+            if (entry.m_gated) ++nGated;
+        }
+        V3Stats::addStat("Scheduling, vif triggers, gated", nGated);
+        V3Stats::addStat("Scheduling, vif triggers, ungated",
+                         m_triggers.m_triggers.size() - nGated);
     }
 
 public:
