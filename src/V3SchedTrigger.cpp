@@ -407,7 +407,8 @@ void TriggerKit::addExtraTriggerAssignment(AstVarScope* vscp, uint32_t index) co
 // Creates: trigger[bit] = (vscp != prev); prev = vscp;
 void TriggerKit::addValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc* initFuncp,
                                                  AstVarScope* instVscp, uint32_t index) const {
-    if (AstNode* const setp = newValueChangeTriggerAssignment(netlistp, initFuncp, instVscp, index))
+    if (AstNode* const setp
+        = newValueChangeTriggerAssignment(netlistp, initFuncp, instVscp, index))
         m_compVecp->prependStmtsp(setp);
 }
 
@@ -427,10 +428,8 @@ void TriggerKit::addGatedValueChangeTriggerAssignments(
         thensp->addNext(setp);
         const uint32_t index = item.second + m_nSenseWords * WORD_SIZE;
         AstVarRef* const refp = new AstVarRef{flp, m_vscp, VAccess::WRITE};
-        AstNodeExpr* const wordp
-            = new AstArraySel{flp, refp, static_cast<int>(index / WORD_SIZE)};
-        AstNodeExpr* const lhsp
-            = new AstSel{flp, wordp, static_cast<int>(index % WORD_SIZE), 1};
+        AstNodeExpr* const wordp = new AstArraySel{flp, refp, static_cast<int>(index / WORD_SIZE)};
+        AstNodeExpr* const lhsp = new AstSel{flp, wordp, static_cast<int>(index % WORD_SIZE), 1};
         elsesp = AstNode::addNext(
             elsesp, new AstAssign{flp, lhsp, new AstConst{flp, AstConst::BitFalse{}}});
         if (v3Global.opt.debugCheck()) {
@@ -439,8 +438,8 @@ void TriggerKit::addGatedValueChangeTriggerAssignments(
             AstCStmt* const stmtp = new AstCStmt{flp};
             const std::string& file = VIdProtect::protect(item.first->fileline()->filename());
             const std::string& line = std::to_string(item.first->fileline()->lineno());
-            stmtp->add("VL_FATAL_MT(\"" + V3OutFormatter::quoteNameControls(file) + "\", "
-                       + line + ", \"\", \"Internal: gated virtual interface member '"
+            stmtp->add("VL_FATAL_MT(\"" + V3OutFormatter::quoteNameControls(file) + "\", " + line
+                       + ", \"\", \"Internal: gated virtual interface member '"
                        + item.first->prettyName() + "' changed without setting dirty flag\");");
             elsesp = AstNode::addNext(elsesp, new AstIf{flp, neqp, stmtp});
         }
@@ -453,8 +452,7 @@ void TriggerKit::addGatedValueChangeTriggerAssignments(
 }
 
 AstNode* TriggerKit::newValueChangeTriggerAssignment(AstNetlist* netlistp, AstCFunc* initFuncp,
-                                                     AstVarScope* instVscp,
-                                                     uint32_t index) const {
+                                                     AstVarScope* instVscp, uint32_t index) const {
     index += m_nSenseWords * WORD_SIZE;
     const uint32_t wordIndex = index / WORD_SIZE;
     const uint32_t bitIndex = index % WORD_SIZE;

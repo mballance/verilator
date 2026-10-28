@@ -702,10 +702,10 @@ public:
     bool isOpaque() const VL_MT_SAFE {  // IE not a simple number we can bit optimize
         return (m_e == EVENT || m_e == STRING || m_e == SCOPEPTR || m_e == CHARPTR
                 || m_e == DELAY_SCHEDULER || m_e == TRIGGER_SCHEDULER
-                || m_e == DYNAMIC_TRIGGER_SCHEDULER || m_e == WAIT_SCHEDULER
-                || m_e == WAIT_QUEUE || m_e == FORK_SYNC || m_e == PROCESS_REFERENCE
-                || m_e == RANDOM_GENERATOR || m_e == RANDOM_STDGENERATOR
-                || m_e == COVERGROUP_INSTHANDLE || m_e == DOUBLE || m_e == UNTYPED);
+                || m_e == DYNAMIC_TRIGGER_SCHEDULER || m_e == WAIT_SCHEDULER || m_e == WAIT_QUEUE
+                || m_e == FORK_SYNC || m_e == PROCESS_REFERENCE || m_e == RANDOM_GENERATOR
+                || m_e == RANDOM_STDGENERATOR || m_e == COVERGROUP_INSTHANDLE || m_e == DOUBLE
+                || m_e == UNTYPED);
     }
     bool isCHandle() const VL_MT_SAFE { return m_e == CHANDLE; }
     bool isDouble() const VL_MT_SAFE { return m_e == DOUBLE; }

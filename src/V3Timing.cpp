@@ -641,12 +641,11 @@ class TimingControlVisitor final : public VNVisitor {
     AstSenTree* getCreateWaitSenTree() {
         if (m_waitSensesp) return m_waitSensesp;
         FileLine* const flp = m_scopeTopp->fileline();
-        auto* const anyReadyp = new AstCMethodHard{
-            flp, new AstVarRef{flp, getCreateWaitScheduler(), VAccess::READ},
-            VCMethod::SCHED_ANY_READY};
+        auto* const anyReadyp
+            = new AstCMethodHard{flp, new AstVarRef{flp, getCreateWaitScheduler(), VAccess::READ},
+                                 VCMethod::SCHED_ANY_READY};
         anyReadyp->dtypeSetBit();
-        m_waitSensesp
-            = new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_TRUE, anyReadyp}};
+        m_waitSensesp = new AstSenTree{flp, new AstSenItem{flp, VEdgeType::ET_TRUE, anyReadyp}};
         m_netlistp->topScopep()->addSenTreesp(m_waitSensesp);
         return m_waitSensesp;
     }
@@ -960,14 +959,14 @@ class TimingControlVisitor final : public VNVisitor {
         AstNode* stmtp = writep;
         while (stmtp && !VN_IS(stmtp, NodeStmt)) stmtp = stmtp->backp();
         AstNode* const upp = writep->backp();
-        const bool ok = (VN_IS(stmtp, NodeAssign) && !VN_IS(stmtp, AssignDly))
-                        || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, CMethodHard)
-                            && VN_AS(upp, CMethodHard)->fromp() == writep)
-                        // Output argument of a function call statement: a function cannot
-                        // suspend, so a wake after the call is as good as one at the write
-                        || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, NodeCCall)
-                            && upp->backp() == stmtp
-                            && !VN_AS(upp, NodeCCall)->funcp()->isCoroutine());
+        const bool ok
+            = (VN_IS(stmtp, NodeAssign) && !VN_IS(stmtp, AssignDly))
+              || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, CMethodHard)
+                  && VN_AS(upp, CMethodHard)->fromp() == writep)
+              // Output argument of a function call statement: a function cannot
+              // suspend, so a wake after the call is as good as one at the write
+              || (VN_IS(stmtp, StmtExpr) && VN_IS(upp, NodeCCall) && upp->backp() == stmtp
+                  && !VN_AS(upp, NodeCCall)->funcp()->isCoroutine());
         return ok && writep->isPure() ? stmtp : nullptr;
     }
     // Whole-program writer rule: find class members written anywhere but in a scope of their
@@ -1037,8 +1036,9 @@ class TimingControlVisitor final : public VNVisitor {
     }
     // The class member event referenced by 'exprp' (a VarRef, or a MemberSel from a simple
     // ref), or nullptr
-    static const AstVar* eventMemberOf(const AstNodeExpr* exprp,
-                                       const std::unordered_map<const AstVar*, const AstClass*>& ownerOf) {
+    static const AstVar*
+    eventMemberOf(const AstNodeExpr* exprp,
+                  const std::unordered_map<const AstVar*, const AstClass*>& ownerOf) {
         const AstVar* varp = nullptr;
         if (const AstVarRef* const refp = VN_CAST(exprp, VarRef)) {
             varp = refp->varp();
@@ -1065,7 +1065,8 @@ class TimingControlVisitor final : public VNVisitor {
         const auto markAll = [&](const AstNode* np) {
             if (!np) return;
             np->foreach([&](const AstNodeExpr* exprp) {
-                if (const AstVar* const varp = eventMemberOf(exprp, ownerOf)) untrackable.insert(varp);
+                if (const AstVar* const varp = eventMemberOf(exprp, ownerOf))
+                    untrackable.insert(varp);
             });
         };
         m_netlistp->foreach([&](const AstSenItem* itemp) {
@@ -1125,9 +1126,8 @@ class TimingControlVisitor final : public VNVisitor {
             const auto it = m_eventQueues.find(pair.second);
             if (it == m_eventQueues.end()) continue;
             FileLine* const flp = firep->fileline();
-            AstCMethodHard* const wakep
-                = new AstCMethodHard{flp, eventQueueRef(firep->operandp(), it->second),
-                                     VCMethod::SCHED_WAKE};
+            AstCMethodHard* const wakep = new AstCMethodHard{
+                flp, eventQueueRef(firep->operandp(), it->second), VCMethod::SCHED_WAKE};
             wakep->dtypeSetVoid();
             firep->addNextHere(wakep->makeStmt());
         }
@@ -1171,7 +1171,8 @@ class TimingControlVisitor final : public VNVisitor {
         const AstNodeModule* const modp = callp->funcp()->scopep()->modp();
         const AstClass* classp = VN_CAST(modp, Class);
         // Static methods (self) live in the class package
-        if (const AstClassPackage* const pkgp = VN_CAST(modp, ClassPackage)) classp = pkgp->classp();
+        if (const AstClassPackage* const pkgp = VN_CAST(modp, ClassPackage))
+            classp = pkgp->classp();
         if (!classp || classp->prettyName() != "std::process") return false;
         const string& name = callp->funcp()->name();
         return name == "__VnoInFunc_status" || name == "__VnoInFunc_self";
@@ -1243,8 +1244,9 @@ class TimingControlVisitor final : public VNVisitor {
                         AstNodeVarRef* const hp = VN_CAST(selp->fromp(), NodeVarRef);
                         const AstVar* const fp = selp->varp();
                         const auto it = fp ? ownerOf.find(fp) : ownerOf.end();
-                        if (!hp || it == ownerOf.end() || (handlep && handlep->varp() != hp->varp())
-                            || fp->isSigPublic() || fp->isRand()
+                        if (!hp || it == ownerOf.end()
+                            || (handlep && handlep->varp() != hp->varp()) || fp->isSigPublic()
+                            || fp->isRand()
                             || (!fp->isHideLocal() && m_externallyWritten.count(fp))
                             || (classp && classp != it->second)) {
                             ok = false;
@@ -1361,9 +1363,8 @@ class TimingControlVisitor final : public VNVisitor {
         });
         // Writes through a MemberSel, and from derived classes, are in m_externalWrites
         for (AstWait* const waitp : waits) {
-            const bool ok = !waitp->condp()->exists([&](const AstNodeVarRef* refp) {
-                return untrackable.count(refp->varp());
-            });
+            const bool ok = !waitp->condp()->exists(
+                [&](const AstNodeVarRef* refp) { return untrackable.count(refp->varp()); });
             if (ok) m_parkWaits.insert(waitp);
         }
         const auto remoteIt = m_remoteTracked.find(m_classp);
@@ -2045,8 +2046,8 @@ class TimingControlVisitor final : public VNVisitor {
             if (remoteIt != m_remoteWaits.end()) {
                 AstNodeExpr* const fromp = remoteIt->second.fromp->cloneTree(false);
                 fromp->foreach([](AstNodeVarRef* refp) { refp->access(VAccess::READ); });
-                AstMemberSel* const selp = new AstMemberSel{
-                    flp, fromp, getCreateClassQueue(remoteIt->second.classp)};
+                AstMemberSel* const selp
+                    = new AstMemberSel{flp, fromp, getCreateClassQueue(remoteIt->second.classp)};
                 selp->access(VAccess::WRITE);
                 queuep = selp;
             } else {

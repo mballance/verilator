@@ -196,13 +196,14 @@ private:
             auto mit = modVars.find(modp);
             if (mit == modVars.end()) {
                 const auto newVar = [&](const string& name) {
-                    AstVar* const varp = new AstVar{flp, VVarType::MODULETEMP, name,
-                                                    netlistp->findBitDType()};
+                    AstVar* const varp
+                        = new AstVar{flp, VVarType::MODULETEMP, name, netlistp->findBitDType()};
                     modp->addStmtsp(varp);
                     return varp;
                 };
-                mit = modVars.emplace(modp, std::make_pair(newVar("__Vvifdirty_ico"),
-                                                           newVar("__Vvifdirty_act")))
+                mit = modVars
+                          .emplace(modp, std::make_pair(newVar("__Vvifdirty_ico"),
+                                                        newVar("__Vvifdirty_act")))
                           .first;
             }
             const auto newVscp = [&](AstVar* const varp) {
@@ -210,8 +211,8 @@ private:
                 scopep->addVarsp(vscp);
                 return vscp;
             };
-            const auto flags = std::make_pair(newVscp(mit->second.first),
-                                              newVscp(mit->second.second));
+            const auto flags
+                = std::make_pair(newVscp(mit->second.first), newVscp(mit->second.second));
             scopeFlags.emplace(scopep, flags);
             return flags;
         };
