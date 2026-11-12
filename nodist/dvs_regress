@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+# mypy: disallow-untyped-defs
+# pylint: disable=C0114,C0116,C0209
+######################################################################
+# Run the randomization tests with --solver-dvs and compare each test's
+# result with the expected-results list.
+######################################################################
+
+import argparse
+import glob
+import os
+import pickle
+import re
+import subprocess
+import sys
+
+RootDir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+RegressDir = os.path.join(RootDir, "test_regress")
+DefaultExpected = os.path.join(RootDir, "docs", "design", "dvs_regress_expected.txt")
+Statuses = ("pass", "skip", "unsupported", "golden", "fail")
+# Set by hand in the expected file, for a test of the SMT back-end itself; it
+# matches any result but pass
+NotApplicable = "n/a"
+
+#######################################################################
+
+
+def scenario(name: str) -> str:
+    """Driver scenario to run a test in: vltmt only for tests that run nowhere else"""
+    with open(os.path.join(RegressDir, "t", name + ".py"), encoding="utf-8") as fh:
+        return "vltmt" if re.search(r"scenarios\('vltmt'\)", fh.read()) else "vlt"
+
+
+def select_tests() -> list:
+    """Tests whose top source randomizes or has constraints"""
+    tests = []
+    for py in sorted(glob.glob(os.path.join(RegressDir, "t", "t_*.py"))):
+        name = os.path.basename(py)[:-3]
+        with open(py, encoding="utf-8") as fh:
+            match = re.search(r'top_filename\s*=\s*"([^"]+)"', fh.read())
+        top = os.path.join(RegressDir, match.group(1) if match else "t/" + name + ".v")
+        if not os.path.isfile(top):
+            continue
+        with open(top, encoding="utf-8", errors="replace") as fh:
+            if re.search(r'\brandomize\s*\(|\bconstraint\b', fh.read()):
+                tests.append(name)
+    return tests
+
+
+def classify(name: str) -> tuple:
+    """Return (status, message) from the status the driver left for the test"""
+    obj_dir = os.path.join(RegressDir, "obj_" + scenario(name), name)
+    try:
+        with open(os.path.join(obj_dir, "V" + name + ".status"), "rb") as fh:
+            status = pickle.load(fh)
+    except OSError:
+        return ("fail", "no status (driver or test error)")
+    errors = status.get('errors') or ""
+    if status.get('_ok'):
+        return ("pass", "")
+    if status.get('_skips') and not errors:
+        return ("skip", status['_skips'])
+    if status.get('_scenario_off') and not errors:
+        return ("skip", "not a vlt or vltmt test")
+    message = errors.splitlines()[0] if errors else "no message"
+    if "miscompares" in errors:
+        # A golden test fails on our refusal, or its golden is SMT-specific
+        try:
+            with open(os.path.join(obj_dir, "vlt_compile.log"), encoding="utf-8") as fh:
+                match = re.search(r'Unsupported: .* with --solver-dvs', fh.read())
+            if match:
+                return ("unsupported", match.group(0))
+        except OSError:
+            pass
+        return ("golden", message)
+    match = re.search(r'Unsupported: .* with --solver-dvs', errors)
+    if match:
+        return ("unsupported", match.group(0))
+    return ("fail", message)
+
+
+def read_expected(filename: str) -> dict:
+    """Map test name to (status, note)"""
+    expected = {}
+    if not os.path.isfile(filename):
+        return expected
+    with open(filename, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line or line.startswith("#"):
+                continue
+            fields = line.split(None, 2)
+            expected[fields[0]] = (fields[1], fields[2] if len(fields) > 2 else "")
+    return expected
+
+
+def write_expected(filename: str, results: dict, expected: dict) -> None:
+    with open(filename, "w", encoding="utf-8") as fh:
+        fh.write("# Expected results of nodist/dvs_regress (--solver-dvs); regenerate with\n"
+                 "# --update. Notes on 'golden', 'skip' and 'fail' lines are kept.\n"
+                 "# Statuses: " + " ".join(Statuses) + ", and " + NotApplicable +
+                 " (set by hand: tests the SMT back-end itself)\n")
+        for name in sorted(results):
+            status, message = results[name]
+            note = ""
+            # An 'unsupported' note is the refusal of this run; the others are hand-written
+            if name in expected and expected[name][0] == status and status != "unsupported":
+                note = expected[name][1]
+            if not note and status != "pass":
+                note = "# " + message
+            fh.write(("%-48s %-12s %s" % (name, status, note)).rstrip() + "\n")
+
+
+#######################################################################
+
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description="""Run the randomization tests with --solver-dvs, classify each as
+pass, skip, unsupported (our 'Unsupported: ... with --solver-dvs'), golden (an
+expected-output file that differs, e.g. SMT-specific text) or fail, and compare with
+the expected list. Exits non-zero on any difference.""")
+parser.add_argument('--expected', default=DefaultExpected, help='expected-results file')
+parser.add_argument('-j', dest='jobs', default="0", help='parallel tests (0 = all cores)')
+parser.add_argument('--no-run', action='store_true', help='classify the last run only')
+parser.add_argument('--update', action='store_true', help='rewrite the expected file')
+parser.add_argument('tests', nargs='*', help='tests to run (default: all selected)')
+Args = parser.parse_args()
+if Args.update and Args.tests:
+    sys.exit("%Error: --update needs the full test selection")
+
+Tests = Args.tests or select_tests()
+if not Args.no_run:
+    for scen in ("vlt", "vltmt"):
+        scen_tests = ["t/" + t + ".py" for t in Tests if scenario(t) == scen]
+        if scen_tests:
+            subprocess.run([
+                sys.executable, "driver.py", "--" + scen, "--solver-dvs", "-j", Args.jobs,
+                "--quiet", *scen_tests
+            ],
+                           cwd=RegressDir,
+                           check=False)
+
+Expected = read_expected(Args.expected)
+Results = {}
+for t in Tests:
+    Results[t] = classify(t)
+    if Expected.get(t, ("", ""))[0] == NotApplicable and Results[t][0] != "pass":
+        Results[t] = (NotApplicable, Results[t][1])
+
+counts = {s: sum(1 for r in Results.values() if r[0] == s) for s in Statuses + (NotApplicable,)}
+print("dvs_regress: " + "  ".join("%s %d" % (s, n) for s, n in counts.items()))
+
+Diffs = 0
+for test in sorted(Results):
+    status, message = Results[test]
+    want = Expected.get(test, ("(new)", ""))[0]
+    if status != want:
+        Diffs += 1
+        print("%-48s expected %-12s got %-12s %s" % (test, want, status, message))
+if not Args.tests:
+    for test in sorted(set(Expected) - set(Results)):
+        Diffs += 1
+        print("%-48s expected %-12s but not selected" % (test, Expected[test][0]))
+
+if Args.update:
+    write_expected(Args.expected, Results, Expected)
+    print("dvs_regress: wrote " + Args.expected)
+elif Diffs:
+    print("dvs_regress: %d difference(s) from %s" % (Diffs, Args.expected))
+    sys.exit(1)
