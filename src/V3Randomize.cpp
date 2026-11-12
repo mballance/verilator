@@ -2305,7 +2305,8 @@ class RandomizeVisitor final : public VNVisitor {
 
         // Detect global-constraint ownership BEFORE the constraint items are
         // unlinked into setup tasks below (after that the member-selects are gone).
-        const bool basicFirst = classOwnsGlobalConstraint(nodep);
+        const bool basicFirst
+            = classOwnsGlobalConstraint(nodep) || m_solverp->basicRandomizeFirst(nodep);
 
         FileLine* const fl = nodep->fileline();
         AstFunc* const randomizep = V3Randomize::newRandomizeFunc(m_memberMap, nodep);
