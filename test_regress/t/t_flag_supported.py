@@ -17,6 +17,12 @@ if test.have_coroutines:
              expect_filename="t/t_flag_supported_1.out",
              verilator_run=True)
 
+if test.have_dv_solve:
+    test.run(cmd=[os.environ["VERILATOR_ROOT"] + "/bin/verilator --get-supported DV_SOLVE"],
+             logfile=test.obj_dir + "/vlt_dv_solve.log",
+             expect_filename="t/t_flag_supported_1.out",
+             verilator_run=True)
+
 if test.have_sc:
     test.run(cmd=[os.environ["VERILATOR_ROOT"] + "/bin/verilator --get-supported SYSTEMC"],
              logfile=test.obj_dir + "/vlt_systemc.log",

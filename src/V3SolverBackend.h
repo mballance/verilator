@@ -160,6 +160,9 @@ class V3SolverBackend VL_NOT_FINAL {
 public:
     virtual ~V3SolverBackend() = default;
 
+    // Create the back-end selected by --solver-smt or --solver-dvs
+    static V3SolverBackend* create(VSolverBackend backend) VL_MT_DISABLED;
+
     // Header of the runtime library, included by the generated code
     virtual std::string runtimeHeader() const VL_MT_DISABLED = 0;
     // Runtime C++ files compiled with the model

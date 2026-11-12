@@ -51,6 +51,11 @@
 
 #include "V3SolverBackend.h"
 
+#include "V3SolverSmt.h"
+#ifdef HAVE_DV_SOLVE
+#include "V3SolverDvs.h"
+#endif
+
 AstVar* RandModeVars::randModeVarp(AstNodeModule* classp) {
     while (classp) {
         if (classp->user2p()) return VN_AS(classp->user2p(), Var);
@@ -99,4 +104,13 @@ AstVar* RandModeVars::constraintModeVarp(AstClass* classp) {
         return constraintModeVarp(extendsp->classp());
     }
     return nullptr;
+}
+
+V3SolverBackend* V3SolverBackend::create(VSolverBackend backend) {
+#ifdef HAVE_DV_SOLVE
+    if (backend == VSolverBackend::DVS) return newV3SolverDvs();
+#endif
+    // V3Options rejects --solver-dvs when not built with dv-solve
+    UASSERT(backend == VSolverBackend::SMT, "Solver back-end not built into this Verilator");
+    return new V3SolverSmt;
 }

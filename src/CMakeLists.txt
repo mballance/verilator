@@ -183,6 +183,8 @@ set(HEADERS
     V3Simulate.h
     V3Slice.h
     V3SolverBackend.h
+    V3SolverDvs.h
+    V3SolverDvsBuild.h
     V3SolverSmt.h
     V3Split.h
     V3StackCount.h
@@ -367,6 +369,9 @@ set(COMMON_SOURCES
     V3Scope.cpp
     V3Slice.cpp
     V3SolverBackend.cpp
+    V3SolverDvs.cpp
+    V3SolverDvsBuild.cpp
+    V3SolverDvsCheck.cpp
     V3SolverSmt.cpp
     V3Split.cpp
     V3StackCount.cpp
@@ -600,6 +605,13 @@ add_dependencies(
 )
 
 target_link_libraries(${verilator} PRIVATE Threads::Threads)
+
+option(VERILATOR_WITH_DV_SOLVE "Build the dv-solve constraint solver back-end" OFF)
+if(VERILATOR_WITH_DV_SOLVE)
+    find_package(dv-solve CONFIG REQUIRED)
+    target_compile_definitions(${verilator} PRIVATE HAVE_DV_SOLVE)
+    target_link_libraries(${verilator} PRIVATE dv_solve::writer)
+endif()
 
 if(NOT MSVC)
     target_compile_features(${verilator} PRIVATE cxx_std_11)

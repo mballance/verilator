@@ -70,6 +70,10 @@ CFG_CXXFLAGS_PARSER = @CFG_CXXFLAGS_PARSER@
 CFG_CXXFLAGS_WEXTRA = @CFG_CXXFLAGS_WEXTRA@
 CFG_LDFLAGS_SRC = @CFG_LDFLAGS_SRC@
 CFG_LIBS = @CFG_LIBS@
+# dv-solve problem writer, if configured --with-dv-solve
+CFG_CXXFLAGS_DVS = @CFG_CXXFLAGS_DVS@
+CFG_LIBS_DVS = @CFG_LIBS_DVS@
+CFG_DV_SOLVE_ROOT = @CFG_DV_SOLVE_ROOT@
 CFG_CXXFLAGS_PCH = -x c++-header
 # Compiler option to put in front of filename to read precompiled header
 CFG_CXXFLAGS_PCH_I = @CFG_CXXFLAGS_PCH_I@
@@ -99,10 +103,12 @@ endif
 
 # -lfl not needed as Flex invoked with %nowrap option
 LIBS = $(CFG_LIBS) -lm
+LIBS += $(CFG_LIBS_DVS)
 
 CPPFLAGS += -DVERILATOR_INTERNAL_
 CPPFLAGS += -MMD
 CPPFLAGS += -I. -I$(bldsrc) -I$(srcdir) -I$(incdir) -I../../include
+CPPFLAGS += $(CFG_CXXFLAGS_DVS)
 #CPPFLAGS += -DVL_ALLOC_RANDOM_CHECKS  # To allow --debug-new-random
 #CPPFLAGS += -DVL_LEAK_CHECKS  # If running valgrind or other hunting tool
 CPPFLAGS += -MP # Only works on recent GCC versions
@@ -123,6 +129,7 @@ CPPFLAGSPARSER = $(CPPFLAGS) $(CFG_CXXFLAGS_PARSER)
 # Allow RPM builds to specify hardcoded data directories
 # To do this:
 ifeq ($(CFG_WITH_DEFENV),yes)
+  CPPFLAGS += -DDEFENV_DV_SOLVE_ROOT=\"$(CFG_DV_SOLVE_ROOT)\"
   CPPFLAGS += -DDEFENV_SYSTEMC=\"$(SYSTEMC)\"
   CPPFLAGS += -DDEFENV_SYSTEMC_ARCH=\"$(SYSTEMC_ARCH)\"
   CPPFLAGS += -DDEFENV_SYSTEMC_INCLUDE=\"$(SYSTEMC_INCLUDE)\"
@@ -349,6 +356,9 @@ RAW_OBJS_PCH_ASTNOMT = \
   V3Scope.o \
   V3Slice.o \
   V3SolverBackend.o \
+  V3SolverDvs.o \
+  V3SolverDvsBuild.o \
+  V3SolverDvsCheck.o \
   V3SolverSmt.o \
   V3Split.o \
   V3StackCount.o \

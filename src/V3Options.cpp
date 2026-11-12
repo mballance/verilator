@@ -26,6 +26,7 @@
 #include "V3OptionParser.h"
 #include "V3Os.h"
 #include "V3PreShell.h"
+#include "V3SolverDvs.h"
 #include "V3String.h"
 
 // clang-format off
@@ -732,7 +733,9 @@ V3LangCode V3Options::fileLanguage(const string& filename) {
 
 string V3Options::getenvBuiltins(const string& var) {
     // If update below, also update V3Options::showVersion()
-    if (var == "MAKE") {
+    if (var == "DV_SOLVE_ROOT") {
+        return getenvDV_SOLVE_ROOT();
+    } else if (var == "MAKE") {
         return getenvMAKE();
     } else if (var == "PERL") {
         return getenvPERL();
@@ -753,6 +756,18 @@ string V3Options::getenvBuiltins(const string& var) {
     } else {
         return V3Os::getenvStr(var, "");
     }
+}
+
+string V3Options::getenvDV_SOLVE_ROOT() {
+    string var = V3Os::getenvStr("DV_SOLVE_ROOT", "");
+    // Treat compiled-in DEFENV string literals as C-strings to enable
+    // binary patching for relocatable installs (e.g. conda)
+    const string defenv = string{DEFENV_DV_SOLVE_ROOT};
+    if (var == "" && defenv != "") {
+        var = defenv;
+        V3Os::setenvStr("DV_SOLVE_ROOT", var, "Hardcoded at build time");
+    }
+    return V3Os::filenameCleanup(var);
 }
 
 #ifdef __FreeBSD__
@@ -906,6 +921,8 @@ string V3Options::getSupported(const string& var) {
     } else if (var == "DEV_ASAN" && devAsan()) {
         return "1";
     } else if (var == "DEV_GCOV" && devGcov()) {
+        return "1";
+    } else if (var == "DV_SOLVE" && dvSolveFormatVersion()) {
         return "1";
         // cppcheck-suppress knownConditionTrueFalse
     } else if (var == "SYSTEMC" && systemCFound()) {
@@ -1222,6 +1239,14 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
 
     const auto callStrSetter = [this](void (V3Options::*cbStr)(const string&)) {
         return [this, cbStr](const string& v) { (this->*cbStr)(v); };
+    };
+    // Returns false if the other back-end was already selected
+    const auto setSolverBackend = [this, fl](VSolverBackend backend) {
+        const bool conflict = m_solverBackendSet && m_solverBackend != backend;
+        if (conflict) fl->v3error("--solver-dvs cannot be used together with --solver-smt");
+        m_solverBackend = backend;
+        m_solverBackendSet = true;
+        return !conflict;
     };
     // Usage
     // DECL_OPTION("-option", action, pointer_or_lambda);
@@ -1839,6 +1864,12 @@ void V3Options::parseOptsList(FileLine* fl, const string& optdir, int argc,
     });
     DECL_OPTION("-sched-zero-delay", OnOff, &m_schedZeroDelay);
     DECL_OPTION("-skip-identical", OnOff, &m_skipIdentical);
+    DECL_OPTION("-solver-dvs", CbCall, [fl, setSolverBackend]() {
+        if (setSolverBackend(VSolverBackend::DVS) && !dvSolveFormatVersion())
+            fl->v3error("--solver-dvs: Verilator was not configured with --with-dv-solve");
+    });
+    DECL_OPTION("-solver-smt", CbCall,
+                [setSolverBackend]() { setSolverBackend(VSolverBackend::SMT); });
     DECL_OPTION("-stats", OnOff, &m_stats);
     DECL_OPTION("-stats-vars", CbOnOff, [this](bool flag) {
         m_statsVars = flag;
@@ -2345,6 +2376,7 @@ void V3Options::showVersion(bool verbose) {
     cout << "\n";
     cout << "Summary of configuration:\n";
     cout << "  Compiled in defaults if not in environment:\n";
+    cout << "    DV_SOLVE_ROOT      = " << DEFENV_DV_SOLVE_ROOT << "\n";
     cout << "    SYSTEMC            = " << DEFENV_SYSTEMC << "\n";
     cout << "    SYSTEMC_ARCH       = " << DEFENV_SYSTEMC_ARCH << "\n";
     cout << "    SYSTEMC_INCLUDE    = " << DEFENV_SYSTEMC_INCLUDE << "\n";
@@ -2357,6 +2389,7 @@ void V3Options::showVersion(bool verbose) {
     // If update below, also update V3Options::getenvBuiltins()
     cout << "\n";
     cout << "Environment:\n";
+    cout << "    DV_SOLVE_ROOT      = " << V3Os::getenvStr("DV_SOLVE_ROOT", "") << "\n";
     cout << "    MAKE               = " << V3Os::getenvStr("MAKE", "") << "\n";
     cout << "    PERL               = " << V3Os::getenvStr("PERL", "") << "\n";
     cout << "    PYTHON3            = " << V3Os::getenvStr("PYTHON3", "") << "\n";
@@ -2375,6 +2408,10 @@ void V3Options::showVersion(bool verbose) {
     cout << "\n";
     cout << "Supported features (compiled-in or forced by environment):\n";
     cout << "    COROUTINES         = " << getSupported("COROUTINES") << "\n";
+    cout << "    DV_SOLVE           = " << getSupported("DV_SOLVE") << "\n";
+    if (dvSolveFormatVersion()) {
+        cout << "    DV_SOLVE problem format version = " << dvSolveFormatVersion() << "\n";
+    }
     cout << "    SYSTEMC            = " << getSupported("SYSTEMC") << "\n";
     cout << "    TSAN               = " << getSupported("TSAN") << "\n";
 }

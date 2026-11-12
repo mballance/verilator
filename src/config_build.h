@@ -35,6 +35,9 @@
 // to set them at Verilator runtime.
 
 // clang-format off
+#ifndef DEFENV_DV_SOLVE_ROOT
+# define DEFENV_DV_SOLVE_ROOT ""
+#endif
 #ifndef DEFENV_SYSTEMC
 # define DEFENV_SYSTEMC ""
 #endif

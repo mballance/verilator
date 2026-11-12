@@ -1192,6 +1192,12 @@ FOR_EACH_CMETHOD(VL_CMETHOD_ARGS_CHECK)
 #define FOR_EACH_CFUNCTION(macro) \
     /*    id,                                 function,                 pure,   args */ \
     macro(_NONE,                              "_none",                  false,  "") \
+    macro(DVS_PART,                           "VL_DVS_PART",            false,  "rrrrrm+") \
+    macro(DVS_PARTS_BEGIN,                    "VL_DVS_PARTS_BEGIN",     false,  "") \
+    macro(DVS_SITE_PART,                      "VL_DVS_SITE_PART",       false,  "rrrrm+") \
+    macro(DVS_SOLVE,                          "VL_DVS_SOLVE",           false,  "rrrm+") \
+    macro(DVS_SOLVE_STD,                      "VL_DVS_SOLVE_STD",       false,  "mrrrm+") \
+    macro(DVS_SOLVE_PARTS,                    "VL_DVS_SOLVE_PARTS",     false,  "") \
     macro(RANDOMIZER_TO_SOLVER_HEX,           "vlToSolverHex",          PURE,   "r") \
     macro(STRING_APPEND,                      "VL_APPENDN_NN",          false,  "mr")
 // clang-format on
