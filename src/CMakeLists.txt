@@ -52,7 +52,6 @@ set(HEADERS
     V3AstNodeOther.h
     V3AstNodeStmt.h
     V3AstPatterns.h
-    V3AstUserAllocator.h
     V3Begin.h
     V3BitBlast.h
     V3Branch.h
@@ -65,7 +64,7 @@ set(HEADERS
     V3Cfg.h
     V3Class.h
     V3Clean.h
-    V3Clock.h
+    V3Coalesce.h
     V3Combine.h
     V3Common.h
     V3Const.h
@@ -156,6 +155,7 @@ set(HEADERS
     V3OrderMoveGraph.h
     V3OrderMTaskGraph.h
     V3Os.h
+    V3Outline.h
     V3PairingHeap.h
     V3Param.h
     V3Parse.h
@@ -206,6 +206,7 @@ set(HEADERS
     V3UniqueNames.h
     V3Unknown.h
     V3Unroll.h
+    V3VNUserAllocator.h
     V3VariableOrder.h
     V3Waiver.h
     V3Width.h
@@ -242,7 +243,7 @@ set(COMMON_SOURCES
     V3CfgLiveVariables.cpp
     V3Class.cpp
     V3Clean.cpp
-    V3Clock.cpp
+    V3Coalesce.cpp
     V3Combine.cpp
     V3Common.cpp
     V3ConstPool.cpp
@@ -342,6 +343,7 @@ set(COMMON_SOURCES
     V3OrderProcessDomains.cpp
     V3OrderSerial.cpp
     V3Os.cpp
+    V3Outline.cpp
     V3Param.cpp
     V3ParseGrammar.cpp
     V3ParseImp.cpp

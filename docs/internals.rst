@@ -680,7 +680,9 @@ it, overrides it, or is overriden by it.
 
 The second visitor in ``V3Timing.cpp``, ``TimingControlVisitor``, uses the
 information provided by ``TimingSuspendableVisitor`` and transforms each
-timing control into a ``co_await``.
+timing control into a ``co_await``. It also turns each suspendable
+``always`` into an ``initial forever``, with the sensitivity list of a
+clocked ``always`` as an event control at the start of the loop body.
 
 - event controls are turned into ``co_await`` on a trigger scheduler's
   ``trigger`` method. The awaited trigger scheduler is the one
@@ -713,9 +715,9 @@ condition is always false, the ``wait`` statement is replaced by a
 the ``wait`` is deep in a call stack (otherwise, the coroutine's caller
 would continue execution).
 
-Each sub-statement of a ``fork`` is put in an ``AstBegin`` node for easier
-grouping. In a later step, each of these gets transformed into a new,
-separate function. See the `Forks` section for more detail.
+Each sub-statement of a ``fork`` is put in an ``AstForkItem`` node, the
+process that executes it. In a later step, each of these gets transformed
+into a new, separate function. See the `Forks` section for more detail.
 
 Suspendable functions get the return type of ``VlCoroutine``, which makes
 them coroutines. Later, during ``V3Sched``, suspendable processes are also
@@ -803,6 +805,64 @@ In forked processes, references to local variables are only allowed in
 ``fork..join``, as this is the only case that ensures the lifetime of these
 locals are at least as long as the execution of the forked processes.
 
+DPI with timing
+~~~~~~~~~~~~~~~
+
+Verilator supports DPI exported tasks with timing constructs by running the
+DPI imported task on a separate thread with its own call stack. When an
+exported task suspends, the thread blocks and the simulation event loop
+continues.
+
+The implementation is present in ``verilated_dpi_call.cpp`` and
+``verilated_dpi_call.h``.
+
+``VlDpiCall``
++++++++++++++
+
+Runs the function passed to its constructor on a pool thread. It implements
+the following key functions:
+
+- ``handoffWorker()`` - Runs the function, or continues it after the last
+  ``stopWorker()``. The calling thread blocks until the function yields or
+  returns.
+- ``stopWorker()`` - Called on the DPI thread. Blocks the DPI thread and
+  returns control to the thread blocked in ``handoffWorker()``.
+
+``co_await`` on a ``VlDpiCall`` suspends the awaiting coroutine until the
+function returns.
+
+Only one of the two threads runs at any time, so model state needs no
+locking. ``Verilated`` thread-local state (context, DPI scope),
+``VlProcess::currentp()`` and ``VlRNG::vl_thread_rng()`` are copied at each
+handoff.
+
+``VlThreadPool``
+++++++++++++++++
+
+Imported tasks acquire workers from their context's ``VlThreadPool``. Each
+call retains its worker and C++ stack while an exported task is suspended.
+These workers are separate from the statically assigned model evaluation
+workers, so suspended calls do not block model evaluation or parallel
+tracing. The pool creates workers as needed, reuses them after calls
+return, and joins idle workers when the context is destroyed. ``VlDpiCall``
+manages the handoff with a mutex and condition variable.
+
+Calling and awaiting DPI tasks
+++++++++++++++++++++++++++++++
+
+Verilator emits a call to ``awaitImportTask()`` (defined in
+``verilated_dpi.h``) to call DPI imported tasks. If no suspendable exports
+are present, Verilator emits ``callImportTask()`` instead. Exported tasks
+are called through ``callExportTask()``.
+
+``awaitImportTask()`` creates a ``VlDpiCall`` that calls the imported task,
+resumes it, and awaits it. If the imported task calls an exported task that
+returns a ``VlCoroutine`` and the coroutine suspends, ``callExportTask()``
+makes ``resumeDpiCallAfter()`` await it and calls
+``VlDpiCall::stopWorker()``. ``handoffWorker()`` in ``awaitImportTask()``
+then returns, ``awaitImportTask()`` suspends, and the event loop continues.
+When the exported task completes, ``resumeDpiCallAfter()`` resumes the DPI
+call.
 
 Multithreaded Mode
 ------------------
@@ -1459,12 +1519,12 @@ The behavior of the visitor classes is achieved by overloading the
 ``visit`` function for the different ``AstNode`` derived classes. If a
 specific implementation is not found, the system will look in turn for
 overloaded implementations up the inheritance hierarchy. For example
-calling ``accept`` on ``AstIf`` will look in turn for:
+calling ``accept`` on ``AstAssignDly`` will look in turn for:
 
 ::
 
-   void visit(AstIf* nodep)
-   void visit(AstNodeIf* nodep)
+   void visit(AstAssignDly* nodep)
+   void visit(AstNodeAssign* nodep)
    void visit(AstNodeStmt* nodep)
    void visit(AstNode* nodep)
 
@@ -1597,22 +1657,22 @@ Identifying Derived Classes
 
 A common requirement is to identify the specific ``AstNode`` class we are
 dealing with. For example, a visitor might not implement separate ``visit``
-methods for ``AstIf`` and ``AstGenIf``, but just a single method for the
-base class:
+methods for ``AstAssign`` and ``AstAssignDly``, but just a single method
+for the base class:
 
 ::
 
-   void visit(AstNodeIf* nodep)
+   void visit(AstNodeAssign* nodep)
 
 However that method might want to specify additional code if it is called
-for ``AstGenIf``. Verilator does this by providing a ``VN_IS`` method for
-each possible node type, which returns true if the node is of that type (or
-derived from that type). So our ``visit`` method could use:
+for ``AstAssignDly``. Verilator does this by providing a ``VN_IS`` method
+for each possible node type, which returns true if the node is of that type
+(or derived from that type). So our ``visit`` method could use:
 
 ::
 
-   if (VN_IS(nodep, AstGenIf) {
-     <code specific to AstGenIf>
+   if (VN_IS(nodep, AssignDly)) {
+     <code specific to AstAssignDly>
    }
 
 Additionally the ``VN_CAST`` method converts pointers similar to C++

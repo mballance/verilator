@@ -367,7 +367,10 @@ string AstNode::vpiName(const string& namein) {
     return pretty;
 }
 
-string AstNode::prettyTypeName() const {
+string AstNode::prettyTypeNameQ() const {
+    if (const AstCMethodHard* const methodp = VN_CAST(this, CMethodHard)) {
+        return "'"s + methodp->method().prettyName() + "'";
+    }
     if (name() == "") return typeName();
     return std::string{typeName()} + " '" + prettyNameMsg() + "'";
 }
@@ -1199,10 +1202,11 @@ AstNode* AstNode::iterateSubtreeReturnEdits(VNVisitor& v) {
     } else if (!nodep->backp()) {
         // Calling on standalone tree; insert a shim node so we can keep
         // track, then delete it on completion
-        AstBegin* const tempp = new AstBegin{nodep->fileline(), "[EditWrapper]", nodep, false};
+        AstBegin* const tempp = new AstBegin{nodep->fileline(), "[EditWrapper]", nullptr, false};
+        tempp->addDeclsp(nodep);
         // nodep to null as may be replaced
-        VL_DO_DANGLING(tempp->stmtsp()->accept(v), nodep);
-        nodep = tempp->stmtsp()->unlinkFrBackWithNext();
+        VL_DO_DANGLING(tempp->declsp()->accept(v), nodep);
+        nodep = tempp->declsp()->unlinkFrBackWithNext();
         VL_DO_DANGLING(tempp->deleteTree(), tempp);
     } else {
         // Use back to determine who's pointing at us (IE assume new node

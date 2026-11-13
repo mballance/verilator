@@ -33,7 +33,7 @@
 #include "V3Cast.h"
 #include "V3Class.h"
 #include "V3Clean.h"
-#include "V3Clock.h"
+#include "V3Coalesce.h"
 #include "V3Combine.h"
 #include "V3Common.h"
 #include "V3Const.h"
@@ -89,6 +89,7 @@
 #include "V3Name.h"
 #include "V3Order.h"
 #include "V3Os.h"
+#include "V3Outline.h"
 #include "V3Param.h"
 #include "V3PreShell.h"
 #include "V3Premit.h"
@@ -353,6 +354,9 @@ static void process() {
             // Module inlining
             if (v3Global.opt.fInline()) V3Inline::inlineAll(v3Global.rootp());
 
+            // Coalesce variables that are always the same
+            if (v3Global.opt.fCoalesce()) V3Coalesce::coalesceAll(v3Global.rootp());
+
             // Relocate classes (after linkDot)
             V3Class::classAll(v3Global.rootp());
         }
@@ -402,6 +406,10 @@ static void process() {
             if (v3Global.opt.fBitblast()) V3BitBlast::bitBlastAll(v3Global.rootp());
 
             if (v3Global.opt.fLife()) V3Life::lifeAll(v3Global.rootp());
+
+            // Split single ALWAYS blocks before making tables, so that a table is made for each
+            // independent group of outputs, indexed by their own inputs only
+            if (v3Global.opt.fSplit()) V3Split::splitAll(v3Global.rootp());
 
             // Make large low-fanin logic blocks into lookup tables
             // This should probably be done much later, once we have common logic elimination.
@@ -478,9 +486,6 @@ static void process() {
             V3Sched::schedule(v3Global.rootp());
             V3Sched::transformForks(v3Global.rootp());
 
-            // Post scheduling transformations - TODO: this should at least be renamed
-            V3Clock::clockAll(v3Global.rootp());
-
             // Cleanup any dly vars or other temps that are simple assignments
             // Life must be done before Subst, as it assumes each CFunc under
             // _eval is called only once.
@@ -507,6 +512,11 @@ static void process() {
         // --MODULE OPTIMIZATIONS--------------
 
         if (!v3Global.opt.serializeOnly()) {
+            // Outline parts of large coroutines.  Must be before Localize.
+            if (!v3Global.opt.lintOnly() && v3Global.opt.outputSplitCFuncs()) {
+                V3Outline::outlineAll(v3Global.rootp());
+            }
+
             // Split deep blocks to appease MSVC++.  Must be before Localize.
             if (!v3Global.opt.lintOnly() && v3Global.opt.compLimitBlocks()) {
                 V3DepthBlock::depthBlockAll(v3Global.rootp());

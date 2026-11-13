@@ -101,6 +101,10 @@ class V3EmitMkJsonEmitter final {
             deps.emplace_back(V3Os::filenameSlashPath(V3Os::filenameAbsolutePath(dep)));
         for (const auto& cppFile : v3Global.opt.cppFiles())
             cppFiles.emplace_back(V3Os::filenameSlashPath(V3Os::filenameAbsolutePath(cppFile)));
+        std::vector<string> moduleInterfaces;
+        for (const auto& moduleFile : v3Global.opt.moduleFiles())
+            moduleInterfaces.emplace_back(
+                V3Os::filenameSlashPath(V3Os::filenameAbsolutePath(moduleFile)));
 
         of.put("version", 1)
             .begin("system")
@@ -114,6 +118,7 @@ class V3EmitMkJsonEmitter final {
             .putList("ldflags", ldLibs)
             .put("system_c", v3Global.opt.systemC())
             .put("coverage", v3Global.opt.coverage())
+            .put("cxx_modules", v3Global.opt.cxxModules())
             .put("dpi", v3Global.dpi())
             .put("use_timing", v3Global.usesTiming())
             .put("threads", v3Global.opt.threads())
@@ -130,6 +135,7 @@ class V3EmitMkJsonEmitter final {
             .putList("support_fast", supportFast)
             .putList("deps", deps)
             .putList("user_classes", cppFiles)
+            .putList("module_interfaces", moduleInterfaces)
             .end();
 
         if (const V3HierGraph* const graphp = v3Global.hierGraphp()) {
