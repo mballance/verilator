@@ -767,6 +767,20 @@ string V3Options::getenvDV_SOLVE_ROOT() {
         var = defenv;
         V3Os::setenvStr("DV_SOLVE_ROOT", var, "Hardcoded at build time");
     }
+    // Relocated install: the build-time path is gone, so use the copy
+    // shipped beside the runtime in $VERILATOR_ROOT/dv-solve
+    const auto isDir = [](const string& dirname) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
+        struct stat sstat;  // Stat information
+        return stat(dirname.c_str(), &sstat) == 0 && S_ISDIR(sstat.st_mode);
+    };
+    if (var == "" || !isDir(var)) {
+        const string shipped = V3Os::filenameJoin(getenvVERILATOR_ROOT(), "dv-solve");
+        if (isDir(shipped)) {
+            var = shipped;
+            V3Os::setenvStr("DV_SOLVE_ROOT", var, "Found under VERILATOR_ROOT");
+        }
+    }
     return V3Os::filenameCleanup(var);
 }
 
