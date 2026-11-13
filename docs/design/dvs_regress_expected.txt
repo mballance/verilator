@@ -1,6 +1,8 @@
 # Expected results of nodist/dvs_regress (--solver-dvs); regenerate with
 # --update. Notes on 'golden', 'skip' and 'fail' lines are kept.
 # Statuses: pass skip unsupported golden fail, and n/a (set by hand: tests the SMT back-end itself)
+# SPDX-FileCopyrightText: 2026 Wilson Snyder
+# SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0
 t_assoc_array_constraints                        unsupported  # Unsupported: operator ASSOCSEL on random variables with --solver-dvs
 t_assocsel_sideeffect                            unsupported  # Unsupported: operator ASSOCSEL on random variables with --solver-dvs
 t_constraint                                     pass

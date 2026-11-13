@@ -26,6 +26,7 @@
 
 #include "verilated_solver_dvs.h"
 
+#include <cinttypes>
 #include <cstdio>
 #include <cstring>
 #include <deque>
@@ -88,11 +89,11 @@ public:
             }
             std::fputs("# Verilator solver log\n", m_logfp);
         }
-        std::fprintf(m_logfp, "# [%s]\n",
-                     Verilated::threadContextp()->timeWithUnitString().c_str());
+        const std::string timeStr = Verilated::threadContextp()->timeWithUnitString();
+        std::fprintf(m_logfp, "# [%s]\n", timeStr.c_str());
         if (nParts) {
-            std::fprintf(m_logfp, "; a problem of %zu objects\n; seed %llu, result %d\n", nParts,
-                         static_cast<unsigned long long>(seed), result);
+            std::fprintf(m_logfp, "; a problem of %zu objects\n; seed %" PRIu64 ", result %d\n",
+                         nParts, static_cast<uint64_t>(seed), result);
             std::fflush(m_logfp);
             return;
         }
@@ -106,11 +107,11 @@ public:
             dvs_problem_write_smt2(reinterpret_cast<const dvs_problem_t*>(problem.data()),
                                    m_logfp);
         }
-        std::fprintf(m_logfp, "; seed %llu, result %d\n", static_cast<unsigned long long>(seed),
-                     result);
+        std::fprintf(m_logfp, "; seed %" PRIu64 ", result %d\n",
+                     static_cast<uint64_t>(seed), result);
         for (uint32_t i = 0; i < nVars; ++i) {
-            std::fprintf(m_logfp, "; v%u = 0x%llx\n", i,
-                         static_cast<unsigned long long>(value(refs[i].addr, refs[i].width)));
+            std::fprintf(m_logfp, "; v%u = 0x%" PRIx64 "\n", i,
+                         static_cast<uint64_t>(value(refs[i].addr, refs[i].width)));
         }
         std::fflush(m_logfp);
     }

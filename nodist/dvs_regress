@@ -4,6 +4,12 @@
 ######################################################################
 # Run the randomization tests with --solver-dvs and compare each test's
 # result with the expected-results list.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of either the GNU Lesser General Public License Version 3
+# or the Perl Artistic License Version 2.0.
+# SPDX-FileCopyrightText: 2026 Wilson Snyder
+# SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0
 ######################################################################
 
 import argparse
@@ -31,9 +37,9 @@ def scenario(name: str) -> str:
         return "vltmt" if re.search(r"scenarios\('vltmt'\)", fh.read()) else "vlt"
 
 
-def select_tests() -> list:
+def select_tests() -> list[str]:
     """Tests whose top source randomizes or has constraints"""
-    tests = []
+    tests: list[str] = []
     for py in sorted(glob.glob(os.path.join(RegressDir, "t", "t_*.py"))):
         name = os.path.basename(py)[:-3]
         with open(py, encoding="utf-8") as fh:
@@ -47,7 +53,7 @@ def select_tests() -> list:
     return tests
 
 
-def classify(name: str) -> tuple:
+def classify(name: str) -> tuple[str, str]:
     """Return (status, message) from the status the driver left for the test"""
     obj_dir = os.path.join(RegressDir, "obj_" + scenario(name), name)
     try:
@@ -79,9 +85,9 @@ def classify(name: str) -> tuple:
     return ("fail", message)
 
 
-def read_expected(filename: str) -> dict:
+def read_expected(filename: str) -> dict[str, tuple[str, str]]:
     """Map test name to (status, note)"""
-    expected = {}
+    expected: dict[str, tuple[str, str]] = {}
     if not os.path.isfile(filename):
         return expected
     with open(filename, encoding="utf-8") as fh:
@@ -94,12 +100,15 @@ def read_expected(filename: str) -> dict:
     return expected
 
 
-def write_expected(filename: str, results: dict, expected: dict) -> None:
+def write_expected(filename: str, results: dict[str, tuple[str, str]],
+                   expected: dict[str, tuple[str, str]]) -> None:
     with open(filename, "w", encoding="utf-8") as fh:
         fh.write("# Expected results of nodist/dvs_regress (--solver-dvs); regenerate with\n"
                  "# --update. Notes on 'golden', 'skip' and 'fail' lines are kept.\n"
                  "# Statuses: " + " ".join(Statuses) + ", and " + NotApplicable +
-                 " (set by hand: tests the SMT back-end itself)\n")
+                 " (set by hand: tests the SMT back-end itself)\n"
+                 "# SPDX-FileCopyrightText: 2026 Wilson Snyder\n"
+                 "# SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0\n")
         for name in sorted(results):
             status, message = results[name]
             note = ""
@@ -141,7 +150,7 @@ if not Args.no_run:
                            check=False)
 
 Expected = read_expected(Args.expected)
-Results = {}
+Results: dict[str, tuple[str, str]] = {}
 for t in Tests:
     Results[t] = classify(t)
     if Expected.get(t, ("", ""))[0] == NotApplicable and Results[t][0] != "pass":
