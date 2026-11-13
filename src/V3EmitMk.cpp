@@ -684,6 +684,13 @@ public:
         of.putSetQ("SYSTEMC_INCLUDE", V3Options::getenvSYSTEMC_INCLUDE());
         of.puts("# SystemC library directory with libsystemc.a (from $SYSTEMC_LIBDIR)\n");
         of.putSetQ("SYSTEMC_LIBDIR", V3Options::getenvSYSTEMC_LIBDIR());
+        if (v3Global.useRandomizeMethods()) {
+            for (const std::pair<string, string>& nameValue :
+                 v3Global.solverBackendp()->runtimeMakeVars()) {
+                of.puts("# Constraint solver runtime (from $" + nameValue.first + ")\n");
+                of.putSetQ(nameValue.first, nameValue.second);
+            }
+        }
 
         // Only check it if we really need the value
         if (v3Global.opt.systemC() && !V3Options::systemCFound()) {
@@ -733,6 +740,10 @@ public:
         of.puts("VM_USER_LDLIBS = \\\n");
         const VStringList& ldLibs = v3Global.opt.ldLibs();
         for (const string& i : ldLibs) of.puts("  " + i + " \\\n");
+        if (v3Global.useRandomizeMethods()) {
+            for (const string& lib : v3Global.solverBackendp()->runtimeLdLibs())
+                of.puts("\t" + lib + " \\\n");
+        }
         of.puts("\n");
 
         of.puts("# User library files (from .a/.o/.so on Verilator command line)\n");

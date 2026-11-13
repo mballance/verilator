@@ -21,6 +21,7 @@
 #include "V3EmitCBase.h"
 #include "V3HierBlock.h"
 #include "V3Os.h"
+#include "V3SolverBackend.h"
 
 #include <memory>
 
@@ -76,6 +77,26 @@ class V3EmitMkJsonEmitter final {
             global.emplace_back(makeDir + "/" + v3Global.opt.libCreate() + ".cpp");
         }
 
+        // As VM_USER_CFLAGS and VM_USER_LDLIBS of the makefile: back-end flags and user flags
+        std::vector<string> cFlags;
+        std::vector<string> ldLibs = v3Global.opt.ldLibs();
+        if (v3Global.useRandomizeMethods()) {
+            // CMake has no make variables: expand the back-end's ones in its flags
+            const auto expandMakeVars = [](string flag) {
+                for (const std::pair<string, string>& nameValue :
+                     v3Global.solverBackendp()->runtimeMakeVars()) {
+                    flag = VString::replaceSubstr(flag, "$(" + nameValue.first + ")",
+                                                  nameValue.second);
+                }
+                return flag;
+            };
+            for (const string& flag : v3Global.solverBackendp()->runtimeCFlags())
+                cFlags.emplace_back(expandMakeVars(flag));
+            for (const string& lib : v3Global.solverBackendp()->runtimeLdLibs())
+                ldLibs.emplace_back(expandMakeVars(lib));
+        }
+        for (const string& flag : v3Global.opt.cFlags()) cFlags.emplace_back(flag);
+
         for (const auto& dep : V3File::getAllDeps())
             deps.emplace_back(V3Os::filenameSlashPath(V3Os::filenameAbsolutePath(dep)));
         for (const auto& cppFile : v3Global.opt.cppFiles())
@@ -93,8 +114,8 @@ class V3EmitMkJsonEmitter final {
             .put("verilator_solver", V3Options::getenvVERILATOR_SOLVER())
             .end()
             .begin("options")
-            .putList("cflags", v3Global.opt.cFlags())
-            .putList("ldflags", v3Global.opt.ldLibs())
+            .putList("cflags", cFlags)
+            .putList("ldflags", ldLibs)
             .put("system_c", v3Global.opt.systemC())
             .put("coverage", v3Global.opt.coverage())
             .put("cxx_modules", v3Global.opt.cxxModules())

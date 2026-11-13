@@ -200,6 +200,23 @@ inline std::ostream& operator<<(std::ostream& os, const VFsmExpandType& rhs) VL_
 
 // ######################################################################
 
+class VSolverBackend final {
+    // Constraint solver back-end selected by --solver-smt or --solver-dvs
+public:
+    enum en : uint8_t {
+        SMT = 0,  // SMT-LIB2 solver run as a subprocess (default)
+        DVS,  // dv-solve library
+    } m_e;
+    VSolverBackend()
+        : m_e{SMT} {}
+    // cppcheck-suppress noExplicitConstructor
+    constexpr VSolverBackend(en _e)
+        : m_e{_e} {}
+    constexpr operator en() const { return m_e; }
+};
+
+// ######################################################################
+
 // Information given by --hierarchical-block option
 class V3HierarchicalBlockOption final {
 public:
@@ -394,6 +411,8 @@ private:
     int         m_reloopLimit = 40; // main switch: --reloop-limit
     int         m_replicationLimit = 8192; // main switch: --replication-limit
     VOptionBool m_skipIdentical;  // main switch: --skip-identical
+    VSolverBackend m_solverBackend;  // main switch: --solver-dvs, --solver-smt
+    bool        m_solverBackendSet = false;  // --solver-dvs or --solver-smt given
     bool        m_stopFail = true;  // main switch: --stop-fail
     int         m_threads = 1;      // main switch: --threads
     int         m_threadsMaxMTasks = 0;  // main switch: --threads-max-mtasks
@@ -708,6 +727,7 @@ public:
     int reloopLimit() const { return m_reloopLimit; }
     int replicationLimit() const { return m_replicationLimit; }
     VOptionBool skipIdentical() const { return m_skipIdentical; }
+    VSolverBackend solverBackend() const { return m_solverBackend; }
     bool stopFail() const { return m_stopFail; }
     int threads() const VL_MT_SAFE { return m_threads; }
     int threadsMaxMTasks() const { return m_threadsMaxMTasks; }
@@ -882,6 +902,7 @@ public:
     // see the README.  If adding new variables, also see src/Makefile_obj.in
     // Also add to V3Options::showVersion()
     static string getenvBuiltins(const string& var);
+    static string getenvDV_SOLVE_ROOT();
     static string getenvMAKE();
     static string getenvMAKEFLAGS();
     static string getenvPERL();

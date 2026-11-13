@@ -1222,7 +1222,7 @@ Summary:
    :file:`*.mk` files.
 
    Feature may be one of the following: COROUTINES, DEV_ASAN, DEV_GCOV,
-   SYSTEMC, TSAN.
+   DV_SOLVE, SYSTEMC, TSAN.
 
 .. option:: --getenv <variable>
 
@@ -2054,6 +2054,19 @@ Summary:
    all source files are identical, and all output files exist with newer
    dates. By default, this option is enabled for :vlopt:`--cc` or
    :vlopt:`--sc` modes only.
+
+.. option:: --solver-dvs
+
+   Use the ``dv-solve`` library as the constraint solver back-end for
+   randomization. Requires a Verilator build configured with ``dv-solve``,
+   see :vlopt:`--get-supported DV_SOLVE <--get-supported>`. Cannot be used
+   together with :vlopt:`--solver-smt`.
+
+.. option:: --solver-smt
+
+   Use an SMT solver run as a separate process as the constraint solver
+   back-end for randomization, see :option:`VERILATOR_SOLVER`. This is the
+   default.
 
 .. option:: --stats
 

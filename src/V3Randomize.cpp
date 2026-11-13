@@ -1173,6 +1173,23 @@ class RandomizeVisitor final : public VNVisitor {
             return isSimilarNode(withASp->fromp(), argASp->fromp())
                    && isSimilarNode(withIdxp, argIdxp);
         }
+        // Member of an unpacked struct (s.x)
+        if (VN_IS(argExprp, StructSel) && VN_IS(withExprp, StructSel)) {
+            return withExprp->name() == argExprp->name()
+                   && isSimilarNode(VN_AS(withExprp, StructSel)->fromp(),
+                                    VN_AS(argExprp, StructSel)->fromp());
+        }
+        // Element of a dynamic array or queue (q[i])
+        const AstCMethodHard* const withAtp = VN_CAST(withExprp, CMethodHard);
+        const AstCMethodHard* const argAtp = VN_CAST(argExprp, CMethodHard);
+        if (withAtp && argAtp && withAtp->method() == VCMethod::ARRAY_AT
+            && argAtp->method() == VCMethod::ARRAY_AT) {
+            return isSimilarNode(withAtp->fromp(), argAtp->fromp())
+                   && isSimilarNode(withAtp->pinsp(), argAtp->pinsp());
+        }
+        if (VN_IS(argExprp, Const) && VN_IS(withExprp, Const)) {
+            return VN_AS(withExprp, Const)->num().isCaseEq(VN_AS(argExprp, Const)->num());
+        }
         return false;
     }
     AstVar* createStdRandomGenerator(AstNodeModule* const modp) {
@@ -2334,7 +2351,8 @@ class RandomizeVisitor final : public VNVisitor {
 
         // Detect global-constraint ownership BEFORE the constraint items are
         // unlinked into setup tasks below (after that the member-selects are gone).
-        const bool basicFirst = classOwnsGlobalConstraint(nodep);
+        const bool basicFirst
+            = classOwnsGlobalConstraint(nodep) || m_solverp->basicRandomizeFirst(nodep);
 
         FileLine* const fl = nodep->fileline();
         AstFunc* const randomizep = V3Randomize::newRandomizeFunc(m_memberMap, nodep);

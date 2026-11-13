@@ -897,6 +897,10 @@ AC_MSG_RESULT($_my_result)
 LIBS="$ACO_SAVE_LIBS"
 AC_SUBST(HAVE_SYSTEMC)
 
+# dv-solve constraint solver back-end
+m4_include([src/dv_solve.m4])
+VL_CHECK_DV_SOLVE
+
 # Checks for system services
 
 ######################################################################

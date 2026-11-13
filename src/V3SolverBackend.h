@@ -30,6 +30,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 class V3UniqueNames;
@@ -127,6 +128,10 @@ public:
     virtual AstNodeExpr* lowerClassRandomize(AstClass* classp, AstFunc* randomizep,
                                              AstVar* randModeVarp)
         = 0;
+    // Class randomize(): true if __VBasicRand() must run before the solver, which
+    // then overrides the variables it solves, though the class's constraints do
+    // not name another object's variables
+    virtual bool basicRandomizeFirst(const AstClass*) const { return false; }
     // Class randomize(): add statements that must follow the solver result,
     // after the front end has emitted the assignment that evaluates it
     virtual void addAfterClassSolve(AstClass* classp, AstFunc* randomizep) = 0;
@@ -155,12 +160,22 @@ class V3SolverBackend VL_NOT_FINAL {
 public:
     virtual ~V3SolverBackend() = default;
 
+    // Create the back-end selected by --solver-smt or --solver-dvs
+    static V3SolverBackend* create(VSolverBackend backend) VL_MT_DISABLED;
+
     // Header of the runtime library, included by the generated code
     virtual std::string runtimeHeader() const VL_MT_DISABLED = 0;
     // Runtime C++ files compiled with the model
     virtual std::vector<std::string> runtimeCppFiles() const VL_MT_DISABLED = 0;
     // Flags for VM_USER_CFLAGS of the generated makefile, from the environment
     virtual std::vector<std::string> runtimeCFlags() const VL_MT_DISABLED = 0;
+    // Libraries for VM_USER_LDLIBS of the generated makefile
+    virtual std::vector<std::string> runtimeLdLibs() const VL_MT_DISABLED { return {}; }
+    // Variables defaulted ('NAME ?= value') by the generated makefile, as name/value pairs
+    virtual std::vector<std::pair<std::string, std::string>>
+    runtimeMakeVars() const VL_MT_DISABLED {
+        return {};
+    }
 
     // Lowering for one V3Randomize pass, sharing the given state with the front end
     virtual std::unique_ptr<V3SolverLowering>

@@ -61,6 +61,8 @@ for filename in sorted(hit.keys()):
         continue
     if re.search(r'_timing', filename) and not test.have_coroutines:
         continue
+    if re.search(r'_solver_dvs', filename):  # Needs --solver-dvs, covered by t_dvs_*
+        continue
     test.error("Include file not covered by t_verilated_all test: ", filename)
 
 test.passes()

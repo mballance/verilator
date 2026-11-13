@@ -529,6 +529,7 @@ PY_PROGRAMS = \
   examples/json_py/vl_hier_graph \
   nodist/clang_check_attributes \
   nodist/dot_importer \
+  nodist/dvs_regress \
   nodist/fuzzer/actual_fail \
   nodist/fuzzer/generate_dictionary \
   nodist/install_test \

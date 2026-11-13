@@ -166,6 +166,7 @@ class Capabilities:
     _cached_have_cxx_module_scan = None
     _cached_have_dev_asan = None
     _cached_have_dev_gcov = None
+    _cached_have_dv_solve = None
     _cached_have_gdb = None
     _cached_have_lldb = None
     _cached_have_sc = None
@@ -235,6 +236,13 @@ class Capabilities:
         return Capabilities._cached_have_dev_gcov
 
     @staticproperty
+    def have_dv_solve() -> bool:  # pylint: disable=no-method-argument
+        if Capabilities._cached_have_dv_solve is None:
+            Capabilities._cached_have_dv_solve = bool(
+                Capabilities._verilator_get_supported('DV_SOLVE'))
+        return Capabilities._cached_have_dv_solve
+
+    @staticproperty
     def have_gdb() -> bool:  # pylint: disable=no-method-argument
         if Capabilities._cached_have_gdb is None:
             out = VtOs.run_capture('gdb --version 2>/dev/null', check=False)
@@ -294,6 +302,7 @@ class Capabilities:
         _ignore = Capabilities.have_coroutines
         _ignore = Capabilities.have_dev_asan
         _ignore = Capabilities.have_dev_gcov
+        _ignore = Capabilities.have_dv_solve
         _ignore = Capabilities.have_gdb
         _ignore = Capabilities.have_lldb
         _ignore = Capabilities.have_sc
@@ -1902,6 +1911,10 @@ class VlTest:
     @property
     def have_dev_gcov(self) -> bool:
         return Capabilities.have_dev_gcov
+
+    @property
+    def have_dv_solve(self) -> bool:
+        return Capabilities.have_dv_solve
 
     @property
     def have_gdb(self) -> bool:

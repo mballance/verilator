@@ -1230,6 +1230,13 @@ FOR_EACH_CMETHOD(VL_CMETHOD_ARGS_CHECK)
     macro(CALL_EXPORT_TASK,                   "VerilatedDpi::callExportTask",       false,  "rf+") \
     macro(CALL_IMPORT_FUNCTION,               "VerilatedDpi::callImportFunction",   false,  "r+") \
     macro(CALL_IMPORT_TASK,                   "VerilatedDpi::callImportTask",       false,  "r+") \
+    macro(DVS_PART,                           "VL_DVS_PART",                        false,  "rrrrrm+") \
+    macro(DVS_PARTS_BEGIN,                    "VL_DVS_PARTS_BEGIN",                 false,  "") \
+    macro(DVS_SITE_PART,                      "VL_DVS_SITE_PART",                   false,  "rrrrm+") \
+    macro(DVS_SOLVE,                          "VL_DVS_SOLVE",                       false,  "rrrm+") \
+    macro(DVS_SOLVE_STD,                      "VL_DVS_SOLVE_STD",                   false,  "mrrrm+") \
+    macro(DVS_SOLVE_PARTS,                    "VL_DVS_SOLVE_PARTS",                 false,  "") \
+    macro(RANDOMIZER_TO_SOLVER_HEX,           "vlToSolverHex",                      PURE,   "r") \
     macro(STRING_APPEND,                      "VL_APPENDN_NN",                      false,  "mr")
 // clang-format on
 

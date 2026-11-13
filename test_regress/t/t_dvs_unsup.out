@@ -1,0 +1,253 @@
+%Error: t/t_dvs_unsup.v:580:33: Unsupported: dynamic array or queue in randomize() with {...} on a class with rand class handles, or extended with constraints with --solver-dvs
+  580 |     void'(a15.randomize() with {q.size() < 3;});
+      |                                 ^
+        ... See the manual at https://verilator.org/verilator_doc.html?v=latest for more assistance.
+%Error: t/t_dvs_unsup.v:630:38: Unsupported: operator FUNCREF 'f' on random variables with --solver-dvs
+  630 |     void'(a41.randomize() with {x == f(y);});
+      |                                      ^
+%Error: t/t_dvs_unsup.v:636:33: Unsupported: 'solve before' in randomize() with {...} on a class with rand class handles, or extended with constraints with --solver-dvs
+  636 |     void'(a44.randomize() with {solve w before l.v;});
+      |                                 ^~~~~
+%Error: t/t_dvs_unsup.v:650:37: Unsupported: size of an array of class handles in randomize() with {...} with --solver-dvs
+  650 |     void'(a51.randomize() with {arr.size() == 2;});
+      |                                     ^~~~
+%Error: t/t_dvs_unsup.v:301:1: Unsupported: randomize(null) on a handle of a class that a class with constraints extends with --solver-dvs
+                             : ... note: In instance 't'
+  301 | class Base;
+      | ^~~~~
+%Error: t/t_dvs_unsup.v:684:38: Unsupported: circular 'solve before' ordering with --solver-dvs
+  684 |     void'(std::randomize(v, w) with {solve v before w; solve w before v;});
+      |                                      ^~~~~
+%Error: t/t_dvs_unsup.v:16:20: Unsupported: array select of an array that is not a random variable of this object with --solver-dvs
+                             : ... note: In instance 't'
+   16 |   constraint c {arr[k] < 4;}
+      |                    ^
+%Error: t/t_dvs_unsup.v:21:17: Unsupported: random variable of type 'bit[7:0]$[]' with --solver-dvs
+                             : ... note: In instance 't'
+   21 |   constraint c {arr.size() < 4;}
+      |                 ^~~
+%Error: t/t_dvs_unsup.v:26:17: Unsupported: random variable wider than 64 bits with --solver-dvs
+                             : ... note: In instance 't'
+   26 |   constraint c {w != 0;}
+      |                 ^
+%Error: t/t_dvs_unsup.v:32:17: Unsupported: 'foreach' over more than one dimension of 'bit[7:0]$[]$[]' with --solver-dvs
+                             : ... note: In instance 't'
+   32 |   constraint c {foreach (m[i, j]) x != m[i][j];}
+      |                 ^~~~~~~
+%Error: t/t_dvs_unsup.v:38:28: Unsupported: array index that is not a constant or a 'foreach' index in 'dist', 'unique' or 'solve before' with --solver-dvs
+                             : ... note: In instance 't'
+   38 |   constraint c {unique {arr[k], arr[0]};}
+      |                            ^
+%Error: t/t_dvs_unsup.v:43:34: Unsupported: 'unique' in a 'foreach' over a dynamic array with --solver-dvs
+                             : ... note: In instance 't'
+   43 |   constraint c {foreach (arr[i]) unique {arr[i], arr[0]};}
+      |                                  ^~~~~~
+%Error: t/t_dvs_unsup.v:48:24: Unsupported: 'dist' on an element of a dynamic array outside a 'foreach' over a dynamic array with --solver-dvs
+                             : ... note: In instance 't'
+   48 |   constraint c {arr[0] dist {1 := 1, 2 := 1};}
+      |                        ^~~~
+%Error: t/t_dvs_unsup.v:56:20: Unsupported: 'solve before' of a dynamic array or queue with --solver-dvs
+                             : ... note: In instance 't'
+   56 |     solve x before arr;
+      |                    ^~~
+%Error: t/t_dvs_unsup.v:63:17: Unsupported: dynamic array or queue as a whole in a constraint with --solver-dvs
+                             : ... note: In instance 't'
+   63 |   constraint c {arr == b;}
+      |                 ^~~
+%Error: t/t_dvs_unsup.v:69:46: Unsupported: element of a fixed-size array that is not random at the index of a 'foreach' over a dynamic array with --solver-dvs
+                             : ... note: In instance 't'
+   69 |   constraint c {foreach (arr[i]) arr[i] < lim[i];}
+      |                                              ^
+%Error: t/t_dvs_unsup.v:77:44: Unsupported: operator FUNCREF 'f' of the index of a 'foreach' over a dynamic array with --solver-dvs
+                             : ... note: In instance 't'
+   77 |   constraint c {foreach (arr[i]) arr[i] != f(i);}
+      |                                            ^
+%Error: t/t_dvs_unsup.v:83:36: Unsupported: 'dist' on a variable in a 'foreach' over a dynamic array with --solver-dvs
+                             : ... note: In instance 't'
+   83 |   constraint c {foreach (arr[i]) x dist {1 := 1, 2 := 1};}
+      |                                    ^~~~
+%Error: t/t_dvs_unsup.v:88:53: Unsupported: array index out of range with --solver-dvs
+                             : ... note: In instance 't'
+   88 |   constraint c {foreach (arr[i]) unique {arr[i], arr[i+1]};}
+      |                                                     ^
+%Error: t/t_dvs_unsup.v:94:17: Unsupported: unpacked array as a whole in a constraint with --solver-dvs
+                             : ... note: In instance 't'
+   94 |   constraint c {a == b;}
+      |                 ^
+%Error: t/t_dvs_unsup.v:100:46: Unsupported: 'dist' in a 'soft foreach' with --solver-dvs
+                              : ... note: In instance 't'
+  100 |   constraint c {soft foreach (arr[i]) arr[i] dist {1 := 1, 2 := 1};}
+      |                                              ^~~~
+%Error: t/t_dvs_unsup.v:110:22: Unsupported: operator FUNCREF 'f' on random variables with --solver-dvs
+                              : ... note: In instance 't'
+  110 |   constraint c {x == f(y);}
+      |                      ^
+%Error: t/t_dvs_unsup.v:115:17: Unsupported: randc variable in a constraint with --solver-dvs
+                              : ... note: In instance 't'
+  115 |   constraint c {x < 10;}
+      |                 ^
+%Error: t/t_dvs_unsup.v:120:17: Unsupported: rand_mode() or randomize() arguments for a constrained variable with --solver-dvs
+                              : ... note: In instance 't'
+  120 |   constraint c {x < 10;}
+      |                 ^
+%Error: t/t_dvs_unsup.v:126:18: Unsupported: 'disable soft' with --solver-dvs
+                              : ... note: In instance 't'
+  126 |   constraint c2 {disable soft x;}
+      |                  ^~~~~~~
+%Error: t/t_dvs_unsup.v:132:26: Unsupported: 'dist' in a conditional constraint or a block with constraint_mode() with --solver-dvs
+                              : ... note: In instance 't'
+  132 |   constraint c {if (s) x dist {1 := 1, 2 := 1};}
+      |                          ^~~~
+%Error: t/t_dvs_unsup.v:139:24: Unsupported: 'unique' in a conditional constraint or a block with constraint_mode() with --solver-dvs
+                              : ... note: In instance 't'
+  139 |   constraint c {if (s) unique {x, y};}
+      |                        ^~~~~~
+%Error: t/t_dvs_unsup.v:145:28: Unsupported: 'unique' of variables of different widths with --solver-dvs
+                              : ... note: In instance 't'
+  145 |   constraint c {unique {x, y};}
+      |                            ^
+%Error: t/t_dvs_unsup.v:148:1: Unsupported: constraints dv-solve cannot solve (UNSUPPORTED_WIDTH: all-different over variable 0 of 40 bits, over 32) with --solver-dvs
+                             : ... note: In instance 't'
+  148 | class UniqueWide;
+      | ^~~~~
+%Error: t/t_dvs_unsup.v:157:30: Unsupported: 'dist' with a value or weight that is not a constant with --solver-dvs
+                              : ... note: In instance 't'
+  157 |   constraint c {x dist {1 := w, 2 := 1};}
+      |                              ^
+%Error: t/t_dvs_unsup.v:163:19: Unsupported: 'dist' of an expression with --solver-dvs
+                              : ... note: In instance 't'
+  163 |   constraint c {x + y dist {1 := 1, 2 := 1};}
+      |                   ^
+%Error: t/t_dvs_unsup.v:176:24: Unsupported: random variable of an object in an array of class handles in a constraint with --solver-dvs
+                              : ... note: In instance 't'
+  176 |   constraint c {arr[0].v < 3;}
+      |                        ^
+%Error: t/t_dvs_unsup.v:182:20: Unsupported: index of an array of class handles that is not a constant or a 'foreach' index with --solver-dvs
+                              : ... note: In instance 't'
+  182 |   constraint c {arr[k].v < 3;}
+      |                    ^
+%Error: t/t_dvs_unsup.v:187:45: Unsupported: array index out of range with --solver-dvs
+                              : ... note: In instance 't'
+  187 |   constraint c {foreach (arr[i]) arr[i + 1].v < 3;}
+      |                                             ^
+%Error: t/t_dvs_unsup.v:192:17: Unsupported: dynamic array or queue of class handles with --solver-dvs
+                              : ... note: In instance 't'
+  192 |   constraint c {arr.sum() with (item.v) < 3;}
+      |                 ^~~
+%Error: t/t_dvs_unsup.v:198:39: Unsupported: 'dist' in a 'foreach' over an array of class handles with --solver-dvs
+                              : ... note: In instance 't'
+  198 |   constraint c {foreach (arr[i]) d[i] dist {1 := 1, 2 := 1};}
+      |                                       ^~~~
+%Error: t/t_dvs_unsup.v:211:19: Unsupported: dynamic array or queue of another object in a constraint with --solver-dvs
+                              : ... note: In instance 't'
+  211 |   constraint c {s.q.size() < 3;}
+      |                   ^
+%Error: t/t_dvs_unsup.v:220:25: Unsupported: random variable of another object in a constraint with --solver-dvs
+                              : ... note: In instance 't'
+  220 |   constraint c {pick(k).v < 3;}
+      |                         ^
+%Error: t/t_dvs_unsup.v:233:1: Unsupported: more than 64 rand class handles in a class with --solver-dvs
+                             : ... note: In instance 't'
+  233 | class ManyHandles;
+      | ^~~~~
+%Error: t/t_dvs_unsup.v:239:22: Unsupported: constant with X or Z bits in a constraint with --solver-dvs
+                              : ... note: In instance 't'
+  239 |   constraint c {x != 8'b1x;}
+      |                      ^~~~~
+%Error: t/t_dvs_unsup.v:242:1: Unsupported: circular 'solve before' ordering with --solver-dvs
+                             : ... note: In instance 't'
+  242 | class Circular;
+      | ^~~~~
+%Error: t/t_dvs_unsup.v:251:1: Unsupported: constraints without variables with --solver-dvs
+                             : ... note: In instance 't'
+  251 | class NoVars;
+      | ^~~~~
+%Error: t/t_dvs_unsup.v:259:18: Unsupported: bit select at a non-constant position of a random value with --solver-dvs
+                              : ... note: In instance 't'
+  259 |   constraint c {x[i] == 1'b1;}
+      |                  ^
+%Error: t/t_dvs_unsup.v:265:18: Unsupported: bit select at a non-constant position of a random value with --solver-dvs
+                              : ... note: In instance 't'
+  265 |   constraint c {x[k] == 1'b1;}
+      |                  ^
+%Error: t/t_dvs_unsup.v:271:17: Unsupported: operand wider than 64 bits in a constraint with --solver-dvs
+                              : ... note: In instance 't'
+  271 |   constraint c {big == {92'b0, x};}
+      |                 ^~~
+%Error: t/t_dvs_unsup.v:277:17: Unsupported: expression wider than 64 bits on random variables with --solver-dvs
+                              : ... note: In instance 't'
+  277 |   constraint c {{x, q} != 0;}
+      |                 ^
+%Error: t/t_dvs_unsup.v:286:17: Unsupported: random variable of type 'struct Packed.pair_t' with --solver-dvs
+                              : ... note: In instance 't'
+  286 |   constraint c {p != 0;}
+      |                 ^
+%Error: t/t_dvs_unsup.v:292:30: Unsupported: 'unique' of an expression with --solver-dvs
+                              : ... note: In instance 't'
+  292 |   constraint c {unique {x, y + 8'd1};}
+      |                              ^
+%Error: t/t_dvs_unsup.v:298:19: Unsupported: operator LTD on random variables with --solver-dvs
+                              : ... note: In instance 't'
+  298 |   constraint c {x < r;}
+      |                   ^
+%Error: t/t_dvs_unsup.v:309:1: Unsupported: more than 64 soft constraints in one randomize() call with --solver-dvs
+                             : ... note: In instance 't'
+  309 | class ManySoft;
+      | ^~~~~
+%Error: t/t_dvs_unsup.v:382:21: Unsupported: operator 'find' on random variables with --solver-dvs
+                              : ... note: In instance 't'
+  382 |   constraint c {arr.find(item) with (item == 8'd1).size() > 0;}
+      |                     ^~~~
+%Error: t/t_dvs_unsup.v:396:22: Unsupported: random variable of type 'bit[7:0]$[]' with --solver-dvs
+                              : ... note: In instance 't'
+  396 |   constraint c {x == m[1][0];}
+      |                      ^
+%Error: t/t_dvs_unsup.v:402:20: Unsupported: index of an array of class handles that is not a constant or a 'foreach' index with --solver-dvs
+                              : ... note: In instance 't'
+  402 |   constraint c {hs[k].v == 1;}
+      |                    ^
+%Error: t/t_dvs_unsup.v:407:20: Unsupported: array reduction over 'bit[7:0]$[int]' with --solver-dvs
+                              : ... note: In instance 't'
+  407 |   constraint c {aa.sum() with (int'(item)) < 10;}
+      |                    ^~~
+%Error: t/t_dvs_unsup.v:421:5: Unsupported: more than 8 nested loops over dynamic arrays with --solver-dvs
+                             : ... note: In instance 't'
+  421 |     foreach (q[i9]) q[i9] != 1;
+      |     ^~~~~~~
+%Error: t/t_dvs_unsup.v:428:17: Unsupported: dynamic array or queue of another object in a constraint with --solver-dvs
+                              : ... note: In instance 't'
+  428 |   constraint c {foreach (s.q[i]) x != i;}
+      |                 ^~~~~~~
+%Error: t/t_dvs_unsup.v:434:17: Unsupported: 'foreach' over 'string$[$]' with --solver-dvs
+                              : ... note: In instance 't'
+  434 |   constraint c {foreach (names[i]) x != i;}
+      |                 ^~~~~~~
+%Error: t/t_dvs_unsup.v:439:51: Unsupported: operand wider than 64 bits in a constraint with --solver-dvs
+                              : ... note: In instance 't'
+  439 |   constraint c {foreach (q[i]) q[i] != 8'(128'(i) + 128'd1);}
+      |                                                   ^
+%Error: t/t_dvs_unsup.v:445:39: Unsupported: array reduction of an expression with --solver-dvs
+                              : ... note: In instance 't'
+  445 |   constraint c {foreach (q[i]) q[i] < w.sum() with (item + i);}
+      |                                       ^
+%Error: t/t_dvs_unsup.v:451:19: Unsupported: 'inside' over 'real$[$]' with --solver-dvs
+                              : ... note: In instance 't'
+  451 |   constraint c {x inside {r};}
+      |                   ^~~~~~
+%Error: t/t_dvs_unsup.v:457:49: Unsupported: 'inside' array at the index of a 'foreach' over a dynamic array with --solver-dvs
+                              : ... note: In instance 't'
+  457 |   constraint c {foreach (q[i]) q[i] inside {lims[i]};}
+      |                                                 ^
+%Error: t/t_dvs_unsup.v:463:29: Unsupported: 'inside' set member of an expression with --solver-dvs
+                              : ... note: In instance 't'
+  463 |   constraint c {x inside {s.q};}
+      |                             ^
+%Error: t/t_dvs_unsup.v:476:27: Unsupported: more than 8 nested loops over dynamic arrays with --solver-dvs
+                              : ... note: In instance 't'
+  476 |     foreach (q[i8]) q[i8] inside {q};
+      |                           ^~~~~~
+%Error: t/t_dvs_unsup.v:483:17: Unsupported: operator COUNTONES on random variables with --solver-dvs
+                              : ... note: In instance 't'
+  483 |   constraint c {$countones(x) inside {q};}
+      |                 ^~~~~~~~~~
+%Error: Exiting due to

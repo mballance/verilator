@@ -102,7 +102,7 @@
 #include "V3Sched.h"
 #include "V3Scope.h"
 #include "V3Slice.h"
-#include "V3SolverSmt.h"
+#include "V3SolverBackend.h"
 #include "V3Split.h"
 #include "V3Stats.h"
 #include "V3String.h"
@@ -728,7 +728,7 @@ static bool verilate(const string& argString) {
     v3Global.threadPoolp(new V3ThreadPool{v3Global.opt.verilateJobs()});
 
     // Constraint solver back-end
-    v3Global.solverBackendp(new V3SolverSmt);
+    v3Global.solverBackendp(V3SolverBackend::create(v3Global.opt.solverBackend()));
 
     // --FRONTEND------------------
 

@@ -52,6 +52,11 @@ PACKAGE_VERSION_STRING_CHAR
 // Define if compiled with code coverage collection
 #undef HAVE_DEV_GCOV
 
+// Define if built with the dv-solve constraint solver back-end
+#undef HAVE_DV_SOLVE
+// Libraries of the dv-solve runtime for models, if found by pkg-config
+#undef DV_SOLVE_RUNTIME_LDLIBS
+
 //**********************************************************************
 //**** This file sometimes gets truncated, so check in consumers
 #define HAVE_CONFIG_PACKAGE
