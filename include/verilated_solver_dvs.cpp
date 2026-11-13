@@ -107,8 +107,8 @@ public:
             dvs_problem_write_smt2(reinterpret_cast<const dvs_problem_t*>(problem.data()),
                                    m_logfp);
         }
-        std::fprintf(m_logfp, "; seed %" PRIu64 ", result %d\n",
-                     static_cast<uint64_t>(seed), result);
+        std::fprintf(m_logfp, "; seed %" PRIu64 ", result %d\n", static_cast<uint64_t>(seed),
+                     result);
         for (uint32_t i = 0; i < nVars; ++i) {
             std::fprintf(m_logfp, "; v%u = 0x%" PRIx64 "\n", i,
                          static_cast<uint64_t>(value(refs[i].addr, refs[i].width)));
