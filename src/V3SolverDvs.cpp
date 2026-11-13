@@ -160,7 +160,7 @@ private:
         if (AstNode* const foundp = m_memberMap.findMember(classp, PART_TASK_NAME)) {
             return VN_AS(foundp, Task);
         }
-        AstTask* const taskp = new AstTask{classp->fileline(), PART_TASK_NAME, nullptr};
+        AstTask* const taskp = new AstTask{classp->fileline(), PART_TASK_NAME};
         taskp->classMethod(true);
         taskp->isVirtual(classp->isExtended());
         classp->addMembersp(taskp);
@@ -186,7 +186,7 @@ private:
         AstNodeExpr* const callp = dvsNewPartCallp(site, taskp, ownVars);
         if (!callp) return nullptr;
         // Once registered, the parts of the objects of its slots
-        AstNode* slotsp = nullptr;
+        AstNodeStmt* slotsp = nullptr;
         for (AstVar* const slotp : dvsSlots(classp)) {
             AstTask* const slotTaskp = partTaskp(dvsHandleClassp(slotp->dtypep()));
             AstNodeModule* const modp = VN_AS(slotp->user2p(), NodeModule);
@@ -289,22 +289,24 @@ private:
     // random members, captured as '__Vthis.member', references to the random variables.
     // Return the new first item.
     AstNode* ownRandMembers(AstNode* itemsp, const AstVar* thisVarp) {
-        AstNode* const headp = new AstBegin{itemsp->fileline(), "", itemsp, false};
-        headp->foreach([&](AstMemberSel* selp) {
-            const AstVarRef* const fromp = VN_CAST(selp->fromp(), VarRef);
-            if (!fromp || fromp->varp() != thisVarp || !selp->varp()->rand().isRandomizable()) {
-                return;
-            }
-            AstVar* const varp = selp->varp();
-            AstVarRef* const refp = new AstVarRef{
-                selp->fileline(), VN_AS(varp->user2p(), NodeModule), varp, VAccess::READ};
-            refp->user1(true);
-            selp->replaceWith(refp);
-            pushDeletep(selp);
-        });
-        AstNode* const firstp = VN_AS(headp, Begin)->stmtsp()->unlinkFrBackWithNext();
-        VL_DO_DANGLING(headp->deleteTree(), headp);
-        return firstp;
+        // The items are constraint items, not statements: visit each one (an item is never
+        // itself a member reference, so the head of the list is not replaced)
+        for (AstNode* itemp = itemsp; itemp; itemp = itemp->nextp()) {
+            itemp->foreach([&](AstMemberRef* selp) {
+                const AstVarRef* const fromp = VN_CAST(selp->fromp(), VarRef);
+                if (!fromp || fromp->varp() != thisVarp
+                    || !selp->varp()->rand().isRandomizable()) {
+                    return;
+                }
+                AstVar* const varp = selp->varp();
+                AstVarRef* const refp = new AstVarRef{
+                    selp->fileline(), VN_AS(varp->user2p(), NodeModule), varp, VAccess::READ};
+                refp->user1(true);
+                selp->replaceWith(refp);
+                pushDeletep(selp);
+            });
+        }
+        return itemsp;
     }
     // A class handle, or a fixed-size unpacked array of them (a dynamic array of them is a
     // random variable: its size)
@@ -328,7 +330,7 @@ private:
         if (!VN_IS(nodep, NodeExpr)) return false;
         if (VN_IS(nodep, NodeVarRef)) {
             dependent = nodep->user1() && !isHandle(nodep);
-        } else if (const AstMemberSel* const selp = VN_CAST(nodep, MemberSel)) {
+        } else if (const AstMemberRef* const selp = VN_CAST(nodep, MemberRef)) {
             // A random member of a random object, or of the 'item' of a reduction, or of an
             // object reached through rand handles of this one
             dependent = selp->user1() && !isHandle(nodep)
@@ -382,7 +384,7 @@ public:
         // __VBasicRand of the class has been emitted already, and randomizes the variables
         // that only the inline constraints name: it is called first, and the solver then
         // overrides the variables it solves
-        AstVar* const retVarp = VN_AS(randomizeFuncp->fvarp(), Var);
+        AstVar* const retVarp = randomizeFuncp->fvarp();
         randomizeFuncp->addStmtsp(new AstAssign{flp, new AstVarRef{flp, retVarp, VAccess::WRITE},
                                                 new AstAnd{flp, basicRandomizeCallp, resultp}});
         pushDeletep(capturedTreep);
@@ -390,8 +392,8 @@ public:
     AstNodeExpr* lowerStdRandomizeWith(AstNodeFTaskRef* nodep, AstFunc* randomizeFuncp,
                                        AstNode* capturedTreep, AstVar* stdrandp) override {
         // The random variables are the arguments, the function's references to them
-        for (AstNode* stmtp = randomizeFuncp->stmtsp(); stmtp; stmtp = stmtp->nextp()) {
-            AstVar* const varp = VN_CAST(stmtp, Var);
+        for (AstNode* declp = randomizeFuncp->declsp(); declp; declp = declp->nextp()) {
+            AstVar* const varp = VN_CAST(declp, Var);
             if (varp && varp->isStdRandomizeArg()) varp->rand(VRandAttr::RAND);
         }
         for (AstNode* itemp = capturedTreep; itemp; itemp = itemp->nextp()) {

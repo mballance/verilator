@@ -97,7 +97,7 @@ class DvsCheckVisitor final : public VNVisitorConst {
         return refp && refp->varp()->rand().isRandomizable() ? refp : nullptr;
     }
     // Why selp, a random variable of another object, is not an import
-    static std::string otherObject(const AstMemberSel* selp) {
+    static std::string otherObject(const AstMemberRef* selp) {
         const AstNodeExpr* const fromp = selp->fromp();
         if (VN_IS(fromp, ArraySel) || VN_IS(fromp, AssocSel) || VN_IS(fromp, CMethodHard)) {
             return "random variable of an object in an array of class handles in a constraint";
@@ -109,7 +109,7 @@ class DvsCheckVisitor final : public VNVisitorConst {
     void checkRandElement(const AstNodeExpr* nodep, bool whole = false) {
         const AstNode* basep = nodep;
         while (const AstArraySel* const selp = VN_CAST(basep, ArraySel)) basep = selp->fromp();
-        const AstMemberSel* const importp = VN_CAST(basep, MemberSel);
+        const AstMemberRef* const importp = VN_CAST(basep, MemberRef);
         const bool isImport = importp && m_part && dvsIsSlotPath(importp->fromp());
         if (importp && !isImport) {
             unsupported(nodep, otherObject(importp));
@@ -342,7 +342,7 @@ class DvsCheckVisitor final : public VNVisitorConst {
             const bool rand = refp && refp->varp()->rand().isRandomizable();
             // An array of class handles of this object is a slot array: its handles' objects
             const bool slots = rand && dvsIsSlotArray(fromp->dtypep());
-            const AstMemberSel* const importp = VN_CAST(fromp, MemberSel);
+            const AstMemberRef* const importp = VN_CAST(fromp, MemberRef);
             if (rand) {
                 if (!slots) checkRandVar(refp, refp->varp());
             } else if (importp && importp->varp()->rand().isRandomizable()
@@ -427,7 +427,7 @@ class DvsCheckVisitor final : public VNVisitorConst {
             }
             return;
         }
-        if (VN_IS(nodep, VarRef) || VN_IS(nodep, ArraySel) || VN_IS(nodep, MemberSel)) {
+        if (VN_IS(nodep, VarRef) || VN_IS(nodep, ArraySel) || VN_IS(nodep, MemberRef)) {
             checkRandElement(nodep);
             return;
         }

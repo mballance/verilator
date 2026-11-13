@@ -194,7 +194,7 @@
                              : ... note: In instance 't'
   309 | class ManySoft;
       | ^~~~~
-%Error: t/t_dvs_unsup.v:382:21: Unsupported: operator CMETHODHARD 'find' on random variables with --solver-dvs
+%Error: t/t_dvs_unsup.v:382:21: Unsupported: operator 'find' on random variables with --solver-dvs
                               : ... note: In instance 't'
   382 |   constraint c {arr.find(item) with (item == 8'd1).size() > 0;}
       |                     ^~~~

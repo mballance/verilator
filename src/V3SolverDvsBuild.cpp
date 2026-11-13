@@ -401,7 +401,7 @@ class DvsProblemBuilder final {
     // through a slot path (dvsIsSlotPath), or in a site part, one of the object randomized; or
     // -1 if the path selects an element of an array of handles out of range
     int64_t importVarId(AstNodeExpr* nodep) {
-        AstMemberSel* const selp = VN_CAST(nodep, MemberSel);
+        AstMemberRef* const selp = VN_CAST(nodep, MemberRef);
         AstVar* const varp = selp ? selp->varp() : VN_AS(nodep, VarRef)->varp();
         std::vector<uint32_t> path;
         for (AstNodeExpr* fromp = selp ? selp->fromp() : nullptr; fromp;) {
@@ -432,7 +432,7 @@ class DvsProblemBuilder final {
                 stride *= elements;
                 fromp = arraySelp->fromp();
             }
-            if (AstMemberSel* const fromSelp = VN_CAST(fromp, MemberSel)) {
+            if (AstMemberRef* const fromSelp = VN_CAST(fromp, MemberRef)) {
                 path.insert(path.begin(), slotIndex(dvsHandleClassp(fromSelp->fromp()->dtypep()),
                                                     fromSelp->varp())
                                               + element);
@@ -464,7 +464,7 @@ class DvsProblemBuilder final {
     // an index is out of range
     int64_t randRefId(AstNodeExpr* nodep) {
         if (AstVarRef* const refp = VN_CAST(nodep, VarRef)) return varRefId(refp);
-        if (AstMemberSel* const selp = VN_CAST(nodep, MemberSel)) return importVarId(selp);
+        if (AstMemberRef* const selp = VN_CAST(nodep, MemberRef)) return importVarId(selp);
         AstArraySel* const selp = VN_AS(nodep, ArraySel);
         const int64_t arrayId = randRefId(selp->fromp());
         const AstUnpackArrayDType* const adtypep
@@ -514,7 +514,7 @@ class DvsProblemBuilder final {
         } else {
             varp = new AstVar{flp, VVarType::BLOCKTEMP, "__Vdvs_" + suffix, dtypep};
             varp->funcLocal(true);
-            m_funcp->addStmtsp(varp);
+            m_funcp->addDeclsp(varp);
         }
         const Arg arg{varp, local};
         m_funcp->addStmtsp(
@@ -802,7 +802,7 @@ class DvsProblemBuilder final {
             return loopIndex(it->second);
         }
         case VNType::ArraySel:  // FALLTHRU
-        case VNType::MemberSel: return values(nodep).front();
+        case VNType::MemberRef: return values(nodep).front();
         case VNType::CMethodHard: {
             AstCMethodHard* const callp = VN_AS(nodep, CMethodHard);
             if (callp->method() == VCMethod::ARRAY_AT) {
@@ -1461,7 +1461,7 @@ bool dvsIsSlotPath(const AstNodeExpr* nodep) {
         }
     }
     const AstNodeVarRef* const refp = VN_CAST(nodep, NodeVarRef);
-    const AstMemberSel* const selp = VN_CAST(nodep, MemberSel);
+    const AstMemberRef* const selp = VN_CAST(nodep, MemberRef);
     const AstVar* const varp = refp ? refp->varp() : selp ? selp->varp() : nullptr;
     if (!varp || !varp->rand().isRandomizable() || varp->lifetime().isStatic()
         || !dvsHandleClassp(varp->dtypep())) {
