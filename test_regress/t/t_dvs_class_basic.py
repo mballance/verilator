@@ -28,8 +28,9 @@ test.file_grep(test.obj_dir + '/solver.log', r'; a problem with 1 arrays')
 # There is no unsat core yet: the site and all its hard constraints are listed
 test.file_grep(test.obj_dir + '/vlt_sim.log',
                r'%Warning-UNSATCONSTR: t/t_dvs_class_basic.v:\d+: Unsatisfied constraints in')
-test.file_grep(test.obj_dir + '/vlt_sim.log',
-               r"%Warning-UNSATCONSTR: t/t_dvs_class_basic.v:\d+: Unsatisfied constraint: 'y > 10;'")
+test.file_grep(
+    test.obj_dir + '/vlt_sim.log',
+    r"%Warning-UNSATCONSTR: t/t_dvs_class_basic.v:\d+: Unsatisfied constraint: 'y > 10;'")
 
 # A log that cannot be written
 test.execute(all_run_flags=['+verilator+solver+file+' + test.obj_dir + '/nodir/solver.log'],

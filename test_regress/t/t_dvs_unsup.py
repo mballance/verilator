@@ -14,6 +14,8 @@ test.scenarios('vlt')
 if not test.have_dv_solve:
     test.skip("Verilator not configured with dv-solve")
 
-test.lint(verilator_flags2=['--solver-dvs', '--error-limit 1000'], fails=True, expect_filename=test.golden_filename)
+test.lint(verilator_flags2=['--solver-dvs', '--error-limit 1000'],
+          fails=True,
+          expect_filename=test.golden_filename)
 
 test.passes()

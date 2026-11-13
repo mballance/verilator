@@ -606,7 +606,11 @@ add_dependencies(
 
 target_link_libraries(${verilator} PRIVATE Threads::Threads)
 
-option(VERILATOR_WITH_DV_SOLVE "Build the dv-solve constraint solver back-end" OFF)
+option(
+    VERILATOR_WITH_DV_SOLVE
+    "Build the dv-solve constraint solver back-end"
+    OFF
+)
 if(VERILATOR_WITH_DV_SOLVE)
     find_package(dv-solve CONFIG REQUIRED)
     target_compile_definitions(${verilator} PRIVATE HAVE_DV_SOLVE)

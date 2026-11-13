@@ -147,7 +147,7 @@ for t in Tests:
     if Expected.get(t, ("", ""))[0] == NotApplicable and Results[t][0] != "pass":
         Results[t] = (NotApplicable, Results[t][1])
 
-counts = {s: sum(1 for r in Results.values() if r[0] == s) for s in Statuses + (NotApplicable,)}
+counts = {s: sum(1 for r in Results.values() if r[0] == s) for s in Statuses + (NotApplicable, )}
 print("dvs_regress: " + "  ".join("%s %d" % (s, n) for s, n in counts.items()))
 
 Diffs = 0
