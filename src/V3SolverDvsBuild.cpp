@@ -30,8 +30,13 @@
 // Problem variables, numbered in the order they are met:
 //  * RAND: a random variable of the site, passed by reference. A random
 //    unpacked array is one per element, numbered in storage order, and is
-//    passed as one argument. For a randomize(null) site they are STATE
-//    instead, so they are checked, not solved.
+//    passed as one argument. A packed value wider than 64 bits (a vector or a
+//    packed struct) is one per 32-bit word, least significant first, as
+//    VlWide stores it; it is read through bit selects at constant positions,
+//    which select from its words. For a randomize(null) site they are STATE
+//    instead, so they are checked, not solved. One with a rand_mode() bit is
+//    still RAND, constrained to its value before the call (a STATE copy)
+//    while the bit is off, so randomize(args) needs nothing more.
 //  * STATE: each maximal sub-expression that does not depend on a random
 //    variable (AstNodeExpr::user1() clear, as marked by the front end), other
 //    than a constant expression (folded by V3Const), and the constraint_mode()
@@ -43,11 +48,13 @@
 //  * A random variable that another site's constraints named is solved at
 //    every class site, since __VBasicRand skips it (AstVar::user3()).
 //
-// 'foreach' is unrolled over the declared indices of the array. While it is,
+// 'foreach' is unrolled over the declared indices of the array (or the bits of
+// a vector). While it is,
 // a sub-expression that reads a loop variable is built from a copy with the
 // loop variables replaced by their values, so element indices are constants.
 // An element at an index out of range reads 0, as an out-of-range read does
-// (IEEE 1800-2023 7.4.6), so 'i > 0 -> a[i] > a[i - 1]' needs no special case.
+// (IEEE 1800-2023 7.4.6), so 'i > 0 -> a[i] > a[i - 1]' needs no special case;
+// so does a bit past the end of a vector (11.5.1).
 // An index that is not a constant (random, or read before the call) selects
 // with a choice over the elements, 0 if none matches.
 //
@@ -67,6 +74,24 @@
 // element, before the elements. An array whose size is not constrained is not
 // resized (18.4). A random one is passed by reference; any other is copied
 // into a local before the call.
+// A random one of unpacked structs is a problem array per rand member, all of
+// its size: 'q[i].m' is element i of member m's, and 'solve before' of it
+// orders that whole array. Each is passed as a view of the queue
+// (vlDvsField), whose accessor is a StructSel so V3Name renames the member.
+// One that is not random, of unpacked structs or of class handles, is copied
+// the same way, a STATE array per integral member (of class handles, per
+// member its constraints read, through a MemberRef).
+// A 'dist' with constant values and weights, and no guard, is a dv-solve dist
+// as is. Under a guard (the conditions of 'if' constraints and the enable of
+// its block), or reading values or weights before the call, it is a record
+// dv-solve evaluates on each call: the first added whose guard holds is used.
+// Its values are also a hard constraint, guarded; with all weights 0 neither
+// applies (as the SMT back-end).
+//
+// An associative array is a problem array of its elements in key order, and a
+// STATE one of their keys; it is not resized. In a 'foreach' over it the loop
+// variable is the key, and 'a[i]' the element; 'a[k]' with any other key is
+// an OR over the elements of each one's value if its key is k, 0 if none.
 //
 // The part of a class (DvsSite::part) is the problem of its own constraint
 // blocks, for a solve across objects (IEEE 1800-2023 18.5.8):
@@ -132,9 +157,12 @@ static constexpr uint32_t DVS_INFO_SIGNED = 1U << 31;
 static constexpr uint32_t DVS_INFO_IMPORT = 1U << 30;  // An import: no argument
 static constexpr uint32_t DVS_INFO_WIDTH = DVS_INFO_IMPORT - 1;
 
+// A problem array: a dynamic array or queue, or an associative array (its elements in key
+// order, and their keys)
 bool isDynArray(const AstNodeDType* dtypep) {
     dtypep = dtypep->skipRefp();
-    return VN_IS(dtypep, DynArrayDType) || VN_IS(dtypep, QueueDType);
+    return VN_IS(dtypep, DynArrayDType) || VN_IS(dtypep, QueueDType)
+           || VN_IS(dtypep, AssocArrayDType);
 }
 // Whether varp is in the layout of the part of its class (exported)
 bool isLayoutVar(const AstVar* varp) {
@@ -156,6 +184,10 @@ class DvsProblemBuilder final {
     struct Arg final {  // A variable passed to the solver: one problem variable per element
         AstVar* varp;  // The variable
         bool local;  // varp is a local of the function, else a member of the class
+        // A member of the elements of varp, a dynamic array or queue of unpacked structs, or
+        // nullptr
+        // or of class handles (an AstVar of their class); or nullptr
+        const AstNode* memberp = nullptr;
     };
 
     // MEMBERS
@@ -174,6 +206,8 @@ class DvsProblemBuilder final {
     std::map<const AstVar*, int64_t> m_loopValues;  // Value of each foreach loop variable
     std::map<const AstVar*, uint32_t> m_arrayIds;  // Problem array of a dynamic array read
     std::vector<uint32_t> m_arrayInfos;  // Element width and signedness of each array, by id
+    std::map<const AstVar*, uint32_t> m_loopKeys;  // Key array of each loop variable of a
+                                                   // 'foreach' over an associative array
     std::map<const AstVar*, uint32_t> m_loopLevels;  // Level of each loop variable of a
                                                      // 'foreach' over a dynamic array
     std::set<const AstVar*> m_slotLoopVars;  // Those of a 'foreach' over an array of handles
@@ -188,6 +222,8 @@ class DvsProblemBuilder final {
         int64_t arrayId;  // The array, or -1
     };
     std::vector<EnumVar> m_enumVars;  // Constrained to their values after all items
+    std::vector<AstVar*> m_modeVars;  // Random variables with a rand_mode() bit, held after
+                                      // all items
     bool m_soft = false;  // In a 'soft foreach': expressions are soft
     const Value* m_itemp = nullptr;  // 'item' of the 'with' expression being built
     int64_t m_itemIndex = 0;  // 'item.index' of the 'with' expression being built
@@ -224,6 +260,17 @@ class DvsProblemBuilder final {
         if (state) dvs_builder_set_var_kind(m_builderp, id, DVS_VAR_STATE);
         return id;
     }
+    // First of the problem variables of an element of elemDTypep: one, or one per 32-bit word
+    // of a value wider than 64 bits, as VlWide stores it
+    uint32_t newElemVars(const AstNodeDType* elemDTypep, bool state) {
+        const uint32_t width = elemDTypep->width();
+        if (width <= VL_QUADSIZE) return newVar(width, elemDTypep->isSigned(), state);
+        const uint32_t id = m_varInfos.size();
+        for (uint32_t lsb = 0; lsb < width; lsb += VL_EDATASIZE) {
+            newVar(std::min<uint32_t>(VL_EDATASIZE, width - lsb), false, state);
+        }
+        return id;
+    }
     // First problem variable of random variable varp
     uint32_t randVarId(AstVar* varp) {
         const auto pair = m_varIds.emplace(varp, m_varInfos.size());
@@ -237,14 +284,45 @@ class DvsProblemBuilder final {
             elemDTypep = adtypep->subDTypep()->skipRefToEnump();
         }
         for (uint32_t i = 0; i < count; ++i) {
-            const Value var
-                = varValue(newVar(elemDTypep->width(), elemDTypep->isSigned(), m_site.checkOnly));
+            const Value var = varValue(newElemVars(elemDTypep, m_site.checkOnly));
             // Its values are constrained once all items are added, outside any foreach
             if (const AstEnumDType* const enump = VN_CAST(elemDTypep, EnumDType)) {
                 m_enumVars.push_back({var, enump, varp->fileline(), -1});
             }
         }
+        const RandomizeMode mode = {.asUQuad = varp->user1()};
+        if (mode.usesMode && !m_site.checkOnly) m_modeVars.push_back(varp);
         return pair.first->second;
+    }
+    // While its rand_mode() bit is off, random variable varp keeps its value (IEEE 1800-2023
+    // 18.8): each element is constrained to its value before the call
+    void addHold(AstVar* varp) {
+        FileLine* const flp = varp->fileline();
+        const RandomizeMode mode = {.asUQuad = varp->user1()};
+        AstVar* const modeVarp = RandModeVars::randModeVarp(m_site.classp);
+        AstCMethodHard* const atp = new AstCMethodHard{
+            flp,
+            new AstVarRef{flp, VN_AS(modeVarp->user2p(), NodeModule), modeVarp, VAccess::READ},
+            VCMethod::ARRAY_AT, new AstConst{flp, mode.index}};
+        atp->dtypeSetUInt32();
+        const Value on = asBool(stateValue(atp));
+        VL_DO_DANGLING(atp->deleteTree(), atp);  // stateValue cloned it
+        // Not stateValue(): that of varp is varp itself
+        AstVarRef* const refp
+            = new AstVarRef{flp, VN_AS(varp->user2p(), NodeModule), varp, VAccess::READ};
+        newTempp(refp, "held" + std::to_string(m_varInfos.size()), varp->dtypep());
+        VL_DO_DANGLING(refp->deleteTree(), refp);
+        const uint32_t id = m_varIds.at(varp);
+        for (uint32_t i = 0; i < elementCount(varp->dtypep()); ++i) {
+            const uint32_t info = m_varInfos[id + i];
+            const Value held
+                = varValue(newVar(info & DVS_INFO_WIDTH, info & DVS_INFO_SIGNED, true));
+            const Value same = binary(DVS_BIN_EQ, varValue(id + i), held, true);
+            // No location: UNSATCONSTR lists the user's constraints only
+            dvs_builder_add_constraint(m_builderp, binary(DVS_BIN_OR, on, same, true).expr);
+            m_constraintInfos.emplace_back();
+            m_constraintInfos.emplace_back();
+        }
     }
     // 'var' holds one of the values of enump
     Value enumMember(const Value& var, const AstEnumDType* enump) {
@@ -269,20 +347,35 @@ class DvsProblemBuilder final {
                               rand && !m_site.checkOnly ? DVS_VAR_RAND : DVS_VAR_STATE);
         return id;
     }
-    // Problem array of random dynamic array or queue varp
+    // After the elements of an associative array of dtypep, a STATE array of their keys,
+    // passed with it
+    void newKeyArray(const AstNodeDType* dtypep) {
+        const AstAssocArrayDType* const adtypep = VN_CAST(dtypep->skipRefp(), AssocArrayDType);
+        if (adtypep) newArray(adtypep->keyDTypep()->skipRefToEnump(), false);
+    }
+    // Problem array of random dynamic array, queue or associative array varp
     uint32_t randArrayId(AstVar* varp) {
         const auto it = m_arrayIds.find(varp);
         if (it != m_arrayIds.end()) return it->second;
         const AstNodeDType* const elemDTypep
             = varp->dtypep()->skipRefp()->subDTypep()->skipRefToEnump();
-        const uint32_t id = newArray(elemDTypep, true);
-        m_arrayIds.emplace(varp, id);
-        m_args.push_back({varp, false});
+        // Of unpacked structs: a problem array per rand member, in order, sized alike
+        std::vector<const AstMemberDType*> members = dvsStructFields(elemDTypep, true);
+        if (members.empty()) members.push_back(nullptr);
+        const uint32_t firstId = m_arrayInfos.size();
+        m_arrayIds.emplace(varp, firstId);
         if (m_ownVars) varp->user3(true);
-        if (const AstEnumDType* const enump = VN_CAST(elemDTypep, EnumDType)) {
-            m_enumVars.push_back({elemValue(id, loopIndex(0)), enump, varp->fileline(), id});
+        for (const AstMemberDType* const memberp : members) {
+            const AstNodeDType* const dtypep
+                = memberp ? memberp->subDTypep()->skipRefToEnump() : elemDTypep;
+            const uint32_t id = newArray(dtypep, true);
+            m_args.push_back({varp, false, memberp});
+            if (const AstEnumDType* const enump = VN_CAST(dtypep, EnumDType)) {
+                m_enumVars.push_back({elemValue(id, loopIndex(0)), enump, varp->fileline(), id});
+            }
         }
-        return id;
+        newKeyArray(varp->dtypep());
+        return firstId;
     }
     // Problem array of varp, a dynamic array or queue of class handles of this object: a slot
     // array, at its slot; in a site part, a mirror of the object's, at a slot of its own
@@ -320,16 +413,74 @@ class DvsProblemBuilder final {
     // any other value, copied into a local before the call
     uint32_t arrayId(AstNodeExpr* arrayp) {
         AstVarRef* const refp = VN_CAST(arrayp, VarRef);
-        if (refp && dvsIsSlotArray(refp->varp()->dtypep())) return slotArrayId(refp->varp());
+        if (refp && refp->varp()->rand().isRandomizable() && dvsIsSlotArray(refp->dtypep())) {
+            return slotArrayId(refp->varp());
+        }
         if (refp && refp->varp()->rand().isRandomizable()) return randArrayId(refp->varp());
         if (refp) {
             const auto it = m_arrayIds.find(refp->varp());
             if (it != m_arrayIds.end()) return it->second;
         }
-        const uint32_t id = newArray(elemDTypep(arrayp), false);
+        const uint32_t id = m_arrayInfos.size();
         if (refp) m_arrayIds.emplace(refp->varp(), id);
         newTempp(arrayp, "array" + std::to_string(id), arrayp->dtypep());
+        // Of unpacked structs: a problem array per member, as for a random one
+        const Arg arg = m_args.back();
+        m_args.pop_back();
+        std::vector<const AstNode*> members = arrayFields(arrayp);
+        if (members.empty()) members.push_back(nullptr);
+        for (const AstNode* const memberp : members) {
+            newArray(memberp ? memberDTypep(memberp) : elemDTypep(arrayp), false);
+            m_args.push_back({arg.varp, arg.local, memberp});
+        }
+        newKeyArray(arrayp->dtypep());
         return id;
+    }
+    // The members of the elements of arrayp, a dynamic array or queue, with a problem array
+    // each: of unpacked structs, dvsStructFields(); of class handles (not random), the
+    // members of the elements its constraints read
+    std::vector<const AstNode*> arrayFields(AstNodeExpr* arrayp) {
+        const AstVarRef* const refp = VN_CAST(arrayp, VarRef);
+        std::vector<const AstNode*> fields;
+        if (!VN_IS(elemDTypep(arrayp), ClassRefDType)) {
+            for (const AstMemberDType* const memberp : dvsStructFields(
+                     elemDTypep(arrayp), refp && refp->varp()->rand().isRandomizable())) {
+                fields.push_back(memberp);
+            }
+            return fields;
+        }
+        for (const DvsSite::Block& block : m_site.blocks) {
+            for (AstNode* itemp = block.itemsp; itemp; itemp = itemp->nextp()) {
+                itemp->foreach([&](const AstMemberRef* selp) {
+                    const AstCMethodHard* const atp = VN_CAST(selp->fromp(), CMethodHard);
+                    const AstVarRef* const fromRefp
+                        = atp ? VN_CAST(atp->fromp(), VarRef) : nullptr;
+                    if (fromRefp && fromRefp->varp() == refp->varp()
+                        && std::find(fields.begin(), fields.end(), selp->varp()) == fields.end()) {
+                        fields.push_back(selp->varp());
+                    }
+                });
+            }
+        }
+        return fields;
+    }
+    // Type of memberp, a member of arrayFields()
+    static AstNodeDType* memberDTypep(const AstNode* memberp) {
+        if (const AstVar* const varp = VN_CAST(memberp, Var))
+            return varp->dtypep()->skipRefToEnump();
+        return VN_AS(memberp, MemberDType)->subDTypep()->skipRefToEnump();
+    }
+    // Problem array of selp, a member of the elements of a dynamic array or queue of unpacked
+    // structs or of class handles ('q[i].m'): a StructSel or a MemberRef
+    uint32_t fieldArrayId(AstNodeExpr* selp) {
+        AstCMethodHard* const atp = VN_AS(selp->op1p(), CMethodHard);
+        const std::vector<const AstNode*> members = arrayFields(atp->fromp());
+        const AstMemberRef* const memberSelp = VN_CAST(selp, MemberRef);
+        const auto it = std::find_if(members.begin(), members.end(), [&](const AstNode* memberp) {
+            return memberSelp ? memberp == memberSelp->varp() : memberp->name() == selp->name();
+        });
+        UASSERT_OBJ(it != members.end(), selp, "Not a member with a problem array");
+        return arrayId(atp->fromp()) + (it - members.begin());
     }
     Value loopIndex(uint32_t level) {
         return {dvs_builder_expr_loop_index(m_builderp, level), 32, true, false};
@@ -350,7 +501,8 @@ class DvsProblemBuilder final {
             return argp && argp->index() && m_itemLevel >= 0;
         });
     }
-    // Elements of a value of dtypep: the product of its unpacked dimensions
+    // Problem variables of a value of dtypep: the product of its unpacked dimensions, times
+    // the words of an element wider than 64 bits (newElemVars)
     static uint32_t elementCount(const AstNodeDType* dtypep) {
         uint32_t count = 1;
         for (dtypep = dtypep->skipRefp();
@@ -358,7 +510,7 @@ class DvsProblemBuilder final {
              dtypep = adtypep->subDTypep()->skipRefp()) {
             count *= adtypep->elementsConst();
         }
-        return count;
+        return dtypep->width() > VL_QUADSIZE ? count * dtypep->widthWords() : count;
     }
     // Slots of the part of classp
     const std::vector<AstVar*>& slots(const AstClass* classp) {
@@ -453,10 +605,14 @@ class DvsProblemBuilder final {
             elemDTypep = adtypep->subDTypep()->skipRefToEnump();
         }
         // The values of an enum are constrained in the part exporting it
-        for (uint32_t i = 0; i < elementCount(varp->dtypep()); ++i) {
-            const uint32_t id = newVar(elemDTypep->width(), elemDTypep->isSigned(), false);
+        const uint32_t firstId = m_varInfos.size();
+        while (m_varInfos.size() - firstId < elementCount(varp->dtypep())) {
+            newElemVars(elemDTypep, false);
+        }
+        for (uint32_t id = firstId; id < m_varInfos.size(); ++id) {
             m_varInfos[id] |= DVS_INFO_IMPORT;
-            dvs_builder_add_import(m_builderp, id, path.size(), path.data(), exportIndex + i);
+            dvs_builder_add_import(m_builderp, id, path.size(), path.data(),
+                                   exportIndex + id - firstId);
         }
         return pair.first->second;
     }
@@ -520,6 +676,28 @@ class DvsProblemBuilder final {
         m_funcp->addStmtsp(
             new AstAssign{flp, newArgRefp(flp, arg, VAccess::WRITE), exprp->cloneTree(false)});
         m_args.push_back(arg);
+    }
+    // The argument of the call for arg: a member of the elements of an array of structs is
+    // passed as a view of the array (vlDvsField) that reads and writes it
+    static AstNodeExpr* newArgp(FileLine* flp, const Arg& arg) {
+        AstVarRef* const refp = newArgRefp(flp, arg, VAccess::READWRITE);
+        if (!arg.memberp) return refp;
+        // A StructSel, which V3Name renames with the member, or a MemberRef
+        AstCExpr* const elemp = new AstCExpr{flp, AstCExpr::Pure{}, "vlElem"};
+        elemp->dtypep(arg.varp->dtypep()->skipRefp()->subDTypep());
+        AstNodeExpr* selp;
+        if (AstVar* const memberVarp = const_cast<AstVar*>(VN_CAST(arg.memberp, Var))) {
+            selp = new AstMemberRef{flp, elemp, memberVarp};
+        } else {
+            selp = new AstStructSel{flp, elemp, arg.memberp->name()};
+        }
+        selp->dtypep(memberDTypep(arg.memberp));
+        AstCExpr* const cexprp = new AstCExpr{flp, "vlDvsField("};
+        cexprp->add(refp);
+        cexprp->add(", [](auto& vlElem) -> auto& { return ");
+        cexprp->add(selp);
+        cexprp->add("; })");
+        return cexprp;
     }
     static AstVarRef* newArgRefp(FileLine* flp, const Arg& arg, VAccess access) {
         if (arg.local) return new AstVarRef{flp, arg.varp, access};
@@ -797,12 +975,48 @@ class DvsProblemBuilder final {
             AstVar* const varp = VN_AS(nodep, VarRef)->varp();
             const auto it = m_loopLevels.find(varp);
             if (it == m_loopLevels.end()) return varValue(varRefId(VN_AS(nodep, VarRef)));
+            const auto keyIt = m_loopKeys.find(varp);
+            if (keyIt != m_loopKeys.end()) return elemValue(keyIt->second, loopIndex(it->second));
             // The index of a 'foreach' over a dynamic array, an int
             UASSERT_OBJ(nodep->width() == 32, nodep, "Loop variable not an int");
             return loopIndex(it->second);
         }
-        case VNType::ArraySel:  // FALLTHRU
-        case VNType::MemberRef: return values(nodep).front();
+        case VNType::ArraySel: return values(nodep).front();
+        case VNType::MemberRef: {
+            // A member of an element of an array of class handles that is not random, at an
+            // index; else an import
+            AstCMethodHard* const atp = VN_CAST(VN_AS(nodep, MemberRef)->fromp(), CMethodHard);
+            const AstVarRef* const refp = atp ? VN_CAST(atp->fromp(), VarRef) : nullptr;
+            if (refp && !refp->varp()->rand().isRandomizable()) {
+                return elemValue(fieldArrayId(nodep), expr(atp->pinsp()));
+            }
+            return values(nodep).front();
+        }
+        case VNType::AssocSel: {
+            AstAssocSel* const selp = VN_AS(nodep, AssocSel);
+            const uint32_t id = arrayId(selp->fromp());
+            // The key of a 'foreach' over the array: the element of the loop
+            const AstVarRef* const keyRefp = VN_CAST(selp->bitp(), VarRef);
+            const auto keyIt = keyRefp ? m_loopKeys.find(keyRefp->varp()) : m_loopKeys.end();
+            if (keyIt != m_loopKeys.end() && keyIt->second == id + 1) {
+                return elemValue(id, loopIndex(m_loopLevels.at(keyRefp->varp())));
+            }
+            // Else the element with the key, 0 if none (IEEE 1800-2023 7.8.6): an OR over the
+            // elements of each one's value if its key is the key
+            const Value key = expr(selp->bitp());
+            const uint32_t level = m_levels++;
+            const Value item = elemValue(id, loopIndex(level));
+            const Value match = binary(DVS_BIN_EQ, elemValue(id + 1, loopIndex(level)), key, true);
+            const dvs_expr_t bodyExpr = dvs_builder_expr_ite(
+                m_builderp, match.expr, item.expr, constant(0, item.width, item.isSigned).expr);
+            --m_levels;
+            return {dvs_builder_expr_reduce(m_builderp, DVS_BIN_BOR, id, level, bodyExpr),
+                    item.width, item.isSigned, false};
+        }
+        case VNType::StructSel: {
+            AstCMethodHard* const atp = VN_AS(VN_AS(nodep, StructSel)->fromp(), CMethodHard);
+            return elemValue(fieldArrayId(VN_AS(nodep, StructSel)), expr(atp->pinsp()));
+        }
         case VNType::CMethodHard: {
             AstCMethodHard* const callp = VN_AS(nodep, CMethodHard);
             if (callp->method() == VCMethod::ARRAY_AT) {
@@ -895,16 +1109,36 @@ class DvsProblemBuilder final {
         }
         case VNType::Sel: {
             AstSel* const selp = VN_AS(nodep, Sel);
-            const Value from = expr(selp->fromp());
             AstConst* const lsbp = newBoundConstp(selp->lsbp());
             if (!lsbp) {
                 unsupported(nodep, "bit select at a non-constant position of a random value");
-                return from;
+                return falseValue();
             }
             const uint32_t lsb = lsbp->toUInt();
             VL_DO_DANGLING(lsbp->deleteTree(), lsbp);
-            return {dvs_builder_expr_extract(m_builderp, from.expr, lsb + width - 1, lsb), width,
-                    false, false};
+            // A random variable wider than 64 bits is its 32-bit words, least significant first
+            const uint32_t fromWidth = selp->fromp()->width();
+            const bool wide = fromWidth > VL_QUADSIZE;
+            const std::vector<Value> words
+                = wide ? values(selp->fromp()) : std::vector<Value>{expr(selp->fromp())};
+            const uint32_t wordWidth = wide ? VL_EDATASIZE : fromWidth;
+            // Bits past the value read as 0, a 2-state read out of range (IEEE 1800-2023
+            // 11.5.1), as at a 'foreach' index near the end of a vector
+            const uint32_t inWidth = lsb < fromWidth ? std::min(width, fromWidth - lsb) : 0;
+            if (!inWidth) return constant(0, width, false);
+            Value bits = falseValue();
+            for (uint32_t lo = lsb; lo < lsb + inWidth;) {
+                const uint32_t word = lo / wordWidth;
+                const uint32_t hi = std::min(lsb + inWidth, (word + 1) * wordWidth) - 1;
+                const Value part{dvs_builder_expr_extract(m_builderp, words[word].expr,
+                                                          hi - word * wordWidth,
+                                                          lo - word * wordWidth),
+                                 hi - lo + 1, false, false};
+                bits = lo == lsb ? part : concat(part, bits);
+                lo = hi + 1;
+            }
+            if (inWidth == width) return bits;
+            return concat(constant(0, width - inWidth, false), bits);
         }
         case VNType::Concat: return concat(expr(biopp->lhsp()), expr(biopp->rhsp()));
         case VNType::Replicate: {
@@ -953,7 +1187,25 @@ class DvsProblemBuilder final {
         }
         return result.expr;
     }
-    void addDist(AstDist* distp) {
+    void addDist(AstDist* distp, const std::vector<Value>& guards) {
+        // Under a guard, or with a value or weight read before the call: evaluated by dv-solve
+        // on each call
+        bool dynamic = !guards.empty();
+        for (AstDistItem* itemp = distp->itemsp(); itemp;
+             itemp = VN_AS(itemp->nextp(), DistItem)) {
+            AstInsideRange* const rangep = VN_CAST(itemp->rangep(), InsideRange);
+            for (AstNodeExpr* const operandp :
+                 {itemp->weightp(), rangep ? rangep->lhsp() : itemp->rangep(),
+                  rangep ? rangep->rhsp() : itemp->rangep()}) {
+                AstConst* const constp = newBoundConstp(operandp);
+                if (!constp) dynamic = true;
+                if (constp) VL_DO_DANGLING(constp->deleteTree(), constp);
+            }
+        }
+        if (dynamic) {
+            addDynamicDist(distp, guards);
+            return;
+        }
         AstNodeExpr* targetp = distp->exprp();
         if (AstNodeUniop* const extp = VN_CAST(targetp, NodeUniop)) targetp = extp->lhsp();
         // An element of a dynamic array, in a 'foreach' over it; else a variable
@@ -1013,19 +1265,68 @@ class DvsProblemBuilder final {
             entry.is_per_value = !itemp->isWhole();
             entries.push_back(entry);
         }
-        addHard(member.expr, distp->fileline());
+        // All weights 0: no distribution, and no constraint, as the SMT back-end
         if (entries.empty()) return;
+        addHard(member.expr, distp->fileline());
         if (atp) {
             dvs_builder_add_dist_elem(m_builderp, id, index.expr, entries.size(), entries.data());
         } else {
             dvs_builder_add_dist(m_builderp, id, entries.size(), entries.data());
         }
     }
+    // The dist of distp when guarded, or reading values before the call: a record dv-solve
+    // applies on a call when its guard holds, the first added if several do
+    void addDynamicDist(AstDist* distp, const std::vector<Value>& guards) {
+        AstNodeExpr* targetp = distp->exprp();
+        if (AstNodeUniop* const extp = VN_CAST(targetp, NodeUniop)) targetp = extp->lhsp();
+        AstCMethodHard* const atp = VN_CAST(targetp, CMethodHard);
+        const uint32_t id = atp ? arrayId(atp->fromp()) : randRefIds(targetp).front();
+        // The variable at the width of the items
+        const Value target = expr(distp->exprp());
+        std::vector<dvs_dist_entry_ex_t> entries;
+        Value member = falseValue();
+        Value weighted = falseValue();  // Some weight is positive
+        for (AstDistItem* itemp = distp->itemsp(); itemp;
+             itemp = VN_AS(itemp->nextp(), DistItem)) {
+            AstInsideRange* const rangep = VN_CAST(itemp->rangep(), InsideRange);
+            const Value weight = expr(itemp->weightp());
+            const Value lo = expr(rangep ? rangep->lhsp() : itemp->rangep());
+            const Value hi = rangep ? expr(rangep->rhsp()) : lo;
+            // dv-solve reads a negative weight as 0
+            const Value positive
+                = compare(DVS_BIN_GT, weight, constant(0, weight.width, weight.isSigned));
+            const Value in = binary(DVS_BIN_AND, compare(DVS_BIN_GTE, target, lo),
+                                    compare(DVS_BIN_LTE, target, hi), true);
+            member = binary(DVS_BIN_OR, member, binary(DVS_BIN_AND, positive, in, true), true);
+            weighted = binary(DVS_BIN_OR, weighted, positive, true);
+            dvs_dist_entry_ex_t entry{};
+            entry.lo = lo.expr;
+            entry.hi = hi.expr;
+            entry.weight = weight.expr;
+            entry.is_per_value = !itemp->isWhole();
+            entries.push_back(entry);
+        }
+        // All weights 0: no constraint, as for constant weights
+        addHard(guarded(guards, binary(DVS_BIN_OR, logNot(weighted), member, true)),
+                distp->fileline());
+        dvs_expr_t guard = DVS_EXPR_NULL;
+        for (const Value& cond : guards) {
+            guard = guard == DVS_EXPR_NULL
+                        ? asBool(cond).expr
+                        : binary(DVS_BIN_AND, {guard, 1, false, true}, asBool(cond), true).expr;
+        }
+        if (atp) {
+            dvs_builder_add_dist_elem_ex(m_builderp, id, expr(atp->pinsp()).expr, guard,
+                                         entries.size(), entries.data());
+        } else {
+            dvs_builder_add_dist_ex(m_builderp, id, guard, entries.size(), entries.data());
+        }
+    }
     void addItems(AstNode* itemsp, const std::vector<Value>& guards) {
         for (AstNode* itemp = itemsp; itemp; itemp = itemp->nextp()) {
             if (AstConstraintExpr* const cexprp = VN_CAST(itemp, ConstraintExpr)) {
                 if (AstDist* const distp = VN_CAST(cexprp->exprp(), Dist)) {
-                    addDist(distp);
+                    addDist(distp, guards);
                 } else if (cexprp->isSoft() || m_soft) {
                     // Added now, as it may be in the body of a dv-solve foreach
                     dvs_builder_add_soft_constraint(m_builderp,
@@ -1065,12 +1366,12 @@ class DvsProblemBuilder final {
                 AstConstraintBefore* const beforep = VN_AS(itemp, ConstraintBefore);
                 std::vector<uint32_t> rhsIds;
                 for (AstNode* rhsp = beforep->rhssp(); rhsp; rhsp = rhsp->nextp()) {
-                    for (const uint32_t id : randRefIds(VN_AS(rhsp, NodeExpr))) {
+                    for (const uint32_t id : beforeIds(VN_AS(rhsp, NodeExpr))) {
                         rhsIds.push_back(id);
                     }
                 }
                 for (AstNode* lhsp = beforep->lhssp(); lhsp; lhsp = lhsp->nextp()) {
-                    for (const uint32_t lhsId : randRefIds(VN_AS(lhsp, NodeExpr))) {
+                    for (const uint32_t lhsId : beforeIds(VN_AS(lhsp, NodeExpr))) {
                         for (const uint32_t rhsId : rhsIds) m_befores.emplace_back(lhsId, rhsId);
                     }
                 }
@@ -1085,15 +1386,19 @@ class DvsProblemBuilder final {
             addItems(nodep->bodyp(), guards);
             return;
         }
-        const AstUnpackArrayDType* const adtypep = VN_AS(dtypep->skipRefp(), UnpackArrayDType);
+        // A fixed-size array, or a vector (the last dimension)
+        const AstNodeArrayDType* const adtypep = VN_CAST(dtypep->skipRefp(), NodeArrayDType);
+        AstNodeDType* const subp = adtypep ? adtypep->subDTypep() : nullptr;
+        const VNumRange range
+            = adtypep ? adtypep->declRange() : VN_AS(dtypep->skipRefp(), BasicDType)->declRange();
         AstVar* const varp = VN_CAST(elemp, Var);
         if (!varp) {
-            addForeach(nodep, adtypep->subDTypep(), elemp->nextp(), guards);
+            addForeach(nodep, subp, elemp->nextp(), guards);
             return;
         }
-        for (int index = adtypep->lo(); index <= adtypep->hi(); ++index) {
+        for (int index = range.lo(); index <= range.hi(); ++index) {
             m_loopValues[varp] = index;
-            addForeach(nodep, adtypep->subDTypep(), elemp->nextp(), guards);
+            addForeach(nodep, subp, elemp->nextp(), guards);
         }
         m_loopValues.erase(varp);
     }
@@ -1106,11 +1411,21 @@ class DvsProblemBuilder final {
         const uint32_t level = m_levels++;
         const bool outer = m_foreachArrays.insert(id).second;
         m_loopLevels[varp] = level;
-        if (dvsIsSlotArray(headerp->fromp()->dtypep())) m_slotLoopVars.insert(varp);
+        // Over an associative array, the loop variable is the key
+        if (VN_IS(headerp->fromp()->dtypep()->skipRefp(), AssocArrayDType)) {
+            m_loopKeys[varp] = id + 1;
+        }
+        // A slot array; not a variable of handles that is not random (arrayId)
+        const AstVarRef* const fromRefp = VN_CAST(headerp->fromp(), VarRef);
+        if (dvsIsSlotArray(headerp->fromp()->dtypep())
+            && !(fromRefp && !fromRefp->varp()->rand().isRandomizable())) {
+            m_slotLoopVars.insert(varp);
+        }
         dvs_builder_foreach_begin(m_builderp, id, level);
         addItems(nodep->bodyp(), guards);
         dvs_builder_foreach_end(m_builderp);
         m_loopLevels.erase(varp);
+        m_loopKeys.erase(varp);
         m_slotLoopVars.erase(varp);
         if (outer) m_foreachArrays.erase(id);
         --m_levels;
@@ -1128,6 +1443,15 @@ class DvsProblemBuilder final {
         return value;
     }
     // Solve-before stages: each variable after the variables it is solved after, from stage 1
+    // Problem variables of an item of 'solve before': a dynamic array or queue is its
+    // elements, as a fixed-size array is (its size is solved first anyway, IEEE 1800-2023
+    // 18.5.8.1)
+    std::vector<uint32_t> beforeIds(AstNodeExpr* exprp) {
+        if (isDynArray(exprp->dtypep())) return {DVS_ARRAY_MEMBER(arrayId(exprp))};
+        // A member of the elements of an array of structs: all its elements
+        if (VN_IS(exprp, StructSel)) return {DVS_ARRAY_MEMBER(fieldArrayId(exprp))};
+        return randRefIds(exprp);
+    }
     void addSolveOrder(AstNode* nodep) {
         std::map<uint32_t, uint32_t> stages;
         for (const std::pair<uint32_t, uint32_t>& before : m_befores) {
@@ -1147,7 +1471,12 @@ class DvsProblemBuilder final {
             if (!changed) {
                 for (const std::pair<const uint32_t, uint32_t>& stage : stages) {
                     UASSERT_OBJ(stage.second <= DVS_MAX_STAGE, nodep, "Too many stages");
-                    dvs_builder_set_var_order(m_builderp, stage.first, stage.second);
+                    if (stage.first & DVS_ARRAY_MEMBER(0)) {
+                        dvs_builder_set_array_order(m_builderp, stage.first & ~DVS_ARRAY_MEMBER(0),
+                                                    stage.second);
+                    } else {
+                        dvs_builder_set_var_order(m_builderp, stage.first, stage.second);
+                    }
                 }
                 return;
             }
@@ -1262,11 +1591,20 @@ public:
             for (const auto& it : m_arrayIds) {
                 if (!m_sizedArrays.count(it.second)) continue;
                 dvs_builder_set_array_size_random(m_builderp, it.second);
+                // The other problem arrays of an array of structs have its size
+                const Value size{dvs_builder_expr_array_size(m_builderp, it.second), 32, true,
+                                 false};
+                const size_t nFields
+                    = dvsStructFields(it.first->dtypep()->skipRefp()->subDTypep(), true).size();
+                for (uint32_t id = it.second + 1; id < it.second + nFields; ++id) {
+                    dvs_builder_set_array_size_random(m_builderp, id);
+                    const Value fieldSize{dvs_builder_expr_array_size(m_builderp, id), 32, true,
+                                          false};
+                    addHard(binary(DVS_BIN_EQ, fieldSize, size, true).expr, it.first->fileline());
+                }
                 const AstQueueDType* const qdtypep
                     = VN_CAST(it.first->dtypep()->skipRefp(), QueueDType);
                 if (!qdtypep || !qdtypep->boundp()) continue;
-                const Value size{dvs_builder_expr_array_size(m_builderp, it.second), 32, true,
-                                 false};
                 addHard(
                     binary(DVS_BIN_LTE, size, constant(qdtypep->boundConst() + 1, 32, true), true)
                         .expr,
@@ -1279,6 +1617,7 @@ public:
             addHard(enumMember(var.value, var.enump).expr, var.flp);
             if (var.arrayId >= 0) dvs_builder_foreach_end(m_builderp);
         }
+        for (AstVar* const varp : m_modeVars) addHold(varp);
         if (m_varInfos.empty() && m_arrayInfos.empty()) {
             if (m_site.hasItems()) {
                 unsupported(sitep, "constraints without variables");
@@ -1326,7 +1665,7 @@ public:
         // Each variable's width and signedness
         callp->addPinsp(newPoolArrayp(flp, 32, m_varInfos));
         callp->addPinsp(newPoolArrayp(flp, m_constraintInfos));
-        for (const Arg& arg : m_args) callp->addPinsp(newArgRefp(flp, arg, VAccess::READWRITE));
+        for (const Arg& arg : m_args) callp->addPinsp(newArgp(flp, arg));
         callp->dtypeSetBit();
         return callp;
     }
@@ -1346,9 +1685,7 @@ public:
         // This object: that of the part, or for a site part the object randomized
         callp->addPinsp(new AstThisRef{flp, refDTypep});
         if (m_site.inlinePart) {
-            for (const Arg& arg : m_args) {
-                callp->addPinsp(newArgRefp(flp, arg, VAccess::READWRITE));
-            }
+            for (const Arg& arg : m_args) callp->addPinsp(newArgp(flp, arg));
             for (AstVar* const mirrorp : m_mirrors) {
                 callp->addPinsp(newArgRefp(flp, {mirrorp, false}, VAccess::READWRITE));
             }
@@ -1378,7 +1715,7 @@ public:
             inactivep->dtypeSetUInt64();
         }
         callp->addPinsp(inactivep);
-        for (const Arg& arg : m_args) callp->addPinsp(newArgRefp(flp, arg, VAccess::READWRITE));
+        for (const Arg& arg : m_args) callp->addPinsp(newArgp(flp, arg));
         for (AstVar* const slotp : slots(classp)) {
             callp->addPinsp(newArgRefp(flp, {slotp, false}, VAccess::READWRITE));
         }
@@ -1474,21 +1811,57 @@ std::string dvsRandVarUnsupported(const AstVar* varp) {
     const RandomizeMode mode = {.asUQuad = varp->user1()};
     // An unpacked array is solved element by element, a dynamic array or queue as an array
     const AstNodeDType* dtypep = varp->dtypep()->skipRefp();
-    if (VN_IS(dtypep, DynArrayDType) || VN_IS(dtypep, QueueDType)) {
-        dtypep = dtypep->subDTypep()->skipRefp();  // Of scalars only
+    if (const AstAssocArrayDType* const adtypep = VN_CAST(dtypep, AssocArrayDType)) {
+        const AstNodeDType* const keyDTypep = adtypep->keyDTypep()->skipRefp();
+        if (!keyDTypep->isIntegralOrPacked() || keyDTypep->width() > VL_QUADSIZE) {
+            return "associative array with keys of type " + keyDTypep->prettyDTypeNameQ();
+        }
+        dtypep = adtypep->subDTypep()->skipRefp();  // Of scalars
+    } else if (VN_IS(dtypep, DynArrayDType) || VN_IS(dtypep, QueueDType)) {
+        dtypep = dtypep->subDTypep()->skipRefp();  // Of scalars, or of unpacked structs
         if (VN_IS(dtypep, ClassRefDType)) return "dynamic array or queue of class handles";
+        // Of unpacked structs: a problem array per rand member (its elements' members)
+        for (const AstMemberDType* const memberp : dvsStructFields(dtypep, true)) {
+            const AstNodeDType* const memberDTypep = memberp->subDTypep()->skipRefp();
+            if (!memberDTypep->isIntegralOrPacked() || memberDTypep->width() > VL_QUADSIZE) {
+                return "random member of type " + memberDTypep->prettyDTypeNameQ()
+                       + " of a struct";
+            }
+        }
+        if (!dvsStructFields(dtypep, true).empty()) return "";
     } else {
         while (const AstUnpackArrayDType* const adtypep = VN_CAST(dtypep, UnpackArrayDType)) {
             dtypep = adtypep->subDTypep()->skipRefp();
         }
     }
     if (varp->isRandC()) return "randc variable in a constraint";
-    if (mode.usesMode) return "rand_mode() or randomize() arguments for a constrained variable";
-    if (!VN_IS(dtypep, BasicDType) || !dtypep->isIntegralOrPacked()) {
+    if (mode.usesMode && (varp->lifetime().isStatic() || isDynArray(varp->dtypep()))) {
+        return "rand_mode() or randomize() arguments for a constrained static variable, dynamic"
+               " array or queue";
+    }
+    if (!dtypep->isIntegralOrPacked()) {
         return "random variable of type " + dtypep->prettyDTypeNameQ();
     }
-    if (dtypep->width() > VL_QUADSIZE) return "random variable wider than 64 bits";
+    // An element of a scalar or a fixed-size array may be wider: its words (newElemVars)
+    if (dtypep->width() > VL_QUADSIZE && isDynArray(varp->dtypep())) {
+        return "random variable wider than 64 bits";
+    }
     return "";
+}
+
+std::vector<const AstMemberDType*> dvsStructFields(const AstNodeDType* dtypep, bool rand) {
+    std::vector<const AstMemberDType*> fields;
+    const AstStructDType* const structp = VN_CAST(dtypep->skipRefp(), StructDType);
+    if (!structp || structp->packed()) return fields;
+    for (const AstMemberDType* memberp = structp->membersp(); memberp;
+         memberp = VN_AS(memberp->nextp(), MemberDType)) {
+        const AstNodeDType* const memberDTypep = memberp->subDTypep()->skipRefp();
+        if (rand ? memberp->rand().isRandomizable()
+                 : memberDTypep->isIntegralOrPacked() && memberDTypep->width() <= VL_QUADSIZE) {
+            fields.push_back(memberp);
+        }
+    }
+    return fields;
 }
 
 bool dvsIsMappable(const AstNodeExpr* nodep) {

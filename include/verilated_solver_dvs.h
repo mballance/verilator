@@ -106,6 +106,16 @@ struct VlDvsVars final {
     static constexpr std::size_t slots = 0;
     static void addrs(T_Var& var, void**& varpr, VlDvsArray*&, VlDvsSlot*&) { *varpr++ = &var; }
 };
+/// A value wider than 64 bits is one variable per 32-bit word, least significant first
+template <std::size_t N_Words>
+struct VlDvsVars<VlWide<N_Words>> final {
+    static constexpr std::size_t count = N_Words;
+    static constexpr std::size_t arrays = 0;
+    static constexpr std::size_t slots = 0;
+    static void addrs(VlWide<N_Words>& var, void**& varpr, VlDvsArray*&, VlDvsSlot*&) {
+        for (std::size_t i = 0; i < N_Words; ++i) *varpr++ = &var[i];
+    }
+};
 /// A class handle is a slot, identified by the address of its object
 template <typename T_Class>
 struct VlDvsVars<VlClassRef<T_Class>> final {
@@ -178,23 +188,111 @@ struct VlDvsVars<VlQueue<T_Elem, N_MaxSize>> final {
         *arrayr++ = VlDvsArray{&var, sizeof(T_Elem), size, read, write};
     }
 };
+/// An associative array is two problem arrays: its elements in key order, and (read only)
+/// their keys
+template <typename T_Key, typename T_Value>
+struct VlDvsVars<VlAssocArray<T_Key, T_Value>> final {
+    using Assoc = VlAssocArray<T_Key, T_Value>;
+    static constexpr std::size_t count = 0;
+    static constexpr std::size_t arrays = 2;
+    static constexpr std::size_t slots = 0;
+    static std::size_t size(const void* assocp) {
+        return static_cast<const Assoc*>(assocp)->size();
+    }
+    static void read(void* assocp, void* datap, std::size_t n) {
+        std::size_t i = 0;
+        for (const auto& it : *static_cast<const Assoc*>(assocp)) {
+            if (i == n) break;
+            static_cast<T_Value*>(datap)[i++] = it.second;
+        }
+    }
+    static void readKeys(void* assocp, void* datap, std::size_t n) {
+        std::size_t i = 0;
+        for (const auto& it : *static_cast<const Assoc*>(assocp)) {
+            if (i == n) break;
+            static_cast<T_Key*>(datap)[i++] = it.first;
+        }
+    }
+    // Its size is not random: the elements are written in place
+    static void write(void* assocp, const void* datap, std::size_t n) {
+        Assoc& assoc = *static_cast<Assoc*>(assocp);
+        std::size_t i = 0;
+        for (const auto& it : static_cast<const Assoc&>(assoc)) {
+            if (i == n) break;
+            assoc.atWrite(it.first) = static_cast<const T_Value*>(datap)[i++];
+        }
+    }
+    static void writeKeys(void*, const void*, std::size_t) {}
+    static void addrs(Assoc& var, void**&, VlDvsArray*& arrayr, VlDvsSlot*&) {
+        *arrayr++ = VlDvsArray{&var, sizeof(T_Value), size, read, write};
+        *arrayr++ = VlDvsArray{&var, sizeof(T_Key), size, readKeys, writeKeys};
+    }
+};
+/// A member of the elements of a dynamic array or queue of unpacked structs, read and written
+/// through 'get' (Elem& -> member&): an argument of its own, a problem array
+template <typename T_Queue, typename T_Get>
+struct VlDvsField final {
+    T_Queue& queue;
+    T_Get get;
+};
+template <typename T_Queue, typename T_Get>
+VlDvsField<T_Queue, T_Get> vlDvsField(T_Queue& queue, T_Get get) {
+    return {queue, get};
+}
+template <typename T_Elem, std::size_t N_MaxSize, typename T_Get>
+struct VlDvsVars<VlDvsField<VlQueue<T_Elem, N_MaxSize>, T_Get>> final {
+    // The array is the queue: the field is a temporary, while a part outlives the call
+    // adding it. Its 'get' has no state, so one copy serves every call.
+    using Queue = VlQueue<T_Elem, N_MaxSize>;
+    using Field = VlDvsField<Queue, T_Get>;
+    using Member =
+        typename std::decay<decltype(std::declval<T_Get>()(std::declval<T_Elem&>()))>::type;
+    static_assert(std::is_empty<T_Get>::value, "VlDvsField accessor has no captures");
+    static constexpr std::size_t count = 0;
+    static constexpr std::size_t arrays = 1;
+    static constexpr std::size_t slots = 0;
+    static T_Get& get(const T_Get* initp = nullptr) {
+        static T_Get s_get{*initp};  // Initialized by addrs, before any read or write
+        return s_get;
+    }
+    static std::size_t size(const void* queuep) {
+        return static_cast<const Queue*>(queuep)->size();
+    }
+    static void read(void* queuep, void* datap, std::size_t n) {
+        Queue& queue = *static_cast<Queue*>(queuep);
+        for (std::size_t i = 0; i < n && i < static_cast<std::size_t>(queue.size()); ++i) {
+            static_cast<Member*>(datap)[i] = get()(queue.atWrite(i));
+        }
+    }
+    static void write(void* queuep, const void* datap, std::size_t n) {
+        Queue& queue = *static_cast<Queue*>(queuep);
+        if (n != static_cast<std::size_t>(queue.size())) queue.resize(n);
+        for (std::size_t i = 0; i < n; ++i) {
+            get()(queue.atWrite(i)) = static_cast<const Member*>(datap)[i];
+        }
+    }
+    static void addrs(Field& var, void**&, VlDvsArray*& arrayr, VlDvsSlot*&) {
+        get(&var.get);
+        *arrayr++ = VlDvsArray{&var.queue, sizeof(Member), size, read, write};
+    }
+};
 template <typename... T_Vars>
 constexpr std::size_t vlDvsCount() {
-    const std::size_t counts[] = {0, VlDvsVars<T_Vars>::count...};
+    const std::size_t counts[] = {0, VlDvsVars<typename std::decay<T_Vars>::type>::count...};
     std::size_t total = 0;
     for (const std::size_t count : counts) total += count;
     return total;
 }
 template <typename... T_Vars>
 constexpr std::size_t vlDvsArrays() {
-    const std::size_t counts[] = {0, VlDvsVars<T_Vars>::arrays...};
+    const std::size_t counts[] = {0, VlDvsVars<typename std::decay<T_Vars>::type>::arrays...};
     std::size_t total = 0;
     for (const std::size_t count : counts) total += count;
     return total;
 }
 template <typename... T_Vars>
 constexpr std::size_t vlDvsSlots() {
-    const std::size_t counts[] = {0, VlDvsVars<T_Vars>::slots...};
+    const std::size_t counts[] = {0, VlDvsVars<typename std::decay<T_Vars>::type>::slots...};
     std::size_t total = 0;
     for (const std::size_t count : counts) total += count;
     return total;
@@ -204,7 +302,8 @@ constexpr std::size_t vlDvsSlots() {
 template <std::size_t N_Image, std::size_t N_Infos, std::size_t N_Constraints, typename... T_Vars>
 bool VL_DVS_SOLVE_RNG(VlRNG& rng, const VlUnpacked<CData, N_Image>& image,
                       const VlUnpacked<IData, N_Infos>& infos,
-                      const VlUnpacked<std::string, N_Constraints>& constraints, T_Vars&... vars) {
+                      const VlUnpacked<std::string, N_Constraints>& constraints,
+                      T_Vars&&... vars) {
     static_assert(vlDvsCount<T_Vars...>() == N_Infos, "One entry per variable");
     static_assert(vlDvsSlots<T_Vars...>() == 0, "No slots");
     constexpr std::size_t nArrays = vlDvsArrays<T_Vars...>();
@@ -214,7 +313,8 @@ bool VL_DVS_SOLVE_RNG(VlRNG& rng, const VlUnpacked<CData, N_Image>& image,
     VlDvsArray* arrayr = arrays;
     VlDvsSlot* slotr = nullptr;
     // Braced initializers are evaluated in order, so arguments fill varps and arrays in order
-    (void)std::initializer_list<int>{(VlDvsVars<T_Vars>::addrs(vars, varpr, arrayr, slotr), 0)...};
+    (void)std::initializer_list<int>{
+        (VlDvsVars<typename std::decay<T_Vars>::type>::addrs(vars, varpr, arrayr, slotr), 0)...};
     return VlDvsSite::solve(rng, image.data(), N_Image, infos.data(), constraints.data(),
                             N_Constraints, varps, arrays, nArrays);
 }
@@ -227,7 +327,8 @@ bool VL_DVS_SOLVE_RNG(VlRNG& rng, const VlUnpacked<CData, N_Image>& image,
 template <std::size_t N_Image, std::size_t N_Infos, std::size_t N_Constraints, typename... T_Vars>
 bool VL_DVS_SOLVE_STD(VlStdRandomizer& stdrand, const VlUnpacked<CData, N_Image>& image,
                       const VlUnpacked<IData, N_Infos>& infos,
-                      const VlUnpacked<std::string, N_Constraints>& constraints, T_Vars&... vars) {
+                      const VlUnpacked<std::string, N_Constraints>& constraints,
+                      T_Vars&&... vars) {
     QData seed;
     stdrand.basicStdRandomization(seed, VL_QUADSIZE);
     VlRNG rng{seed};
@@ -240,7 +341,7 @@ template <std::size_t N_Image, std::size_t N_Infos, std::size_t N_Constraints, t
 bool vlDvsAddPart(const void* objp, const VlUnpacked<CData, N_Image>& image,
                   const VlUnpacked<IData, N_Infos>& infos,
                   const VlUnpacked<std::string, N_Constraints>& constraints, QData inactive,
-                  T_Vars&... vars) {
+                  T_Vars&&... vars) {
     constexpr std::size_t nVars = vlDvsCount<T_Vars...>();
     constexpr std::size_t nArrays = vlDvsArrays<T_Vars...>();
     constexpr std::size_t nSlots = vlDvsSlots<T_Vars...>();
@@ -250,7 +351,8 @@ bool vlDvsAddPart(const void* objp, const VlUnpacked<CData, N_Image>& image,
     VlDvsArray* arrayr = arrays;
     VlDvsSlot slots[nSlots + 1];
     VlDvsSlot* slotr = slots;
-    (void)std::initializer_list<int>{(VlDvsVars<T_Vars>::addrs(vars, varpr, arrayr, slotr), 0)...};
+    (void)std::initializer_list<int>{
+        (VlDvsVars<typename std::decay<T_Vars>::type>::addrs(vars, varpr, arrayr, slotr), 0)...};
     return VlDvsParts::add(objp, image.data(), N_Image, infos.data(), constraints.data(),
                            N_Constraints, inactive, varps, nVars, arrays, nArrays, slots, nSlots);
 }
@@ -260,7 +362,7 @@ template <std::size_t N_Image, std::size_t N_Infos, std::size_t N_Constraints, t
           typename... T_Vars>
 bool VL_DVS_PART(const VlUnpacked<CData, N_Image>& image, const VlUnpacked<IData, N_Infos>& infos,
                  const VlUnpacked<std::string, N_Constraints>& constraints,
-                 const VlClassRef<T_Class>& self, QData inactive, T_Vars&... vars) {
+                 const VlClassRef<T_Class>& self, QData inactive, T_Vars&&... vars) {
     return vlDvsAddPart(dynamic_cast<const void*>(self.operator->()), image, infos, constraints,
                         inactive, vars...);
 }
@@ -273,7 +375,7 @@ template <std::size_t N_Image, std::size_t N_Infos, std::size_t N_Constraints, t
 void VL_DVS_SITE_PART(const VlUnpacked<CData, N_Image>& image,
                       const VlUnpacked<IData, N_Infos>& infos,
                       const VlUnpacked<std::string, N_Constraints>& constraints,
-                      const VlClassRef<T_Class>& target, T_Vars&... vars) {
+                      const VlClassRef<T_Class>& target, T_Vars&&... vars) {
     VlClassRef<T_Class> slot = target;
     vlDvsAddPart(image.data(), image, infos, constraints, ~QData{1}, slot, vars...);
 }

@@ -17,27 +17,37 @@
 //
 // Checks that the constraints of a randomize site are within what
 // V3SolverDvsBuild maps to a dv-solve problem, before it builds one, and
-// reports the first construct that is not as 'Unsupported: ... with
+// reports each construct that is not as 'Unsupported: ... with
 // --solver-dvs'. There is no fallback to another solver (design D2).
 //
 // Supported: random variables of this object (or its base classes) that are
-// integral scalars (including enums) of 1 to 64 bits, or fixed-size unpacked
-// arrays of them read element by element, at any index, or reduced (sum etc.,
-// with or without 'with', and as 'inside' set members); dynamic arrays and
-// queues of them, read the same ways or as a whole in 'unique', with size() a
-// state value in a 'foreach' over them, and their size() (solved before the
-// elements when read outside a 'foreach' over them); 'foreach' over fixed-size unpacked arrays and
-// over one dimension of a dynamic array or queue; operands that do not depend on a random
-// variable, whatever they are, when they are integral and at most 64 bits, and arrays of them as
-// 'inside' set members; the operators of dvsIsMappable(); 'if' constraints and implications; soft
-// constraints; 'dist' and 'unique' outside conditions and constraint_mode() blocks; 'solve
-// before'. In the part of a class, also random variables of other objects reached through rand
-// class handles of this object ('s.x', 's.t.x', and elements of their fixed-size arrays), read as
-// operands (not in 'dist', 'unique', 'solve before' or reductions); not their dynamic arrays and
-// queues. A dynamic array or queue of rand class handles of this object is iterated by 'foreach'
-// ('q[i].x', 'q[i] != null'), and its size() read. In a site part, the random variables of the
-// object randomized are imports: not its dynamic arrays and queues, nor in
-// 'solve before'.
+// integral scalars (including enums and packed structs) of 1 to 64 bits, or
+// wider ones read through bit selects at constant positions (packed struct
+// members) and in 'solve before', or fixed-size unpacked arrays of them read
+// element by element, at any index, or reduced (sum etc., with or without
+// 'with', and as 'inside' set members); dynamic arrays and queues of them, or
+// of unpacked structs whose rand members are such scalars (read as 'q[i].m',
+// and in 'solve before'), and associative arrays of them with integral keys
+// (read 'a[k]' at a key read before the call), read the same ways or as a
+// whole in 'unique' and 'solve before', with size() a state value in a
+// 'foreach' over them, and their size() (solved before the elements when read
+// outside a 'foreach' over them); 'foreach' over fixed-size arrays and vectors
+// and over one dimension of a dynamic array or queue; operands that do not
+// depend on a random variable, whatever they are, when they are integral and
+// at most 64 bits, and arrays of them as 'inside' set members; in a 'foreach'
+// over one, the integral members of the elements of a dynamic array or queue
+// of unpacked structs or class handles that is not random ('q[i].m'); the
+// operators of dvsIsMappable(); 'if' constraints and implications; soft
+// constraints; 'dist', with values and weights read before the call, under
+// conditions that read no random variable; 'unique' outside conditions and
+// constraint_mode() blocks; 'solve before'. In the part of a class, also
+// random variables of other objects reached through rand class handles of this
+// object ('s.x', 's.t.x', and elements of their fixed-size arrays), read as
+// operands (not in 'dist', 'unique', 'solve before' or reductions); not their
+// dynamic arrays and queues. A dynamic array or queue of rand class handles of
+// this object is iterated by 'foreach' ('q[i].x', 'q[i] != null'), and its
+// size() read. In a site part, the random variables of the object randomized
+// are imports: not its dynamic arrays and queues, nor in 'solve before'.
 //
 //*************************************************************************
 
@@ -54,9 +64,12 @@ namespace {
 // Most loop levels one dv-solve expression binds (DVS_MAX_LOOP_LEVELS)
 static constexpr uint32_t DVS_MAX_LEVELS = 8;
 
+// A problem array: a dynamic array or queue, or an associative array (its elements in key
+// order, and their keys)
 bool isDynArray(const AstNodeDType* dtypep) {
     dtypep = dtypep->skipRefp();
-    return VN_IS(dtypep, DynArrayDType) || VN_IS(dtypep, QueueDType);
+    return VN_IS(dtypep, DynArrayDType) || VN_IS(dtypep, QueueDType)
+           || VN_IS(dtypep, AssocArrayDType);
 }
 
 class DvsCheckVisitor final : public VNVisitorConst {
@@ -67,8 +80,9 @@ class DvsCheckVisitor final : public VNVisitorConst {
     // STATE
     const bool m_part;  // Checking the part of a class: imports are supported
     const bool m_inlinePart;  // Checking a site part: this object's variables are imports
-    bool m_supported = true;  // No unsupported construct found yet
+    bool m_supported = true;  // No unsupported construct found
     bool m_conditional = false;  // In a conditional constraint or a constraint_mode() block
+    bool m_randCondition = false;  // In a constraint whose condition depends on a random variable
     bool m_soft = false;  // In a 'soft foreach'
     std::set<const AstVar*> m_loopVars;  // Loop variables of 'foreach' over dynamic arrays
     uint32_t m_levels = 0;  // Loop levels over dynamic arrays bound
@@ -77,7 +91,6 @@ class DvsCheckVisitor final : public VNVisitorConst {
 
     // METHODS
     void unsupported(const AstNode* nodep, const std::string& what) {
-        if (!m_supported) return;
         m_supported = false;
         nodep->v3error("Unsupported: " << what << " with --solver-dvs");
     }
@@ -105,8 +118,8 @@ class DvsCheckVisitor final : public VNVisitorConst {
         return "random variable of another object in a constraint";
     }
     // nodep, a random variable or an element of a random array, read in a constraint; an
-    // unpacked array if whole
-    void checkRandElement(const AstNodeExpr* nodep, bool whole = false) {
+    // unpacked array if whole; wider than 64 bits if words (of its 32-bit words)
+    void checkRandElement(const AstNodeExpr* nodep, bool whole = false, bool words = false) {
         const AstNode* basep = nodep;
         while (const AstArraySel* const selp = VN_CAST(basep, ArraySel)) basep = selp->fromp();
         const AstMemberRef* const importp = VN_CAST(basep, MemberRef);
@@ -125,6 +138,9 @@ class DvsCheckVisitor final : public VNVisitorConst {
         if (!whole && isDynArray(nodep->dtypep())) {
             unsupported(nodep, "dynamic array or queue as a whole in a constraint");
         }
+        if (!words && elementWidth(nodep) > VL_QUADSIZE) {
+            unsupported(nodep, "random variable wider than 64 bits");
+        }
         if (isImport) {
             checkRandVar(importp, importp->varp());
             return;
@@ -139,12 +155,13 @@ class DvsCheckVisitor final : public VNVisitorConst {
     }
     // A random variable or an element of a random array, alone; or an unpacked array of them
     // if whole
-    void checkRandVarRef(const AstNode* nodep, const std::string& what, bool whole = false) {
+    void checkRandVarRef(const AstNode* nodep, const std::string& what, bool whole = false,
+                         bool words = false) {
         if (!randRefp(nodep)) {
             unsupported(nodep, what + " of an expression");
             return;
         }
-        checkRandElement(VN_AS(nodep, NodeExpr), whole);
+        checkRandElement(VN_AS(nodep, NodeExpr), whole, words);
     }
     static int elementWidth(const AstNode* nodep) {
         const AstNodeDType* dtypep = nodep->dtypep()->skipRefp();
@@ -220,6 +237,43 @@ class DvsCheckVisitor final : public VNVisitorConst {
         }
         iterateConst(nodep->pinsp());
     }
+    // A member of a struct, read in a constraint: a rand member of the elements of a random
+    // dynamic array or queue of unpacked structs ('q[i].m'), or an integral member of one that
+    // is not random, at the index of a 'foreach' over a dynamic array
+    void checkField(AstStructSel* nodep) {
+        AstCMethodHard* const atp = VN_CAST(nodep->fromp(), CMethodHard);
+        const AstVarRef* const refp = atp ? VN_CAST(atp->fromp(), VarRef) : nullptr;
+        bool isField = false;
+        if (refp && atp->method() == VCMethod::ARRAY_AT && isDynArray(refp->dtypep())) {
+            for (const AstMemberDType* const memberp :
+                 dvsStructFields(refp->dtypep()->skipRefp()->subDTypep(),
+                                 refp->varp()->rand().isRandomizable())) {
+                isField = isField || memberp->name() == nodep->name();
+            }
+        }
+        if (!isField) {
+            unsupported(nodep, "member of a struct other than a rand member of an element of a"
+                               " random dynamic array or queue, or an integral one of a"
+                               " dynamic array or queue that is not random");
+            return;
+        }
+        checkElement(atp);
+    }
+    // A member of an object, at the index of a 'foreach' over a dynamic array: an integral
+    // member of an element of a dynamic array or queue of class handles that is not random
+    // ('q[i].m')
+    void checkHandleMember(AstMemberRef* nodep) {
+        AstCMethodHard* const atp = VN_CAST(nodep->fromp(), CMethodHard);
+        const AstVarRef* const refp = atp ? VN_CAST(atp->fromp(), VarRef) : nullptr;
+        const AstNodeDType* const dtypep = nodep->dtypep()->skipRefp();
+        if (!refp || atp->method() != VCMethod::ARRAY_AT || !isDynArray(refp->dtypep())
+            || !dtypep->isIntegralOrPacked() || dtypep->width() > VL_QUADSIZE) {
+            unsupported(nodep, "member of an object other than an integral one of an element of"
+                               " a dynamic array or queue of class handles");
+            return;
+        }
+        checkElement(atp);
+    }
     // Whether nodep reads the index of a loop over a dynamic array, so is built over it
     bool readsLoopIndex(const AstNodeExpr* nodep) const {
         return nodep->exists([&](const AstNode* np) {
@@ -239,9 +293,8 @@ class DvsCheckVisitor final : public VNVisitorConst {
             unsupported(distp, "'dist' in a 'soft foreach'");
             return;
         }
-        if (m_conditional) {
-            unsupported(distp, "'dist' in a conditional constraint or a block with"
-                               " constraint_mode()");
+        if (m_randCondition) {
+            unsupported(distp, "'dist' under a condition that depends on a random variable");
             return;
         }
         const AstNode* targetp = distp->exprp();
@@ -261,22 +314,22 @@ class DvsCheckVisitor final : public VNVisitorConst {
         } else {
             checkRandVarRef(targetp, "'dist'");
         }
+        // Values and weights are read before the call (dv-solve evaluates them per call)
         for (AstDistItem* itemp = distp->itemsp(); itemp;
              itemp = VN_AS(itemp->nextp(), DistItem)) {
             AstInsideRange* const rangep = VN_CAST(itemp->rangep(), InsideRange);
-            checkConstant(itemp->weightp());
-            checkConstant(rangep ? rangep->lhsp() : itemp->rangep());
-            if (rangep) checkConstant(rangep->rhsp());
-            iterateConst(itemp->rangep());
+            for (AstNodeExpr* const operandp :
+                 {itemp->weightp(), rangep ? rangep->lhsp() : itemp->rangep(),
+                  rangep ? rangep->rhsp() : nullptr}) {
+                if (!operandp) continue;
+                if (operandp->user1()) {
+                    unsupported(operandp,
+                                "'dist' with a value or weight that depends on a random variable");
+                } else {
+                    iterateConst(operandp);
+                }
+            }
         }
-    }
-    void checkConstant(AstNodeExpr* nodep) {
-        AstConst* const constp = dvsNewConstp(nodep);
-        if (!constp) {
-            unsupported(nodep, "'dist' with a value or weight that is not a constant");
-            return;
-        }
-        VL_DO_DANGLING(constp->deleteTree(), constp);
     }
 
     // VISITORS - constraint items
@@ -292,7 +345,9 @@ class DvsCheckVisitor final : public VNVisitorConst {
     void visit(AstConstraintIf* nodep) override {
         iterateConst(nodep->condp());
         VL_RESTORER(m_conditional);
+        VL_RESTORER(m_randCondition);
         m_conditional = true;
+        m_randCondition = m_randCondition || nodep->condp()->user1();
         iterateAndNextConstNull(nodep->thensp());
         iterateAndNextConstNull(nodep->elsesp());
     }
@@ -320,11 +375,12 @@ class DvsCheckVisitor final : public VNVisitorConst {
             return;
         }
         for (AstNode* const listp : {nodep->lhssp(), nodep->rhssp()}) {
-            for (const AstNode* itemp = listp; itemp; itemp = itemp->nextp()) {
-                if (isDynArray(VN_AS(itemp, NodeExpr)->dtypep())) {
-                    unsupported(itemp, "'solve before' of a dynamic array or queue");
+            for (AstNode* itemp = listp; itemp; itemp = itemp->nextp()) {
+                if (AstStructSel* const selp = VN_CAST(itemp, StructSel)) {
+                    checkField(selp);  // All the elements' member
+                } else {
+                    checkRandVarRef(itemp, "'solve before'", true, true);
                 }
-                checkRandVarRef(itemp, "'solve before'", true);
             }
         }
     }
@@ -350,10 +406,31 @@ class DvsCheckVisitor final : public VNVisitorConst {
                 // Its size is solved with its object. Not user1(): V3Randomize marks the
                 // expressions of constraints, not 'foreach' headers.
                 unsupported(nodep, "dynamic array or queue of another object in a constraint");
-            } else if (elementWidth(fromp) > VL_QUADSIZE
-                       || !fromp->dtypep()->skipRefp()->subDTypep()->isIntegralOrPacked()) {
+            } else if ((elementWidth(fromp) > VL_QUADSIZE
+                        || !fromp->dtypep()
+                                ->skipRefp()
+                                ->subDTypep()
+                                ->skipRefp()
+                                ->isIntegralOrPacked())
+                       && dvsStructFields(fromp->dtypep()->skipRefp()->subDTypep(), false).empty()
+                       // Of class handles: their members read
+                       && !VN_IS(fromp->dtypep()->skipRefp()->subDTypep()->skipRefp(),
+                                 ClassRefDType)) {
                 unsupported(nodep,
                             "'foreach' over " + fromp->dtypep()->skipRefp()->prettyDTypeNameQ());
+            }
+            // Of class handles that are not random: an array per member read, one at least
+            if (!rand && VN_IS(fromp->dtypep()->skipRefp()->subDTypep()->skipRefp(), ClassRefDType)
+                && (!refp || !nodep->bodyp()
+                    || !nodep->bodyp()->existsAndNext([&](const AstMemberRef* selp) {
+                           const AstCMethodHard* const atp = VN_CAST(selp->fromp(), CMethodHard);
+                           const AstVarRef* const atRefp
+                               = atp ? VN_CAST(atp->fromp(), VarRef) : nullptr;
+                           return atRefp && atRefp->varp() == refp->varp();
+                       }))) {
+                unsupported(nodep, "'foreach' over a dynamic array or queue of class handles"
+                                   " that is not random, other than a variable of this object"
+                                   " whose elements' members it reads");
             }
             if (!checkLevel(nodep)) return;
             VL_RESTORER(m_levels);
@@ -367,16 +444,18 @@ class DvsCheckVisitor final : public VNVisitorConst {
             m_loopVars.erase(varp);
             return;
         }
-        // Each loop variable iterates a dimension of a fixed-size unpacked array
+        // Each loop variable iterates a dimension of a fixed-size array, or the bits of a
+        // vector (the last dimension, V3Width checked)
         const AstNodeDType* dtypep = nodep->headerp()->fromp()->dtypep();
         for (const AstNode* elemp = nodep->headerp()->elementsp(); elemp; elemp = elemp->nextp()) {
-            const AstUnpackArrayDType* const adtypep
-                = VN_CAST(dtypep->skipRefp(), UnpackArrayDType);
-            if (!adtypep) {
-                unsupported(nodep, "'foreach' over " + dtypep->skipRefp()->prettyDTypeNameQ());
+            const AstNodeDType* const skipp = dtypep->skipRefp();
+            const AstBasicDType* const basicp = VN_CAST(skipp, BasicDType);
+            if (const AstNodeArrayDType* const adtypep = VN_CAST(skipp, NodeArrayDType)) {
+                dtypep = adtypep->subDTypep();
+            } else if (!basicp || !basicp->isRanged()) {
+                unsupported(nodep, "'foreach' over " + skipp->prettyDTypeNameQ());
                 return;
             }
-            dtypep = adtypep->subDTypep();
         }
         VL_RESTORER(m_soft);
         m_soft = m_soft || nodep->isSoft();
@@ -386,13 +465,24 @@ class DvsCheckVisitor final : public VNVisitorConst {
     // VISITORS - expressions
     void visit(AstNodeExpr* nodep) override {
         AstCMethodHard* const nullp = dvsSlotNullComparep(nodep);
-        if (nullp && VN_IS(nullp->fromp(), VarRef)) return;  // An element of a slot array
+        if (nullp && VN_IS(nullp->fromp(), VarRef)
+            && VN_AS(nullp->fromp(), VarRef)->varp()->rand().isRandomizable()) {
+            return;  // An element of a slot array
+        }
         if (!nodep->user1() && readsLoopIndex(nodep)) {
             // Built over the loop index, of the operators dvsIsMappable() maps
             if (VN_IS(nodep, VarRef) || VN_IS(nodep, LambdaArgRef)) return;
             if (VN_IS(nodep, ArraySel)) {
                 unsupported(nodep, "element of a fixed-size array that is not random at the"
                                    " index of a 'foreach' over a dynamic array");
+                return;
+            }
+            if (AstStructSel* const selp = VN_CAST(nodep, StructSel)) {
+                checkField(selp);
+                return;
+            }
+            if (AstMemberRef* const selp = VN_CAST(nodep, MemberRef)) {
+                checkHandleMember(selp);
                 return;
             }
             if (!dvsIsMappable(nodep)) {
@@ -405,7 +495,11 @@ class DvsCheckVisitor final : public VNVisitorConst {
                 return;
             }
             AstCMethodHard* const callp = VN_CAST(nodep, CMethodHard);
-            if (callp && callp->method() == VCMethod::ARRAY_AT) {
+            if (callp && callp->method() == VCMethod::ARRAY_AT
+                && VN_IS(callp->dtypep()->skipRefp(), ClassRefDType)) {
+                unsupported(nodep, "class handle in a dynamic array or queue that is not random,"
+                                   " other than read through a member");
+            } else if (callp && callp->method() == VCMethod::ARRAY_AT) {
                 checkElement(callp);
             } else if (callp && callp->method() == VCMethod::ARRAY_INSIDE) {
                 checkInside(callp);
@@ -429,6 +523,25 @@ class DvsCheckVisitor final : public VNVisitorConst {
         }
         if (VN_IS(nodep, VarRef) || VN_IS(nodep, ArraySel) || VN_IS(nodep, MemberRef)) {
             checkRandElement(nodep);
+            return;
+        }
+        if (AstAssocSel* const selp = VN_CAST(nodep, AssocSel)) {
+            // An element of a random associative array, at a key read before the call or the
+            // key of a 'foreach' over an associative array
+            const AstVarRef* const refp = VN_CAST(selp->fromp(), VarRef);
+            if (!refp || !refp->varp()->rand().isRandomizable()) {
+                unsupported(nodep, "associative array that is not a random variable of this"
+                                   " object");
+            } else if (selp->bitp()->user1()) {
+                unsupported(nodep, "associative array key that depends on a random variable");
+            } else {
+                checkRandVar(refp, refp->varp());
+                iterateConst(selp->bitp());
+            }
+            return;
+        }
+        if (AstStructSel* const selp = VN_CAST(nodep, StructSel)) {
+            checkField(selp);
             return;
         }
         if (!dvsIsMappable(nodep)) {
@@ -461,6 +574,12 @@ class DvsCheckVisitor final : public VNVisitorConst {
         if (const AstSel* const selp = VN_CAST(nodep, Sel)) {
             if (selp->lsbp()->user1()) {
                 unsupported(nodep, "bit select at a non-constant position of a random value");
+                return;
+            }
+            const AstNodeExpr* const fromp = selp->fromp();
+            if (fromp->width() > VL_QUADSIZE
+                && (VN_IS(fromp, VarRef) || VN_IS(fromp, ArraySel) || VN_IS(fromp, MemberRef))) {
+                checkRandElement(fromp, false, true);
                 return;
             }
         }

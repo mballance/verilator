@@ -221,6 +221,7 @@ public:
         const std::vector<std::pair<const std::string*, size_t>> site{{constraints, nConstraints}};
         for (const auto& part : partsp ? *partsp : site) {
             for (size_t i = 1; i + 1 < part.second; i += 2) {
+                if (part.first[i].empty()) continue;  // Not the user's: a rand_mode() hold
                 msg = "UNSATCONSTR: " + part.first[i] + ": Unsatisfied constraint";
                 if (!part.first[i + 1].empty()) msg += ": '" + part.first[i + 1] + "'";
                 VL_WARN_MT("", 0, "", msg.c_str());

@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: 2026 Wilson Snyder
 // SPDX-License-Identifier: CC0-1.0
 
-// Constraints --solver-dvs does not support; each class reports its first
+// Constraints --solver-dvs does not support; each unsupported construct is reported
 
 class Sub;
   rand bit [7:0] v;
@@ -23,7 +23,11 @@ endclass
 
 class Wide;
   rand bit [79:0] w;
+  rand bit [79:0] v;
+  rand bit [79:0] d[];
   constraint c {w != 0;}
+  constraint c_unique {unique {w, v};}
+  constraint c_dyn {foreach (d[i]) d[i][3:0] == 1;}
 endclass
 
 class Foreach;
@@ -46,15 +50,6 @@ endclass
 class DynDist;
   rand bit [7:0] arr[];
   constraint c {arr[0] dist {1 := 1, 2 := 1};}
-endclass
-
-class DynBefore;
-  rand bit [7:0] arr[];
-  rand bit [7:0] x;
-  constraint c {
-    foreach (arr[i]) arr[i] < x;
-    solve x before arr;
-  }
 endclass
 
 class DynWhole;
@@ -116,8 +111,12 @@ class RandC;
 endclass
 
 class RandMode;
-  rand bit [7:0] x;
-  constraint c {x < 10;}
+  rand bit [7:0] d[];
+  static rand bit [7:0] s;
+  constraint c {
+    foreach (d[i]) d[i] < 10;
+    s < 10;
+  }
 endclass
 
 class DisableSoft;
@@ -153,7 +152,7 @@ endclass
 
 class DistWeight;
   rand bit [7:0] x;
-  int w;
+  rand int w;
   constraint c {x dist {1 := w, 2 := 1};}
 endclass
 
@@ -277,13 +276,48 @@ class WideExpr;
   constraint c {{x, q} != 0;}
 endclass
 
-class Packed;
-  typedef struct packed {
-    bit [3:0] hi;
-    bit [3:0] lo;
+class Unpacked;
+  typedef struct {
+    rand bit [3:0] hi;
+    rand bit [3:0] lo;
   } pair_t;
   rand pair_t p;
-  constraint c {p != 0;}
+  constraint c {p.hi != 0;}
+endclass
+
+class UnpackedDyn;
+  typedef struct {
+    rand bit [3:0] x;
+    bit [3:0] fixed;
+  } elem_t;
+  typedef struct {rand bit [79:0] big;} wide_t;
+  rand elem_t q[];
+  rand wide_t w[];
+  constraint c {foreach (q[i]) q[i].x != q[i].fixed;}
+  constraint c_w {w.size() < 2;}
+endclass
+
+class AssocUnsup;
+  rand bit [7:0] s[string];
+  rand bit [7:0] v[int];
+  bit [7:0] w[int];
+  rand int k;
+  constraint c_s {foreach (s[i]) s[i] < 10;}
+  constraint c_k {
+    v[k] == 1;
+    w[k] == 1;
+  }
+endclass
+
+class HqItem;
+  bit [79:0] wide;
+endclass
+class HandleQueue;
+  HqItem hq[$];
+  rand bit [7:0] x;
+  constraint c_wide {foreach (hq[i]) x != hq[i].wide[7:0];}
+  constraint c_null {foreach (hq[i]) hq[i] != null -> x > 0;}
+  constraint c_none {foreach (hq[i]) x != 3;}
 endclass
 
 class UniqueExpr;
@@ -507,7 +541,10 @@ module t;
     WideState a21;
     WideExpr a22;
     ManySoft a23;
-    Packed a24;
+    Unpacked a24;
+    UnpackedDyn a24d;
+    AssocUnsup a24a;
+    HandleQueue a24h;
     UniqueExpr a25;
     RealOperand a26;
     ArrayStateIndex a27;
@@ -517,7 +554,6 @@ module t;
     RandSelect a31;
     Reduce a32;
     DynDist a33;
-    DynBefore a34;
     DynScalarDist a35;
     DynWhole a36;
     DynFixedIndex a37;
@@ -594,6 +630,12 @@ module t;
     void'(a23.randomize());
     a24 = new;
     void'(a24.randomize());
+    a24d = new;
+    void'(a24d.randomize());
+    a24a = new;
+    void'(a24a.randomize());
+    a24h = new;
+    void'(a24h.randomize());
     a25 = new;
     void'(a25.randomize());
     a26 = new;
@@ -612,8 +654,6 @@ module t;
     void'(a32.randomize());
     a33 = new;
     void'(a33.randomize());
-    a34 = new;
-    void'(a34.randomize());
     a35 = new;
     void'(a35.randomize());
     a36 = new;
@@ -680,7 +720,8 @@ module t;
       void'(e.randomize());
       void'(b.randomize(null));
     end
-    a7.x.rand_mode(0);
+    a7.d.rand_mode(0);
+    a7.s.rand_mode(0);
     void'(std::randomize(v, w) with {solve v before w; solve w before v;});
   end
 endmodule

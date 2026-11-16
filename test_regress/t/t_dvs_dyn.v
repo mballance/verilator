@@ -135,6 +135,97 @@ class InsideMixed;
   constraint c {z inside {-1, [5 : 6], s};}
 endclass
 
+// riscv-dv's loop registers: 'solve before' of dynamic arrays
+class Before;
+  rand bit [1:0] n;
+  rand bit [7:0] cnt[];
+  rand bit [7:0] lim[];
+  rand bit [7:0] y;
+  constraint c {
+    solve n before cnt;
+    solve cnt before lim;
+    solve lim before y;
+    n inside {[1 : 2]};
+    cnt.size() == n;
+    lim.size() == n;
+    foreach (cnt[i]) {
+      cnt[i] != 0;
+      lim[i] > cnt[i];
+      y != lim[i];
+    }
+  }
+endclass
+
+// Without the ordering, s would be 0: s == 1 has one solution of the array, s == 0 all
+class BeforeFirst;
+  rand bit s;
+  rand bit [7:0] arr[];
+  constraint c {
+    solve s before arr;
+    arr.size() == 3;
+    foreach (arr[i]) s -> arr[i] == 0;
+  }
+endclass
+
+// UVM's uvm_mem_mam_policy: members of objects in a queue of handles that is not random
+class Region;
+  bit [63:0] start_offset;
+  bit [63:0] end_offset;
+  function new(bit [63:0] s, bit [63:0] e);
+    start_offset = s;
+    end_offset = e;
+  endfunction
+endclass
+class Policy;
+  rand bit [63:0] start_offset;
+  bit [63:0] len = 16;
+  Region in_use[$];
+  constraint c_range {start_offset <= 200;}
+  constraint c_no_overlap {
+    foreach (in_use[i]) {
+      !(start_offset <= in_use[i].end_offset && start_offset + len - 1 >= in_use[i].start_offset);
+    }
+  }
+endclass
+
+// riscv-dv's delegation arrays: random associative arrays, solved over their keys
+typedef enum bit [4:0] {
+  E0 = 0,
+  E1 = 1,
+  E3 = 3,
+  E7 = 7,
+  E12 = 12
+} cause_t;
+class Assoc;
+  rand bit deleg[cause_t];
+  rand bit [7:0] v[int];
+  bit force_on;
+  constraint c_deleg {
+    deleg[E3] == 1'b0;
+    if (force_on) {
+      foreach (deleg[i]) soft deleg[i] == 1'b1;
+    }
+    foreach (deleg[i]) {
+      if (!(i inside {E1, E3, E7})) deleg[i] == 0;
+    }
+  }
+  constraint c_v {
+    foreach (v[k]) v[k] >= k;
+    v[3] != 3;
+    v[99] == 0;  // No such key: reads 0
+    v.sum() with (int'(item)) < 30;
+  }
+  function new();
+    deleg[E0] = 1;
+    deleg[E1] = 0;
+    deleg[E3] = 1;
+    deleg[E7] = 0;
+    deleg[E12] = 1;
+    v[10] = 0;
+    v[3] = 0;
+  endfunction
+endclass
+
 module t;
   initial begin
     Local lo;
@@ -296,6 +387,65 @@ module t;
       ub.q = '{1, 2};
       `check(ub.randomize() == 0);
       `check(ub.q.size() == 2);
+    end
+
+    begin
+      Before bf;
+      BeforeFirst bff;
+      int ones;
+      bf = new;
+      for (int n = 0; n < 50; ++n) begin
+        `check(bf.randomize() == 1);
+        `check(bf.cnt.size() == bf.n && bf.lim.size() == bf.n);
+        foreach (bf.cnt[i]) `check(bf.cnt[i] != 0 && bf.lim[i] > bf.cnt[i] && bf.y != bf.lim[i]);
+      end
+      bff = new;
+      for (int n = 0; n < 200; ++n) begin
+        `check(bff.randomize() == 1);
+        if (bff.s) begin
+          ++ones;
+          foreach (bff.arr[i]) `check(bff.arr[i] == 0);
+        end
+      end
+      `check(ones > 60 && ones < 140);
+    end
+
+    begin
+      Assoc as;
+      int sevens;
+      as = new;
+      as.force_on = 1;
+      `check(as.randomize() == 1);
+      `check(as.deleg.size() == 5 && as.v.size() == 2 && as.v.exists(10) && as.v.exists(3));
+      `check(as.deleg[E0] == 0 && as.deleg[E1] == 1 && as.deleg[E3] == 0);
+      `check(as.deleg[E7] == 1 && as.deleg[E12] == 0);
+      as.force_on = 0;
+      for (int n = 0; n < 50; ++n) begin
+        `check(as.randomize() == 1);
+        `check(as.deleg[E0] == 0 && as.deleg[E3] == 0 && as.deleg[E12] == 0);
+        if (as.deleg[E7]) ++sevens;
+        `check(as.v[10] >= 10 && as.v[3] > 3 && as.v[10] + as.v[3] < 30);
+      end
+      `check(sevens > 10 && sevens < 40);
+    end
+
+    begin
+      Policy po;
+      Region rg;
+      po = new;
+      rg = new(10, 100);
+      po.in_use.push_back(rg);
+      rg = new(150, 160);
+      po.in_use.push_back(rg);
+      for (int n = 0; n < 100; ++n) begin
+        `check(po.randomize() == 1);
+        foreach (po.in_use[i]) begin
+          `check(!(po.start_offset <= po.in_use[i].end_offset
+                   && po.start_offset + 15 >= po.in_use[i].start_offset));
+        end
+      end
+      `check(po.in_use.size() == 2 && po.in_use[1].end_offset == 160);
+      `check(po.randomize() with {start_offset inside {[50 : 60]};} == 0);
     end
 
     $write("*-* All Finished *-*\n");

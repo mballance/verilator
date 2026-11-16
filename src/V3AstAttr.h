@@ -928,7 +928,8 @@ static constexpr bool validateArgsDescriptor(const char* descrp) {
 // - 'r' read by the call
 // - 'w' written by the call (Use only if unconditionally and wholly written,
 //   that is: a preceding write can be removed. Otherwise use 'm'.)
-// - 'm' read and written (modified) by the call
+// - 'm' read and written (modified) by the call (or an AstCExpr viewing such a
+//   variable, e.g. VL_DVS_SOLVE's vlDvsField)
 // - 'f' forwarded to another callable
 // - '+' repeats the entry before it for all remaining arguments, must be last
 // - "" if the method takes no arguments

@@ -265,6 +265,7 @@ private:
                             "Output argument of library call is not write-only");
                 break;
             case 'm':
+                if (VN_IS(argp, CExpr)) break;  // A C++ view of a variable, unchecked
                 UASSERT_OBJ(lvalp, argp,  //
                             "Inout argument of library call is not a valid C++ LValue");
                 UASSERT_OBJ(access.isRW(), argp,

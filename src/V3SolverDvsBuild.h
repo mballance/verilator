@@ -64,6 +64,12 @@ AstConst* dvsNewConstp(AstNodeExpr* nodep) VL_MT_DISABLED;
 // Why the builder cannot solve random variable varp, or "" if it can
 std::string dvsRandVarUnsupported(const AstVar* varp) VL_MT_DISABLED;
 
+// The members of unpacked struct dtypep that the elements of a dynamic array or queue of it
+// have a problem array for, in order: the rand members of a random one, else the integral
+// members of at most 64 bits; empty if not an unpacked struct
+std::vector<const AstMemberDType*> dvsStructFields(const AstNodeDType* dtypep,
+                                                   bool rand) VL_MT_DISABLED;
+
 // True if the builder can map nodep, a constraint expression, to a dv-solve operator
 bool dvsIsMappable(const AstNodeExpr* nodep) VL_MT_DISABLED;
 

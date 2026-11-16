@@ -4,7 +4,7 @@
 // SPDX-FileCopyrightText: 2026 Wilson Snyder
 // SPDX-License-Identifier: CC0-1.0
 
-// Fixed-size unpacked arrays and 'foreach' with --solver-dvs
+// Fixed-size arrays and 'foreach' with --solver-dvs
 
 // verilog_format: off
 `define stop $stop
@@ -16,6 +16,11 @@ typedef enum bit [3:0] {
   B = 4,
   C = 9
 } e_t;
+
+typedef struct packed {
+  bit [3:0] hi;
+  bit [3:0] lo;
+} ps_t;
 
 class Arrays;
   rand bit [7:0] sorted[5];  // Strictly increasing, in [10:30]
@@ -72,11 +77,46 @@ class Whole;
   }
 endclass
 
+class Reserved;
+  rand e_t r;
+  rand e_t ri;  // Constrained by randomize() with {...}
+  e_t reserved[];  // Not random, elements of a typedef
+  rand bit [7:0] p;
+  ps_t pairs[];  // Not random, packed struct elements
+  constraint c_r {foreach (reserved[i]) r != reserved[i];}
+  constraint c_p {
+    foreach (pairs[i]) p != pairs[i];
+    p < 3;
+  }
+endclass
+
+class Packed;
+  rand bit [15:0] v;
+  rand bit [3:0] m[2];
+  rand bit [7:1] d;
+  rand bit [3:0] s;
+  // riscv-dv's pmp_val: lock bits 0, no W=1 with R=0
+  constraint c_v {
+    foreach (v[i]) {
+      if ((i + 1) % 4 == 0) v[i] == 1'b0;
+      if (i % 4 == 0) !(v[i] == 0 && v[i+1] == 1'b1);
+    }
+  }
+  constraint c_m {foreach (m[i, j]) m[i][j] == (i == j);}
+  // d[8] is out of range, so reads 0
+  constraint c_d {foreach (d[i]) d[i] != d[i+1];}
+  // s[4] is out of range: s[3] == 0, then the others
+  constraint c_s {foreach (s[i]) s[i+:2] != 2'b01;}
+endclass
+
 module t;
   initial begin
     Arrays o;
     Soft s;
     Whole wh;
+    Reserved rs;
+    Packed pk;
+    e_t reservedRi[];
     int freeDiff;
     int wCount[4];
     o = new;
@@ -119,6 +159,24 @@ module t;
       `check(wh.y == wh.u[0][0]);
     end
     `check(s.g[0][0] == 0 && s.g[0][1] == 1 && s.g[1][0] == 1 && s.g[1][1] == 2);
+    rs = new;
+    rs.reserved = '{A, B};
+    rs.pairs = '{8'h00, 8'h01};
+    reservedRi = '{B, C};
+    for (int n = 0; n < 20; ++n) begin
+      `check(rs.randomize() with {foreach (reservedRi[i]) ri != reservedRi[i];} == 1);
+      `check(rs.r == C && rs.ri == A && rs.p == 2);
+    end
+    pk = new;
+    freeDiff = 0;
+    for (int n = 0; n < 50; ++n) begin
+      `check(pk.randomize() == 1);
+      for (int i = 0; i < 16; i += 4) `check(!pk.v[i+3] && !(!pk.v[i] && pk.v[i+1]));
+      `check(pk.m[0] == 4'b0001 && pk.m[1] == 4'b0010);
+      `check(pk.d == 7'b1010101 && pk.s == 0);
+      if (pk.v[2:0] != 3'b010) ++freeDiff;
+    end
+    `check(freeDiff > 40);
     $write("*-* All Finished *-*\n");
     $finish;
   end
