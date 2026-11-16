@@ -726,13 +726,14 @@ class ConstraintExprVisitor final : public VNVisitor {
         return newTextAppendp(
             flp, varp, new AstConcatN{flp, new AstConst{flp, AstConst::String{}, " "}, termp});
     }
-    // The SMT operator 'op' applied to the terms in 'varp', or 'identity' if there are none
+    // The SMT operator 'op' applied to the terms in 'varp', or 'identity' if there are none.
+    // 'identity' leads the terms, as SMT-LIB needs two operands where there may be one term.
     static AstCond* newTextApplyp(FileLine* flp, AstVar* varp, const std::string& op,
                                   const std::string& identity) {
         AstNodeExpr* const isEmptyp = new AstEqN{flp, new AstVarRef{flp, varp, VAccess::READ},
                                                  new AstConst{flp, AstConst::String{}, ""}};
         AstNodeExpr* const openp
-            = new AstConcatN{flp, new AstConst{flp, AstConst::String{}, "(" + op},
+            = new AstConcatN{flp, new AstConst{flp, AstConst::String{}, "(" + op + " " + identity},
                              new AstVarRef{flp, varp, VAccess::READ}};
         AstNodeExpr* const appliedp
             = new AstConcatN{flp, openp, new AstConst{flp, AstConst::String{}, ")"}};
