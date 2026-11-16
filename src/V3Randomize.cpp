@@ -2624,6 +2624,23 @@ class RandomizeVisitor final : public VNVisitor {
                                    new AstVarRef{nodep->fileline(), randomizeFuncp->fvarp(),
                                                  VAccess::READ},
                                    basicMethodp}});
+                // IEEE 1800-2023 18.4: an enum takes one of its values, that at the random
+                // value modulo their count; constraints naming it are solved after this. (An
+                // enum with every value of its width needs nothing.)
+                AstEnumDType* const enumDtp
+                    = VN_CAST(exprp->dtypep()->skipRefToEnump(), EnumDType);
+                if (enumDtp && V3Number::log2bQuad(enumDtp->itemCount()) < enumDtp->width()) {
+                    FileLine* const fl = exprp->fileline();
+                    AstModDiv* const moddivp = new AstModDiv{
+                        fl, new AstVarRef{fl, refvarp, VAccess::READ},
+                        new AstConst{fl, AstConst::WidthedValue{}, enumDtp->width(),
+                                     static_cast<uint32_t>(enumDtp->itemCount())}};
+                    moddivp->dtypep(enumDtp);
+                    basicStmtsp = AstNode::addNextNull(
+                        basicStmtsp,
+                        new AstAssign{fl, new AstVarRef{fl, refvarp, VAccess::WRITE},
+                                      new AstArraySel{fl, enumValueTabRefp(enumDtp), moddivp}});
+                }
             }
             if (basicStmtsp) randomizeFuncp->addStmtsp(basicStmtsp);
             if (withp) {
