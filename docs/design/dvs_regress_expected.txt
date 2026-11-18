@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: LGPL-3.0-only OR Artistic-2.0
 t_assoc_array_constraints                        unsupported  # Unsupported: associative array with keys of type 'string' with --solver-dvs
 t_assocsel_sideeffect                            pass
+t_class_implements_param_bad                     pass
 t_constraint                                     pass
 t_constraint_arr_with_arrsize_unsup              n/a          # golden is the SMT back-end's refusal of a size constraint in 'with' on another object's array; dv-solve reads 'i.s[0].arr' (handle not rand) as a state value and accepts it
 t_constraint_array_index                         pass
@@ -16,7 +17,7 @@ t_constraint_assoc_arr_bad                       unsupported  # Unsupported: ass
 t_constraint_assoc_arr_basic                     unsupported  # Unsupported: associative array with keys of type 'string' with --solver-dvs
 t_constraint_assoc_arr_others                    pass
 t_constraint_assoc_arr_wide                      unsupported  # Unsupported: associative array with keys of type 'bit[64:0]' with --solver-dvs
-t_constraint_assoc_class_member                  unsupported  # Unsupported: operator MEMBERSEL 'member_a' of the index of a 'foreach' over a dynamic array with --solver-dvs
+t_constraint_assoc_class_member                  unsupported  # Unsupported: member of an object other than an integral one of an element of a dynamic array or queue of class handles with --solver-dvs
 t_constraint_before_randc_bad                    pass
 t_constraint_cls_arr_member                      pass
 t_constraint_cond                                pass
@@ -41,7 +42,7 @@ t_constraint_dyn_size_class                      unsupported  # Unsupported: dyn
 t_constraint_dyn_size_inline                     pass
 t_constraint_dynarray_randmode                   pass
 t_constraint_dynarray_struct                     unsupported  # Unsupported: dynamic array or queue in randomize() with {...} on a class with rand class handles, or extended with constraints with --solver-dvs
-t_constraint_enum_lambda_arg                     unsupported  # Unsupported: operator CMETHODHARD 'find' on random variables with --solver-dvs
+t_constraint_enum_lambda_arg                     unsupported  # Unsupported: operator 'find' on random variables with --solver-dvs
 t_constraint_extern                              pass
 t_constraint_extern_bad                          pass
 t_constraint_foreach                             unsupported  # Unsupported: circular 'solve before' ordering with --solver-dvs
@@ -95,7 +96,7 @@ t_constraint_randc_solve_before                  unsupported  # Unsupported: ran
 t_constraint_randmode_inherited                  pass
 t_constraint_real_array_eq_unsup                 unsupported  # Unsupported: unpacked array as a whole in a constraint with --solver-dvs
 t_constraint_real_struct_eq_unsup                unsupported  # Unsupported: random variable of type 'struct $unit::coord_t' with --solver-dvs
-t_constraint_real_struct_field                   unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue with --solver-dvs
+t_constraint_real_struct_field                   unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue, or an integral one of a dynamic array or queue that is not random with --solver-dvs
 t_constraint_red_arr_unsup                       unsupported  # Unsupported: random variable of type 'int$[]' with --solver-dvs
 t_constraint_redops                              unsupported  # Unsupported: operator REDXOR on random variables with --solver-dvs
 t_constraint_shift_width                         unsupported  # Unsupported: random variable wider than 64 bits with --solver-dvs
@@ -107,9 +108,9 @@ t_constraint_solve_before_assoc                  unsupported  # Unsupported: ass
 t_constraint_solver_cmake                        n/a          # tests the SMT solver process (VERILATOR_SOLVER); t_dvs_cmake covers CMake with dv-solve
 t_constraint_solver_log                          pass
 t_constraint_state                               pass
-t_constraint_struct                              unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue with --solver-dvs
+t_constraint_struct                              unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue, or an integral one of a dynamic array or queue that is not random with --solver-dvs
 t_constraint_struct_complex                      unsupported  # Unsupported: array select of an array that is not a random variable of this object with --solver-dvs
-t_constraint_struct_unref                        unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue with --solver-dvs
+t_constraint_struct_unref                        unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue, or an integral one of a dynamic array or queue that is not random with --solver-dvs
 t_constraint_sysfunc                             unsupported  # Unsupported: operator ONEHOT on random variables with --solver-dvs
 t_constraint_unique_cond                         unsupported  # Unsupported: 'unique' in a conditional constraint or a block with constraint_mode() with --solver-dvs
 t_constraint_unique_dyn                          pass
@@ -175,7 +176,7 @@ t_randomize                                      unsupported  # Unsupported: 'di
 t_randomize_array                                pass
 t_randomize_array_elem_with                      pass
 t_randomize_arraysel_membersel                   pass
-t_randomize_assoc_size                           unsupported  # Unsupported: operator CMETHODHARD 'size' on random variables with --solver-dvs
+t_randomize_assoc_size                           unsupported  # Unsupported: operator 'size' on random variables with --solver-dvs
 t_randomize_bbox                                 pass
 t_randomize_class_inherit_size_foreach           pass
 t_randomize_complex                              pass
@@ -185,7 +186,7 @@ t_randomize_complex_dynamic_arrays               pass
 t_randomize_complex_member_bad                   pass
 t_randomize_complex_queue                        pass
 t_randomize_complex_typedef                      pass
-t_randomize_copy_constr                          unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue with --solver-dvs
+t_randomize_copy_constr                          unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue, or an integral one of a dynamic array or queue that is not random with --solver-dvs
 t_randomize_derived_this                         pass
 t_randomize_dist_conditional                     unsupported  # Unsupported: 'dist' under a condition that depends on a random variable with --solver-dvs
 t_randomize_dist_foreach                         unsupported  # Unsupported: 'dist' with a value or weight that depends on a random variable with --solver-dvs
@@ -222,7 +223,7 @@ t_randomize_param_target_bad                     pass
 t_randomize_param_with                           pass
 t_randomize_pow2                                 unsupported  # Unsupported: operator POWSU on random variables with --solver-dvs
 t_randomize_prepost                              pass
-t_randomize_prepost_nested                       pass
+t_randomize_prepost_nested                       fail         # internal fault: V3StackCount recurses without end on the cycle of rand class handles (upstream #9063 test); the nested randomize() is not marked recursive
 t_randomize_prepost_with_baseref                 pass
 t_randomize_queue_constraints                    pass
 t_randomize_queue_size                           unsupported  # Unsupported: random variable of type 'int$[$]' with --solver-dvs
@@ -244,7 +245,7 @@ t_randomize_soft_foreach                         unsupported  # Unsupported: mor
 t_randomize_soft_relaxation                      pass
 t_randomize_soft_solve_before                    pass
 t_randomize_solve_before_diversity               pass
-t_randomize_solve_before_foreach                 unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue with --solver-dvs
+t_randomize_solve_before_foreach                 unsupported  # Unsupported: member of a struct other than a rand member of an element of a random dynamic array or queue, or an integral one of a dynamic array or queue that is not random with --solver-dvs
 t_randomize_solver_core                          n/a          # tests SMT unsat-core recheck output
 t_randomize_solver_mt                            pass
 t_randomize_solver_pipe                          n/a          # tests the SMT solver pipe (dying solver process)
@@ -271,7 +272,7 @@ t_randomize_with_constraint                      pass
 t_randomize_with_dyn_arr                         pass
 t_randomize_with_dyn_arr_multi_dyn               unsupported  # Unsupported: random variable of type 'int$[]' with --solver-dvs
 t_randomize_with_dyn_arr_multi_dyn_unsup         n/a          # golden is the SMT back-end's refusal of a caller's random array captured in 'with'; dv-solve reads it as a state value (t_dvs_with)
-t_randomize_with_dyn_arr_unsup                   unsupported  # Unsupported: operator CAST on random variables with --solver-dvs
+t_randomize_with_dyn_arr_unsup                   n/a          # golden is the SMT back-end's refusal of a random index into a non-random array; dv-solve accepts it
 t_randomize_with_enum                            pass
 t_randomize_with_idlist_bad                      pass
 t_randomize_with_item_name                       pass
@@ -280,9 +281,12 @@ t_randomize_with_size                            unsupported  # Unsupported: ran
 t_randomize_within_func                          pass
 t_randstate_func                                 pass
 t_randstate_obj                                  pass
+t_std_process_self                               pass
+t_std_process_self_std                           pass
 t_std_randomize                                  unsupported  # Unsupported: random variable wider than 64 bits with --solver-dvs
 t_std_randomize_assoc                            pass
 t_std_randomize_bad1                             pass
+t_std_randomize_enum                             pass
 t_std_randomize_mod                              pass
 t_std_randomize_no_args                          pass
 t_std_randomize_queue                            pass
