@@ -143,8 +143,8 @@ if not Args.no_run:
         scen_tests = ["t/" + t + ".py" for t in Tests if scenario(t) == scen]
         if scen_tests:
             subprocess.run([
-                sys.executable, "driver.py", "--" + scen, "--solver-dvs", "-j", Args.jobs,
-                "--quiet", *scen_tests
+                sys.executable, "driver.py", "--" + scen, "--solver-dvs", "--no-driver-clean",
+                "-j", Args.jobs, "--quiet", *scen_tests
             ],
                            cwd=RegressDir,
                            check=False)
